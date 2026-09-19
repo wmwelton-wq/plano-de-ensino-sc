@@ -59,7 +59,7 @@ export default async function DashboardPage() {
                       : "bg-amber-100 text-amber-700"
                   }`}
                 >
-                  {statusLabel[plano.status]}
+                  {statusLabel[plano.status as PlanoDeEnsino["status"]] ?? plano.status}
                 </span>
               </Link>
             </li>
