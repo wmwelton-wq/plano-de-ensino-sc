@@ -1,6 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Domínio antigo (subdomínio padrão do Vercel) — não passa pelo Cloudflare,
+// então quem ainda tiver esse link salvo é redirecionado permanentemente
+// para o domínio definitivo, que está protegido pelo WAF.
+const OLD_HOST = "plano-de-ensino-sc.vercel.app";
+const NEW_HOST = "planodocente.com.br";
+
 /**
  * Proxy (substitui o antigo middleware.ts a partir do Next.js 16):
  * mantém a sessão do professor sempre renovada e protege as rotas do
@@ -8,6 +14,14 @@ import { NextResponse, type NextRequest } from "next/server";
  * longe das telas de login/cadastro.
  */
 export async function proxy(request: NextRequest) {
+  if (request.nextUrl.hostname === OLD_HOST) {
+    const url = request.nextUrl.clone();
+    url.hostname = NEW_HOST;
+    url.port = "";
+    url.protocol = "https";
+    return NextResponse.redirect(url, 308);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -49,6 +63,11 @@ export async function proxy(request: NextRequest) {
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
+
+  // Agora que o site fica atrás do Cloudflare, garantimos que respostas que
+  // acabaram de renovar/checar a sessão nunca sejam cacheadas no proxy — um
+  // Set-Cookie cacheado poderia vazar a sessão de um professor para outro.
+  response.headers.set("Cache-Control", "private, no-store");
 
   return response;
 }

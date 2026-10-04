@@ -16,7 +16,7 @@ export default function ExcluirButton({
     >
       <button
         type="submit"
-        className="text-sm font-medium text-red-600 hover:text-red-800"
+        className="btn-text-danger"
       >
         Excluir plano
       </button>

@@ -15,8 +15,10 @@ export default function LogoutButton() {
 
   return (
     <button
+      type="button"
       onClick={handleLogout}
-      className="text-sm font-medium text-slate-500 hover:text-slate-900"
+      aria-label="Sair da conta"
+      className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
     >
       Sair
     </button>

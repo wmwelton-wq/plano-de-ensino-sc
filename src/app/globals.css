@@ -3,11 +3,76 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
+  --background: #f6f8fc;
   --foreground: #0f172a;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
+}
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+  }
+}
+
+@layer components {
+  /* Campos de formulário (input, select, textarea) — visual único em todo o
+     app: borda suave, sombra leve e anel de foco mais generoso que o padrão
+     do navegador. */
+  .input-field {
+    @apply mt-1 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm shadow-slate-900/[0.02] transition placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/25;
+  }
+
+  .field-label {
+    @apply block text-sm font-medium text-slate-700;
+  }
+
+  .field-hint {
+    @apply mt-1 text-xs text-slate-400;
+  }
+
+  /* Botões */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-b from-primary-600 to-primary-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-primary-900/20 transition hover:from-primary-500 hover:to-primary-600 hover:shadow-md active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+
+  .btn-text-danger {
+    @apply rounded text-sm font-medium text-red-600 transition hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
+  }
+
+  .link-primary {
+    @apply rounded font-medium text-primary-600 transition hover:text-primary-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+
+  /* Cartões */
+  .card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-900/[0.03];
+  }
+
+  .card-interactive {
+    @apply transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg hover:shadow-slate-900/[0.06];
+  }
+
+  /* Selos de status */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+}
+
+/* Impressão dos planos de ensino: página A4 na horizontal, igual ao
+   modelo oficial da Secretaria de Educação (SED/SC). As margens aqui
+   substituem o padding do próprio conteúdo (removido via `print:p-0`
+   nas páginas de visualização), evitando margem dobrada. */
+@page {
+  size: A4 landscape;
+  margin: 10mm;
 }
