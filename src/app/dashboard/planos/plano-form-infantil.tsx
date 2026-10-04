@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
+import ReferenciasCampo from "./referencias-campo";
+import TurmaSelector, { GRUPO_ETARIO_POR_SERIE } from "./turma-selector";
 
 interface PlanoFormInfantilProps {
   camposExperiencia: Disciplina[];
@@ -67,6 +69,7 @@ export default function PlanoFormInfantil({
 }: PlanoFormInfantilProps) {
   const [estado, formAction, pendente] = useActionState(action, {});
   const [campoPrincipal, setCampoPrincipal] = useState(plano?.disciplina_id ?? "");
+  const [grupoEtario, setGrupoEtario] = useState(plano?.grupo_etario ?? "");
 
   return (
     <form action={formAction} className="space-y-6">
@@ -121,7 +124,8 @@ export default function PlanoFormInfantil({
           <select
             id="grupo_etario"
             name="grupo_etario"
-            defaultValue={plano?.grupo_etario ?? ""}
+            value={grupoEtario}
+            onChange={(e) => setGrupoEtario(e.target.value)}
             className="input-field"
           >
             <option value="">Selecione...</option>
@@ -133,19 +137,16 @@ export default function PlanoFormInfantil({
           </select>
         </div>
 
-        <div>
-          <label htmlFor="turma" className="field-label">
-            Turma / grupo
-          </label>
-          <input
-            id="turma"
-            name="turma"
-            type="text"
-            defaultValue={plano?.turma ?? ""}
-            placeholder="Ex.: Berçário II"
-            className="input-field"
-          />
-        </div>
+        <TurmaSelector
+          etapa="educacao_infantil"
+          valorInicial={plano?.turma}
+          rotuloSerie="Turma / grupo"
+          rotuloTurma="Identificação"
+          onSerieChange={(serie) => {
+            const sugestao = GRUPO_ETARIO_POR_SERIE[serie];
+            if (sugestao) setGrupoEtario(sugestao);
+          }}
+        />
 
         <div>
           <label htmlFor="ano_letivo" className="field-label">
@@ -258,13 +259,7 @@ export default function PlanoFormInfantil({
           As fontes oficiais (BNCC e Currículo Base SC) já entram automaticamente nas Referências
           do plano gerado. Use este campo só para referências adicionais, uma por linha.
         </p>
-        <textarea
-          id="referencias"
-          name="referencias"
-          rows={4}
-          defaultValue={plano?.referencias ?? ""}
-          className="input-field"
-        />
+        <ReferenciasCampo valorInicial={plano?.referencias} rows={4} />
       </div>
 
       <div>

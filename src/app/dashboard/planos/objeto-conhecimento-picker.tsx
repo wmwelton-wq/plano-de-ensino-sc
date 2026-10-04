@@ -157,6 +157,8 @@ export default function ObjetoConhecimentoPicker({
         <input key={id} type="hidden" name="habilidade_ids" value={id} />
       ))}
 
+      <input type="hidden" name="fonte_curriculo" value={fonte} />
+
       <p className="field-label">{titulo}</p>
       {descricaoAjuda && <p className="text-xs text-slate-400">{descricaoAjuda}</p>}
 

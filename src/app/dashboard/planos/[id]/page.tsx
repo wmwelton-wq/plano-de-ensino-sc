@@ -57,6 +57,9 @@ export default async function EditarPlanoPage({
         <p className="text-sm text-slate-500">{ROTULOS_ETAPA[etapa]}</p>
       </div>
       <div className="flex items-center gap-3">
+        <Link href={`/dashboard/planos/${id}/replicar`} className="btn-secondary">
+          Replicar para outras turmas
+        </Link>
         <Link
           href={`/dashboard/planos/${id}/visualizar`}
           className="btn-secondary"

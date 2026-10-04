@@ -13,6 +13,8 @@ import type {
 } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
+import ReferenciasCampo from "./referencias-campo";
+import TurmaSelector from "./turma-selector";
 import ObjetoConhecimentoPicker from "./objeto-conhecimento-picker";
 import CompetenciaPicker from "./competencia-picker";
 import EditorTextoRico, { type EditorTextoRicoHandle } from "./editor-texto-rico";
@@ -208,19 +210,11 @@ export default function PlanoForm({
           />
         </div>
 
-        <div>
-          <label htmlFor="turma" className="field-label">
-            {rotuloTurma}
-          </label>
-          <input
-            id="turma"
-            name="turma"
-            type="text"
-            defaultValue={plano?.turma ?? ""}
-            placeholder={placeholderTurma}
-            className="input-field"
-          />
-        </div>
+        <TurmaSelector
+          etapa={etapa}
+          valorInicial={plano?.turma}
+          rotuloSerie={rotuloTurma === "Ano/turma" ? "Ano" : "Série/ano"}
+        />
 
         <div>
           <label htmlFor="quantidade_aulas" className="field-label">
@@ -467,13 +461,7 @@ export default function PlanoForm({
           automaticamente nas Referências do plano gerado — você não precisa digitá-las. Use este
           campo apenas para referências adicionais (livros, artigos etc.), uma por linha.
         </p>
-        <textarea
-          id="referencias"
-          name="referencias"
-          rows={5}
-          defaultValue={plano?.referencias ?? ""}
-          className="input-field"
-        />
+        <ReferenciasCampo valorInicial={plano?.referencias} rows={5} />
       </div>
 
       <div>

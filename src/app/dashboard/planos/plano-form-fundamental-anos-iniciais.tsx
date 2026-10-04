@@ -5,6 +5,8 @@ import Link from "next/link";
 import type { Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
+import ReferenciasCampo from "./referencias-campo";
+import TurmaSelector from "./turma-selector";
 
 interface PlanoFormFundamentalAnosIniciaisProps {
   disciplinas: Disciplina[];
@@ -128,19 +130,7 @@ export default function PlanoFormFundamentalAnosIniciais({
           </p>
         </div>
 
-        <div>
-          <label htmlFor="turma" className="field-label">
-            Ano/Turma
-          </label>
-          <input
-            id="turma"
-            name="turma"
-            type="text"
-            defaultValue={plano?.turma ?? ""}
-            placeholder="Ex.: 5º ano / 501"
-            className="input-field"
-          />
-        </div>
+        <TurmaSelector etapa="fundamental_anos_iniciais" valorInicial={plano?.turma} rotuloSerie="Ano" />
 
         <div>
           <label htmlFor="segundo_professor_nome" className="field-label">
@@ -352,13 +342,7 @@ export default function PlanoFormFundamentalAnosIniciais({
           automaticamente nas Referências do plano gerado — você não precisa digitá-la. Use este
           campo para as demais referências utilizadas no plano de aula, uma por linha.
         </p>
-        <textarea
-          id="referencias"
-          name="referencias"
-          rows={4}
-          defaultValue={plano?.referencias ?? ""}
-          className="input-field"
-        />
+        <ReferenciasCampo valorInicial={plano?.referencias} rows={4} />
       </div>
 
       <div>

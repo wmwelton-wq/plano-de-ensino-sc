@@ -32,6 +32,12 @@ function lerVinculo(formData: FormData) {
   };
 }
 
+/** Fonte do currículo escolhida no formulário; só gravamos quando o formulário a envia. */
+function lerFonteCurriculo(formData: FormData): { fonte_curriculo?: "bncc" | "curriculo_catarinense" } {
+  const valor = formData.get("fonte_curriculo");
+  return valor === "bncc" || valor === "curriculo_catarinense" ? { fonte_curriculo: valor } : {};
+}
+
 function lerHabilidadeIds(formData: FormData) {
   return formData.getAll("habilidade_ids").filter((v): v is string => typeof v === "string" && v.length > 0);
 }
@@ -158,6 +164,7 @@ export async function criarPlano(
       curso_tecnico_id,
       etapa,
       escola_id: (formData.get("escola_id") as string) || null,
+      ...lerFonteCurriculo(formData),
       grupo_etario: (formData.get("grupo_etario") as string) || null,
       segundo_professor_nome: (formData.get("segundo_professor_nome") as string) || null,
       incluir_logo_estado: formData.get("incluir_logo_estado") === "on",
@@ -231,6 +238,7 @@ export async function atualizarPlano(
       curso_tecnico_id,
       etapa,
       escola_id: (formData.get("escola_id") as string) || null,
+      ...lerFonteCurriculo(formData),
       grupo_etario: (formData.get("grupo_etario") as string) || null,
       segundo_professor_nome: (formData.get("segundo_professor_nome") as string) || null,
       incluir_logo_estado: formData.get("incluir_logo_estado") === "on",
@@ -270,6 +278,105 @@ export async function atualizarPlano(
 export async function excluirPlano(planoId: string) {
   const supabase = await createClient();
   await supabase.from("planos_de_ensino").delete().eq("id", planoId);
+  revalidatePath("/dashboard");
+  redirect("/dashboard");
+}
+
+/**
+ * Cria cópias do plano para outras turmas. Cada cópia nasce como rascunho,
+ * guarda a referência ao plano de origem (replicado_de_id) e leva junto as
+ * habilidades, competências e componentes escolhidos.
+ */
+export async function replicarPlano(
+  planoId: string,
+  _estadoAnterior: EstadoFormulario,
+  formData: FormData
+): Promise<EstadoFormulario> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { erro: "Sessão expirada. Faça login novamente." };
+  }
+
+  const turmas = Array.from(
+    new Set(
+      formData
+        .getAll("turmas_destino")
+        .filter((v): v is string => typeof v === "string")
+        .map((v) => v.trim())
+        .filter((v) => v.length > 0)
+    )
+  );
+  if (turmas.length === 0) {
+    return { erro: "Informe ao menos uma turma de destino." };
+  }
+  if (turmas.length > 30) {
+    return { erro: "Replique para no máximo 30 turmas por vez." };
+  }
+
+  // O RLS garante que só enxergamos planos do próprio professor.
+  const { data: origem } = await supabase.from("planos_de_ensino").select("*").eq("id", planoId).single();
+  if (!origem) {
+    return { erro: "Plano de origem não encontrado." };
+  }
+
+  const [{ data: hab }, { data: comp }, { data: disc }] = await Promise.all([
+    supabase.from("planos_habilidades").select("habilidade_id").eq("plano_id", planoId),
+    supabase.from("planos_competencias").select("competencia_id").eq("plano_id", planoId),
+    supabase.from("planos_disciplinas").select("disciplina_id").eq("plano_id", planoId),
+  ]);
+
+  const base: Record<string, unknown> = { ...origem };
+  for (const campo of ["id", "created_at", "updated_at", "pdf_path", "pdf_gerado_em"]) {
+    delete base[campo];
+  }
+
+  let criados = 0;
+  for (const turma of turmas) {
+    const titulo = origem.titulo.includes(turma) ? origem.titulo : `${origem.titulo} — ${turma}`;
+    const { data: novo, error } = await supabase
+      .from("planos_de_ensino")
+      .insert({
+        ...base,
+        titulo,
+        turma,
+        status: "rascunho",
+        gerado_por_ia: false,
+        replicado_de_id: planoId,
+      })
+      .select("id")
+      .single();
+
+    if (error || !novo) {
+      return {
+        erro:
+          criados > 0
+            ? `Foram criados ${criados} plano(s), mas houve falha ao criar o da turma "${turma}". Confira em "Meus planos".`
+            : "Não foi possível replicar o plano. Tente novamente.",
+      };
+    }
+
+    if (hab && hab.length > 0) {
+      await supabase
+        .from("planos_habilidades")
+        .insert(hab.map((h) => ({ plano_id: novo.id, habilidade_id: h.habilidade_id })));
+    }
+    if (comp && comp.length > 0) {
+      await supabase
+        .from("planos_competencias")
+        .insert(comp.map((c) => ({ plano_id: novo.id, competencia_id: c.competencia_id })));
+    }
+    if (disc && disc.length > 0) {
+      await supabase
+        .from("planos_disciplinas")
+        .insert(disc.map((d) => ({ plano_id: novo.id, disciplina_id: d.disciplina_id })));
+    }
+    criados += 1;
+  }
+
   revalidatePath("/dashboard");
   redirect("/dashboard");
 }
