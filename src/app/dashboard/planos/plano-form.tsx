@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type {
   Disciplina,
@@ -15,6 +15,9 @@ import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
 import ObjetoConhecimentoPicker from "./objeto-conhecimento-picker";
 import CompetenciaPicker from "./competencia-picker";
+import EditorTextoRico, { type EditorTextoRicoHandle } from "./editor-texto-rico";
+import SugestoesPanel from "./sugestoes-panel";
+import { CRITERIOS_AVALIACAO, INSTRUMENTOS_AVALIACAO } from "./sugestoes-avaliacao";
 
 interface PlanoFormProps {
   etapa: EtapaPlano;
@@ -76,18 +79,14 @@ export default function PlanoForm({
   const [usarCurriculoDigital, setUsarCurriculoDigital] = useState(
     plano?.usar_curriculo_digital ?? true
   );
-  // Campo "Objeto(s) de conhecimento em estudo/conteúdos": controlado para que o
-  // seletor de objetos (Anos Finais) possa acrescentar linhas a ele.
-  const [conteudos, setConteudos] = useState(plano?.conteudos_programaticos ?? "");
+  // Editores formatados: o seletor de objetos (Anos Finais) e as listas de
+  // sugestões acrescentam itens a eles por estes "handles".
+  const conteudosRef = useRef<EditorTextoRicoHandle>(null);
+  const avaliacaoRef = useRef<EditorTextoRicoHandle>(null);
+  const instrumentosRef = useRef<EditorTextoRicoHandle>(null);
 
   function adicionarConteudos(novasLinhas: string[]) {
-    setConteudos((atual) => {
-      const existentes = atual.split("\n").map((l) => l.trim().toLowerCase());
-      const acrescentar = novasLinhas.filter((l) => !existentes.includes(l.trim().toLowerCase()));
-      if (acrescentar.length === 0) return atual;
-      const base = atual.trimEnd();
-      return base ? `${base}\n${acrescentar.join("\n")}` : acrescentar.join("\n");
-    });
+    conteudosRef.current?.anexar(novasLinhas, "paragrafos");
   }
 
   const disciplinaSelecionada = useMemo(
@@ -394,14 +393,15 @@ export default function PlanoForm({
         <label htmlFor="conteudos_programaticos" className="field-label">
           Objeto(s) de conhecimento em estudo/conteúdos
         </label>
-        <p className="text-xs text-slate-400">Um item por linha.</p>
-        <textarea
+        <p className="text-xs text-slate-400">
+          Escreva livremente ou use o botão &quot;Adicionar objeto e conteúdos ao plano&quot; do seletor acima.
+        </p>
+        <EditorTextoRico
           id="conteudos_programaticos"
           name="conteudos_programaticos"
-          rows={6}
-          value={conteudos}
-          onChange={(e) => setConteudos(e.target.value)}
-          className="input-field"
+          valorInicial={plano?.conteudos_programaticos}
+          editorRef={conteudosRef}
+          linhas={6}
         />
       </div>
 
@@ -412,12 +412,11 @@ export default function PlanoForm({
         <p className="text-xs text-slate-400">
           Ex.: um parágrafo por semana (&quot;PRIMEIRA SEMANA: ...&quot;).
         </p>
-        <textarea
+        <EditorTextoRico
           id="metodologia"
           name="metodologia"
-          rows={5}
-          defaultValue={plano?.metodologia ?? ""}
-          className="input-field"
+          valorInicial={plano?.metodologia}
+          linhas={6}
         />
       </div>
 
@@ -425,13 +424,18 @@ export default function PlanoForm({
         <label htmlFor="avaliacao" className="field-label">
           Critério(s) de avaliação
         </label>
-        <p className="text-xs text-slate-400">Um critério por linha — vira lista com marcadores no PDF.</p>
-        <textarea
+        <EditorTextoRico
           id="avaliacao"
           name="avaliacao"
-          rows={4}
-          defaultValue={plano?.avaliacao ?? ""}
-          className="input-field"
+          valorInicial={plano?.avaliacao}
+          textoAntigoComoLista
+          editorRef={avaliacaoRef}
+          linhas={5}
+        />
+        <SugestoesPanel
+          rotulo="critérios"
+          itens={CRITERIOS_AVALIACAO}
+          onAdicionar={(item) => avaliacaoRef.current?.anexar([item], "lista")}
         />
       </div>
 
@@ -439,13 +443,18 @@ export default function PlanoForm({
         <label htmlFor="instrumentos_avaliacao" className="field-label">
           Instrumentos de avaliação
         </label>
-        <p className="text-xs text-slate-400">Um item por linha.</p>
-        <textarea
+        <EditorTextoRico
           id="instrumentos_avaliacao"
           name="instrumentos_avaliacao"
-          rows={3}
-          defaultValue={plano?.instrumentos_avaliacao ?? ""}
-          className="input-field"
+          valorInicial={plano?.instrumentos_avaliacao}
+          textoAntigoComoLista
+          editorRef={instrumentosRef}
+          linhas={4}
+        />
+        <SugestoesPanel
+          rotulo="instrumentos"
+          itens={INSTRUMENTOS_AVALIACAO}
+          onAdicionar={(item) => instrumentosRef.current?.anexar([item], "lista")}
         />
       </div>
 

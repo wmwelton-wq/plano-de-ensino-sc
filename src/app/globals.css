@@ -53,6 +53,35 @@ body {
     @apply rounded font-medium text-primary-600 transition hover:text-primary-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
   }
 
+  /* Texto formatado dos campos livres do plano (editor e PDF). O Tailwind
+     zera listas e margens, então restauramos aqui. */
+  .texto-rico p,
+  .texto-rico div {
+    margin: 0 0 0.5rem;
+  }
+  .texto-rico p:last-child,
+  .texto-rico div:last-child {
+    margin-bottom: 0;
+  }
+  .texto-rico ul {
+    list-style: disc;
+    margin: 0 0 0.5rem;
+    padding-left: 1.25rem;
+  }
+  .texto-rico ol {
+    list-style: decimal;
+    margin: 0 0 0.5rem;
+    padding-left: 1.25rem;
+  }
+  .texto-rico li {
+    margin-bottom: 0.125rem;
+  }
+  .editor-rico:empty::before {
+    content: attr(data-placeholder);
+    color: #94a3b8;
+    pointer-events: none;
+  }
+
   /* Cartões */
   .card {
     @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-900/[0.03];

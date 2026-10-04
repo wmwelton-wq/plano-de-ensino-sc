@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import PrintButton from "./print-button";
 import AutoAcao from "./auto-acao";
+import { ehHtml, sanitizarHtml } from "@/lib/texto-rico";
 
 function linhas(texto: string | null): string[] {
   if (!texto) return [];
@@ -250,7 +251,7 @@ export default async function VisualizarPlanoPage({
                 </tr>
                 <tr className="break-inside-avoid">
                   <td className="border border-black p-2 align-top">
-                    <ParagrafosOuVazio itens={linhas(plano.conteudos_programaticos)} />
+                    <TextoOuParagrafos texto={plano.conteudos_programaticos} />
                   </td>
                   <td className="border border-black p-2 align-top">
                     {habilidadesCurriculo.length > 0 ? (
@@ -276,7 +277,7 @@ export default async function VisualizarPlanoPage({
                     )}
                   </td>
                   <td className="border border-black p-2 align-top">
-                    <ParagrafosOuVazio itens={linhas(plano.metodologia)} />
+                    <TextoOuParagrafos texto={plano.metodologia} />
                   </td>
                 </tr>
               </tbody>
@@ -285,16 +286,10 @@ export default async function VisualizarPlanoPage({
             <table className="mt-4 w-full border-collapse border border-black">
               <tbody>
                 <Linha rotulo="Instrumentos de Avaliação:">
-                  <ParagrafosOuVazio itens={linhas(plano.instrumentos_avaliacao)} />
+                  <TextoOuParagrafos texto={plano.instrumentos_avaliacao} />
                 </Linha>
                 <Linha rotulo="Critérios de Avaliação:">
-                  {linhas(plano.avaliacao).length > 0 ? (
-                    <ul className="list-disc space-y-1 pl-5">
-                      {linhas(plano.avaliacao).map((l, i) => (
-                        <li key={i}>{l}</li>
-                      ))}
-                    </ul>
-                  ) : null}
+                  <CriteriosOuLista texto={plano.avaliacao} />
                 </Linha>
                 <Linha rotulo="Referências:">
                   <div className="space-y-2">
@@ -377,13 +372,7 @@ export default async function VisualizarPlanoPage({
                   ehInfantil ? "Avaliação — observação, escuta e registro" : "Critério(s) de avaliação"
                 }
               >
-                {linhas(plano.avaliacao).length > 0 ? (
-                  <ul className="list-disc space-y-1 pl-5">
-                    {linhas(plano.avaliacao).map((l, i) => (
-                      <li key={i}>{l}</li>
-                    ))}
-                  </ul>
-                ) : null}
+                <CriteriosOuLista texto={plano.avaliacao} />
               </Linha>
               <Linha
                 rotulo={
@@ -392,7 +381,7 @@ export default async function VisualizarPlanoPage({
                     : "Objeto(s) de conhecimento em estudo/conteúdos"
                 }
               >
-                <ParagrafosOuVazio itens={linhas(plano.conteudos_programaticos)} />
+                <TextoOuParagrafos texto={plano.conteudos_programaticos} />
               </Linha>
               <Linha
                 rotulo={
@@ -401,10 +390,10 @@ export default async function VisualizarPlanoPage({
                     : "Possível caminho metodológico para desenvolvimento da habilidade"
                 }
               >
-                <ParagrafosOuVazio itens={linhas(plano.metodologia)} />
+                <TextoOuParagrafos texto={plano.metodologia} />
               </Linha>
               <Linha rotulo={ehInfantil ? "Instrumentos de registro" : "Instrumentos de avaliação"}>
-                <ParagrafosOuVazio itens={linhas(plano.instrumentos_avaliacao)} />
+                <TextoOuParagrafos texto={plano.instrumentos_avaliacao} />
               </Linha>
               <Linha rotulo="Referências">
                 <div className="space-y-2">
@@ -444,5 +433,32 @@ function ParagrafosOuVazio({ itens }: { itens: string[] }) {
         <p key={i}>{l}</p>
       ))}
     </div>
+  );
+}
+
+/** Texto formatado (HTML do editor, já higienizado) ou, em planos antigos, um parágrafo por linha. */
+function TextoOuParagrafos({ texto }: { texto: string | null }) {
+  if (ehHtml(texto)) {
+    return (
+      <div
+        className="texto-rico"
+        dangerouslySetInnerHTML={{ __html: sanitizarHtml(texto as string) }}
+      />
+    );
+  }
+  return <ParagrafosOuVazio itens={linhas(texto)} />;
+}
+
+/** Critérios: HTML do editor ou, em planos antigos, uma linha = um marcador. */
+function CriteriosOuLista({ texto }: { texto: string | null }) {
+  if (ehHtml(texto)) return <TextoOuParagrafos texto={texto} />;
+  const itens = linhas(texto);
+  if (itens.length === 0) return null;
+  return (
+    <ul className="list-disc space-y-1 pl-5">
+      {itens.map((l, i) => (
+        <li key={i}>{l}</li>
+      ))}
+    </ul>
   );
 }

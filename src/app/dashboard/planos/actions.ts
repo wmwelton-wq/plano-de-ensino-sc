@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { EtapaPlano } from "@/lib/database.types";
+import { prepararCampoParaSalvar } from "@/lib/texto-rico";
 
 export interface EstadoFormulario {
   erro?: string;
@@ -168,10 +169,10 @@ export async function criarPlano(
       data_fim: (formData.get("data_fim") as string) || null,
       quantidade_aulas: quantidadeAulasRaw ? Number(quantidadeAulasRaw) : null,
       objetivos: (formData.get("objetivos") as string) || null,
-      conteudos_programaticos: (formData.get("conteudos_programaticos") as string) || null,
-      metodologia: (formData.get("metodologia") as string) || null,
-      avaliacao: (formData.get("avaliacao") as string) || null,
-      instrumentos_avaliacao: (formData.get("instrumentos_avaliacao") as string) || null,
+      conteudos_programaticos: prepararCampoParaSalvar(formData.get("conteudos_programaticos")),
+      metodologia: prepararCampoParaSalvar(formData.get("metodologia")),
+      avaliacao: prepararCampoParaSalvar(formData.get("avaliacao")),
+      instrumentos_avaliacao: prepararCampoParaSalvar(formData.get("instrumentos_avaliacao")),
       cronograma: (formData.get("cronograma") as string) || null,
       referencias: (formData.get("referencias") as string) || null,
       status: (formData.get("status") as string) || "rascunho",
@@ -241,10 +242,10 @@ export async function atualizarPlano(
       data_fim: (formData.get("data_fim") as string) || null,
       quantidade_aulas: quantidadeAulasRaw ? Number(quantidadeAulasRaw) : null,
       objetivos: (formData.get("objetivos") as string) || null,
-      conteudos_programaticos: (formData.get("conteudos_programaticos") as string) || null,
-      metodologia: (formData.get("metodologia") as string) || null,
-      avaliacao: (formData.get("avaliacao") as string) || null,
-      instrumentos_avaliacao: (formData.get("instrumentos_avaliacao") as string) || null,
+      conteudos_programaticos: prepararCampoParaSalvar(formData.get("conteudos_programaticos")),
+      metodologia: prepararCampoParaSalvar(formData.get("metodologia")),
+      avaliacao: prepararCampoParaSalvar(formData.get("avaliacao")),
+      instrumentos_avaliacao: prepararCampoParaSalvar(formData.get("instrumentos_avaliacao")),
       cronograma: (formData.get("cronograma") as string) || null,
       referencias: (formData.get("referencias") as string) || null,
       status: (formData.get("status") as string) || "rascunho",
