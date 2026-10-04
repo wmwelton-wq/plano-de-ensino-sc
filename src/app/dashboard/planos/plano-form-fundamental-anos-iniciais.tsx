@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import OpcoesLogo from "./opcoes-logo";
 import type { Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
@@ -149,6 +150,8 @@ export default function PlanoFormFundamentalAnosIniciais({
             </Link>
           </p>
         </div>
+
+        <OpcoesLogo plano={plano} />
 
         <TurmaSelector
           etapa="fundamental_anos_iniciais"

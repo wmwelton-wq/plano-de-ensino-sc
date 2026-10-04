@@ -1,3 +1,4 @@
+import { carregarHabilidades } from "@/lib/habilidades";
 import { createClient } from "@/lib/supabase/server";
 import PlanoFormFundamentalAnosIniciais from "../../plano-form-fundamental-anos-iniciais";
 import { criarPlano } from "../../actions";
@@ -13,12 +14,7 @@ export default async function NovoPlanoFundamentalAnosIniciaisPage() {
       .eq("etapa", "Ensino Fundamental - Anos Iniciais")
       .order("nome"),
     supabase.from("escolas").select("*").order("nome"),
-    supabase
-      .from("habilidades_curriculares")
-      .select("*")
-      .eq("validado", true)
-      .eq("etapa", "Ensino Fundamental - Anos Iniciais")
-      .order("codigo"),
+    carregarHabilidades(supabase, "Ensino Fundamental - Anos Iniciais"),
   ]);
 
   return (

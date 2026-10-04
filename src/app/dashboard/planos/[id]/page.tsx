@@ -1,3 +1,4 @@
+import { carregarHabilidades } from "@/lib/habilidades";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -75,12 +76,7 @@ export default async function EditarPlanoPage({
   if (etapa === "educacao_infantil") {
     const [{ data: camposExperiencia }, { data: objetivos }] = await Promise.all([
       supabase.from("disciplinas").select("*").eq("etapa", "Educação Infantil").order("nome"),
-      supabase
-        .from("habilidades_curriculares")
-        .select("*")
-        .eq("validado", true)
-        .eq("etapa", "Educação Infantil")
-        .order("codigo"),
+      carregarHabilidades(supabase, "Educação Infantil"),
     ]);
 
     return (
@@ -109,12 +105,7 @@ export default async function EditarPlanoPage({
         .select("*")
         .eq("etapa", "Ensino Fundamental - Anos Iniciais")
         .order("nome"),
-      supabase
-        .from("habilidades_curriculares")
-        .select("*")
-        .eq("validado", true)
-        .eq("etapa", "Ensino Fundamental - Anos Iniciais")
-        .order("codigo"),
+      carregarHabilidades(supabase, "Ensino Fundamental - Anos Iniciais"),
       supabase.from("planos_disciplinas").select("disciplina_id").eq("plano_id", id),
     ]);
 
@@ -141,15 +132,10 @@ export default async function EditarPlanoPage({
   }
 
   const etapaDisciplina = DISCIPLINA_ETAPA[etapa];
-  const habilidadesQuery =
-    etapa === "ensino_medio"
-      ? supabase.from("habilidades_curriculares").select("*").eq("validado", true).order("codigo")
-      : supabase
-          .from("habilidades_curriculares")
-          .select("*")
-          .eq("validado", true)
-          .eq("etapa", etapaDisciplina)
-          .order("codigo");
+  const habilidadesQuery = carregarHabilidades(
+    supabase,
+    etapa === "ensino_medio" ? undefined : etapaDisciplina
+  );
 
   const [{ data: disciplinas }, { data: cursos }, { data: habilidades }, { data: competencias }, { data: planoCompetencias }, { data: objetosMedio }] =
     await Promise.all([

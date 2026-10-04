@@ -14,6 +14,7 @@ import type {
 } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
+import OpcoesLogo from "./opcoes-logo";
 import ReferenciasCampo from "./referencias-campo";
 import TurmaSelector, { separarTurma } from "./turma-selector";
 import ObjetoConhecimentoPicker from "./objeto-conhecimento-picker";
@@ -303,18 +304,7 @@ export default function PlanoForm({
           </p>
         </div>
 
-        <div className="sm:col-span-2 flex items-center gap-2">
-          <input
-            id="incluir_logo_estado"
-            name="incluir_logo_estado"
-            type="checkbox"
-            defaultChecked={plano?.incluir_logo_estado ?? true}
-            className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-          />
-          <label htmlFor="incluir_logo_estado" className="text-sm text-slate-700">
-            Incluir a logo do Estado de Santa Catarina no cabeçalho do plano
-          </label>
-        </div>
+        <OpcoesLogo plano={plano} />
 
         <div className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
           <div className="flex items-center gap-2">

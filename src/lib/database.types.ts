@@ -101,7 +101,10 @@ export interface PlanoDeEnsino {
   etapa: EtapaPlano;
   grupo_etario: string | null;
   segundo_professor_nome: string | null;
+  /** Brasão do Estado de Santa Catarina no cabeçalho. */
   incluir_logo_estado: boolean;
+  /** Logo/brasão da escola no cabeçalho (o espaço fica reservado do lado oposto ao brasão do Estado). */
+  incluir_logo_escola: boolean;
   usar_curriculo_digital: boolean;
   titulo: string;
   ano_letivo: number;

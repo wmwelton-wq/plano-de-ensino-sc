@@ -1,3 +1,4 @@
+import { carregarHabilidades } from "@/lib/habilidades";
 import { createClient } from "@/lib/supabase/server";
 import PlanoForm from "../../plano-form";
 import { criarPlano } from "../../actions";
@@ -17,11 +18,7 @@ export default async function NovoPlanoMedioTecnicoPage() {
     supabase.from("disciplinas").select("*").eq("etapa", "Ensino Médio").order("nome"),
     supabase.from("cursos_tecnicos").select("*").order("nome"),
     supabase.from("escolas").select("*").order("nome"),
-    supabase
-      .from("habilidades_curriculares")
-      .select("*")
-      .eq("validado", true)
-      .order("codigo"),
+    carregarHabilidades(supabase),
     supabase.from("competencias_curriculares").select("*").order("numero"),
     supabase.from("objetos_conhecimento_medio").select("*").order("objeto"),
   ]);

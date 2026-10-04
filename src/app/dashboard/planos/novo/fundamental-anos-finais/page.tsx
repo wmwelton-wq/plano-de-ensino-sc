@@ -1,3 +1,4 @@
+import { carregarHabilidades } from "@/lib/habilidades";
 import { createClient } from "@/lib/supabase/server";
 import PlanoForm from "../../plano-form";
 import { criarPlano } from "../../actions";
@@ -18,12 +19,7 @@ export default async function NovoPlanoFundamentalAnosFinaisPage() {
       .eq("etapa", "Ensino Fundamental - Anos Finais")
       .order("nome"),
     supabase.from("escolas").select("*").order("nome"),
-    supabase
-      .from("habilidades_curriculares")
-      .select("*")
-      .eq("validado", true)
-      .eq("etapa", "Ensino Fundamental - Anos Finais")
-      .order("codigo"),
+    carregarHabilidades(supabase, "Ensino Fundamental - Anos Finais"),
     supabase
       .from("competencias_curriculares")
       .select("*")

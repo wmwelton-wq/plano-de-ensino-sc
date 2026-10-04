@@ -116,6 +116,12 @@ export default async function VisualizarPlanoPage({
     ? nomesComponentes.join(", ") || disciplina?.nome || ""
     : disciplina?.nome ?? curso?.nome ?? "";
   const ehInfantil = plano.etapa === "educacao_infantil";
+  // Brasões do cabeçalho: o do Estado fica à esquerda e o da escola à direita; cada um pode ser retirado.
+  // Se ao menos um estiver ligado, os dois lados ficam reservados (a escola sem logo deixa o espaço em
+  // branco para o professor colar o brasão depois).
+  const mostrarBrasaoEstado = plano.incluir_logo_estado !== false;
+  const mostrarLogoEscola = plano.incluir_logo_escola !== false;
+  const temLogos = mostrarBrasaoEstado || mostrarLogoEscola;
   const rotuloTurma =
     plano.etapa === "ensino_medio" ? "Série/ano:" : ehInfantil ? "Turma/grupo:" : "Ano/turma:";
 
@@ -147,39 +153,49 @@ export default async function VisualizarPlanoPage({
           {/* Cabeçalho */}
         {ehAnosIniciais ? (
           <div className="mb-4 flex items-start gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brasao-santa-catarina.jpg"
-              alt="Brasão do Estado de Santa Catarina"
-              className="h-20 w-20 shrink-0 object-contain"
-            />
-            <div className="text-sm leading-tight">
+            {temLogos && (
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center">
+                {mostrarBrasaoEstado && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src="/brasao-santa-catarina.jpg"
+                    alt="Brasão do Estado de Santa Catarina"
+                    className="max-h-20 max-w-full object-contain"
+                  />
+                )}
+              </div>
+            )}
+            <div className="flex-1 text-sm leading-tight">
               <p>ESTADO DE SANTA CATARINA</p>
               <p>SECRETARIA DE ESTADO DA EDUCAÇÃO</p>
               <p>DIRETORIA DE EDUCAÇÃO BÁSICA E PROFISSIONAL</p>
               <p>GERÊNCIA DO ENSINO FUNDAMENTAL</p>
             </div>
+            {temLogos && (
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center">
+                {mostrarLogoEscola && escola?.logo_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={escola.logo_url} alt={`Logo de ${escola.nome}`} className="max-h-20 max-w-full object-contain" />
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <table className="w-full border-collapse border border-black">
             <tbody>
               <tr className="break-inside-avoid">
-                <td className="w-32 border border-black p-2 align-middle text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    {escola?.logo_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={escola.logo_url} alt={`Logo de ${escola.nome}`} className="max-h-20 max-w-full" />
-                    )}
-                    {plano.incluir_logo_estado && (
+                {temLogos && (
+                  <td className="w-32 border border-black p-2 align-middle text-center">
+                    {mostrarBrasaoEstado && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src="/logo-sc-educacao.png"
-                        alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
-                        className="max-h-20 max-w-full"
+                        src="/brasao-santa-catarina.jpg"
+                        alt="Brasão do Estado de Santa Catarina"
+                        className="mx-auto max-h-20 max-w-full object-contain"
                       />
                     )}
-                  </div>
-                </td>
+                  </td>
+                )}
                 <td className="border border-black p-2 text-center font-bold">
                   <p>ESTADO DE SANTA CATARINA</p>
                   <p>SECRETARIA DE ESTADO DA EDUCAÇÃO</p>
@@ -187,6 +203,18 @@ export default async function VisualizarPlanoPage({
                   <p>MUNICÍPIO: {escola?.municipio ? escola.municipio.toUpperCase() : "_______________"}</p>
                   <p>PROFESSOR (A): {(professor?.nome ?? "").toUpperCase()}</p>
                 </td>
+                {temLogos && (
+                  <td className="w-32 border border-black p-2 align-middle text-center">
+                    {mostrarLogoEscola && escola?.logo_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={escola.logo_url}
+                        alt={`Logo de ${escola.nome}`}
+                        className="mx-auto max-h-20 max-w-full object-contain"
+                      />
+                    )}
+                  </td>
+                )}
               </tr>
             </tbody>
           </table>
