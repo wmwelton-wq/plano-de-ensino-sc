@@ -13,6 +13,7 @@ import type {
 } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
+import ObjetoConhecimentoPicker from "./objeto-conhecimento-picker";
 import CompetenciaPicker from "./competencia-picker";
 
 interface PlanoFormProps {
@@ -75,6 +76,19 @@ export default function PlanoForm({
   const [usarCurriculoDigital, setUsarCurriculoDigital] = useState(
     plano?.usar_curriculo_digital ?? true
   );
+  // Campo "Objeto(s) de conhecimento em estudo/conteúdos": controlado para que o
+  // seletor de objetos (Anos Finais) possa acrescentar linhas a ele.
+  const [conteudos, setConteudos] = useState(plano?.conteudos_programaticos ?? "");
+
+  function adicionarConteudos(novasLinhas: string[]) {
+    setConteudos((atual) => {
+      const existentes = atual.split("\n").map((l) => l.trim().toLowerCase());
+      const acrescentar = novasLinhas.filter((l) => !existentes.includes(l.trim().toLowerCase()));
+      if (acrescentar.length === 0) return atual;
+      const base = atual.trimEnd();
+      return base ? `${base}\n${acrescentar.join("\n")}` : acrescentar.join("\n");
+    });
+  }
 
   const disciplinaSelecionada = useMemo(
     () => disciplinas.find((d) => d.id === vinculoId),
@@ -322,17 +336,33 @@ export default function PlanoForm({
         }
       />
 
-      <HabilidadePicker
-        titulo="Habilidade(s) selecionada(s)"
-        descricaoAjuda="Da BNCC / currículo catarinense, filtradas pela disciplina ou curso técnico escolhido acima."
-        habilidades={habilidadesCurriculo}
-        selecionadasIniciais={habilidadesSelecionadasIds}
-        vazio={
-          vinculo
-            ? "Ainda não há habilidades cadastradas para esta disciplina/curso no banco de dados."
-            : "Selecione uma disciplina ou curso técnico acima para ver as habilidades disponíveis."
-        }
-      />
+      {etapa === "fundamental_anos_finais" ? (
+        <ObjetoConhecimentoPicker
+          key={vinculoId ?? "sem-disciplina"}
+          titulo="Objeto de conhecimento e habilidades do currículo"
+          descricaoAjuda="Escolha o currículo e o ano, abra um objeto de conhecimento e marque as habilidades. Só é possível selecionar a partir da lista."
+          habilidades={habilidadesCurriculo}
+          selecionadasIniciais={habilidadesSelecionadasIds}
+          onAdicionarConteudos={adicionarConteudos}
+          vazio={
+            vinculo
+              ? "Ainda não há habilidades cadastradas para esta disciplina no banco de dados."
+              : "Selecione um componente curricular acima para ver os objetos de conhecimento disponíveis."
+          }
+        />
+      ) : (
+        <HabilidadePicker
+          titulo="Habilidade(s) selecionada(s)"
+          descricaoAjuda="Da BNCC / currículo catarinense, filtradas pela disciplina ou curso técnico escolhido acima."
+          habilidades={habilidadesCurriculo}
+          selecionadasIniciais={habilidadesSelecionadasIds}
+          vazio={
+            vinculo
+              ? "Ainda não há habilidades cadastradas para esta disciplina/curso no banco de dados."
+              : "Selecione uma disciplina ou curso técnico acima para ver as habilidades disponíveis."
+          }
+        />
+      )}
 
       {usarCurriculoDigital && (
         <HabilidadePicker
@@ -368,8 +398,9 @@ export default function PlanoForm({
         <textarea
           id="conteudos_programaticos"
           name="conteudos_programaticos"
-          rows={4}
-          defaultValue={plano?.conteudos_programaticos ?? ""}
+          rows={6}
+          value={conteudos}
+          onChange={(e) => setConteudos(e.target.value)}
           className="input-field"
         />
       </div>

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import PlanoForm from "../../plano-form";
 import { criarPlano } from "../../actions";
+import VoltarLink from "../../voltar-link";
 
 export default async function NovoPlanoMedioTecnicoPage() {
   const supabase = await createClient();
@@ -25,6 +26,7 @@ export default async function NovoPlanoMedioTecnicoPage() {
 
   return (
     <div>
+      <VoltarLink />
       <h1 className="text-2xl font-semibold text-slate-900">
         Novo plano — Ensino Médio e Cursos Técnicos
       </h1>

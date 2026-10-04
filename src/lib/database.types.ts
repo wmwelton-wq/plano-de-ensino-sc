@@ -63,6 +63,8 @@ export interface HabilidadeCurricular {
   ano_serie: string | null;
   unidade_tematica: string | null;
   objeto_conhecimento: string | null;
+  /** Conteúdos sugeridos (Currículo Catarinense), um item por linha iniciado por "• ". */
+  conteudos?: string | null;
   validado: boolean;
   created_at: string;
 }

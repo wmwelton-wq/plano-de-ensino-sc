@@ -8,6 +8,7 @@ import PlanoFormFundamentalAnosIniciais from "../plano-form-fundamental-anos-ini
 import { atualizarPlano, excluirPlano } from "../actions";
 import ExcluirButton from "./excluir-button";
 import AcoesRapidas from "./acoes-rapidas";
+import VoltarLink from "../voltar-link";
 
 const DISCIPLINA_ETAPA: Record<Exclude<EtapaPlano, "educacao_infantil">, string> = {
   ensino_medio: "Ensino Médio",
@@ -48,6 +49,8 @@ export default async function EditarPlanoPage({
   const excluirComId = excluirPlano.bind(null, id);
 
   const cabecalho = (
+    <>
+    <VoltarLink href="/dashboard" rotulo="Voltar aos meus planos" />
     <div className="flex items-center justify-between">
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Editar plano de ensino</h1>
@@ -63,6 +66,7 @@ export default async function EditarPlanoPage({
         <ExcluirButton excluirAction={excluirComId} />
       </div>
     </div>
+    </>
   );
 
   if (etapa === "educacao_infantil") {

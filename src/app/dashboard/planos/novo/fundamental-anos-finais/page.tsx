@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import PlanoForm from "../../plano-form";
 import { criarPlano } from "../../actions";
+import VoltarLink from "../../voltar-link";
 
 export default async function NovoPlanoFundamentalAnosFinaisPage() {
   const supabase = await createClient();
@@ -32,6 +33,7 @@ export default async function NovoPlanoFundamentalAnosFinaisPage() {
 
   return (
     <div>
+      <VoltarLink />
       <h1 className="text-2xl font-semibold text-slate-900">
         Novo plano — Ensino Fundamental, Anos Finais (6º ao 9º ano)
       </h1>

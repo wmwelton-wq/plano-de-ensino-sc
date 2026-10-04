@@ -29,7 +29,7 @@ body {
   }
 
   .field-label {
-    @apply block text-sm font-medium text-slate-700;
+    @apply block text-sm font-bold text-slate-800;
   }
 
   .field-hint {
