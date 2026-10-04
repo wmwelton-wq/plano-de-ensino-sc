@@ -7,6 +7,7 @@ import type {
   CursoTecnico,
   Escola,
   HabilidadeCurricular,
+  ObjetoConhecimentoMedio,
   CompetenciaCurricular,
   PlanoDeEnsino,
   EtapaPlano,
@@ -16,6 +17,7 @@ import HabilidadePicker from "./habilidade-picker";
 import ReferenciasCampo from "./referencias-campo";
 import TurmaSelector, { separarTurma } from "./turma-selector";
 import ObjetoConhecimentoPicker from "./objeto-conhecimento-picker";
+import ObjetoMedioPicker from "./objeto-medio-picker";
 import CompetenciaPicker from "./competencia-picker";
 import EditorTextoRico, { type EditorTextoRicoHandle } from "./editor-texto-rico";
 import SugestoesPanel from "./sugestoes-panel";
@@ -28,6 +30,8 @@ interface PlanoFormProps {
   escolas: Escola[];
   habilidades: HabilidadeCurricular[];
   habilidadesSelecionadasIds?: string[];
+  /** Objetos de conhecimento do Ensino Médio (por disciplina e série). */
+  objetosMedio?: ObjetoConhecimentoMedio[];
   competencias: CompetenciaCurricular[];
   competenciasSelecionadasIds?: string[];
   plano?: PlanoDeEnsino;
@@ -59,6 +63,7 @@ export default function PlanoForm({
   escolas,
   habilidades,
   habilidadesSelecionadasIds = [],
+  objetosMedio = [],
   competencias,
   competenciasSelecionadasIds = [],
   plano,
@@ -85,7 +90,7 @@ export default function PlanoForm({
   // sugestões acrescentam itens a eles por estes "handles".
   const conteudosRef = useRef<EditorTextoRicoHandle>(null);
   const anoDaSerie = (serie: string | null | undefined) => {
-    const m = /(\d+)\s*º/.exec(serie ?? "");
+    const m = /(\d+)\s*[ºª°]/.exec(serie ?? "");
     return m ? Number(m[1]) : null;
   };
   const [anoSugerido, setAnoSugerido] = useState<number | null>(
@@ -134,6 +139,14 @@ export default function PlanoForm({
         (h) => h.fonte === "curriculo_educacao_digital" && h.etapa === etapaDisciplina
       ),
     [habilidades, etapaDisciplina]
+  );
+
+  const objetosDaDisciplina = useMemo(
+    () =>
+      vinculoTipo === "disciplina" && vinculoId
+        ? objetosMedio.filter((o) => o.disciplina_id === vinculoId)
+        : [],
+    [objetosMedio, vinculoTipo, vinculoId]
   );
 
   const competenciasArea = useMemo(() => {
@@ -353,6 +366,24 @@ export default function PlanoForm({
           }
         />
       ) : (
+        <>
+        {etapa === "ensino_medio" && (
+          <ObjetoMedioPicker
+            key={vinculoId ?? "sem-disciplina"}
+            titulo="Objeto de conhecimento"
+            descricaoAjuda="Escolha a série, abra um objeto de conhecimento e adicione-o (com os conteúdos sugeridos) ao plano."
+            objetos={objetosDaDisciplina}
+            serieSugerida={anoSugerido}
+            onAdicionarConteudos={adicionarConteudos}
+            vazio={
+              vinculoTipo === "curso"
+                ? "Cursos técnicos não têm lista de objetos de conhecimento; escreva os conteúdos no campo do plano."
+                : vinculo
+                ? "Ainda não há objetos de conhecimento cadastrados para esta disciplina."
+                : "Selecione uma disciplina acima para ver os objetos de conhecimento disponíveis."
+            }
+          />
+        )}
         <HabilidadePicker
           titulo="Habilidade(s) selecionada(s)"
           descricaoAjuda="Da BNCC / currículo catarinense, filtradas pela disciplina ou curso técnico escolhido acima."
@@ -364,6 +395,7 @@ export default function PlanoForm({
               : "Selecione uma disciplina ou curso técnico acima para ver as habilidades disponíveis."
           }
         />
+        </>
       )}
 
       {usarCurriculoDigital && (

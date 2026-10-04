@@ -69,6 +69,17 @@ export interface HabilidadeCurricular {
   created_at: string;
 }
 
+/** Objeto de conhecimento do Ensino Médio, por disciplina e série (1 a 3). */
+export interface ObjetoConhecimentoMedio {
+  id: string;
+  disciplina_id: string;
+  serie: number;
+  objeto: string;
+  /** Conteúdos sugeridos, um por linha iniciado por "• ". */
+  conteudos: string | null;
+  created_at: string;
+}
+
 export interface CompetenciaCurricular {
   id: string;
   numero: number;

@@ -151,7 +151,7 @@ export default async function EditarPlanoPage({
           .eq("etapa", etapaDisciplina)
           .order("codigo");
 
-  const [{ data: disciplinas }, { data: cursos }, { data: habilidades }, { data: competencias }, { data: planoCompetencias }] =
+  const [{ data: disciplinas }, { data: cursos }, { data: habilidades }, { data: competencias }, { data: planoCompetencias }, { data: objetosMedio }] =
     await Promise.all([
       supabase.from("disciplinas").select("*").eq("etapa", etapaDisciplina).order("nome"),
       etapa === "ensino_medio"
@@ -160,6 +160,9 @@ export default async function EditarPlanoPage({
       habilidadesQuery,
       supabase.from("competencias_curriculares").select("*").order("numero"),
       supabase.from("planos_competencias").select("competencia_id").eq("plano_id", id),
+      etapa === "ensino_medio"
+        ? supabase.from("objetos_conhecimento_medio").select("*").order("objeto")
+        : Promise.resolve({ data: [] }),
     ]);
 
   const competenciasSelecionadasIds = (planoCompetencias ?? []).map((c) => c.competencia_id);
@@ -174,6 +177,7 @@ export default async function EditarPlanoPage({
           cursos={cursos ?? []}
           escolas={escolas ?? []}
           habilidades={habilidades ?? []}
+          objetosMedio={objetosMedio ?? []}
           habilidadesSelecionadasIds={habilidadesSelecionadasIds}
           competencias={competencias ?? []}
           competenciasSelecionadasIds={competenciasSelecionadasIds}

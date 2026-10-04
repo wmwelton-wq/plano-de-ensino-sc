@@ -19,6 +19,10 @@ interface ObjetoConhecimentoPickerProps {
 }
 
 const FONTE_CATARINENSE = "curriculo_catarinense";
+const FONTE_BNCC = "bncc";
+/** Na BNCC, uma linha pode reunir vários objetos de conhecimento, separados por " | ". */
+const SEPARADOR_BNCC = " | ";
+const GRUPO_BNCC = "Habilidades da BNCC (em ordem de código)";
 
 /** "6º ano" -> [6]; "6º e 7º anos" -> [6, 7]; "6º ao 9º ano" -> [6, 7, 8, 9]. */
 function anosDoRotulo(rotulo: string | null): number[] {
@@ -75,9 +79,15 @@ export default function ObjetoConhecimentoPicker({
   const idAno = useId();
   const idBusca = useId();
 
-  const [fonte, setFonte] = useState(FONTE_CATARINENSE);
-
   const porId = useMemo(() => new Map(habilidades.map((h) => [h.id, h])), [habilidades]);
+
+  // Em planos já salvos só com habilidades da BNCC, abre direto na BNCC.
+  const [fonte, setFonte] = useState(() => {
+    const doPlano = selecionadasIniciais.map((id) => porId.get(id)).filter(Boolean);
+    return doPlano.length > 0 && doPlano.every((h) => h?.fonte === FONTE_BNCC)
+      ? FONTE_BNCC
+      : FONTE_CATARINENSE;
+  });
 
   // Mantém só as seleções que pertencem a esta lista (assim não duplicamos as
   // habilidades de educação digital, que têm o seu próprio seletor).
@@ -85,9 +95,13 @@ export default function ObjetoConhecimentoPicker({
     () => new Set(selecionadasIniciais.filter((id) => porId.has(id)))
   );
 
+  const ehBncc = fonte === FONTE_BNCC;
   const linhasCatarinense = useMemo(
-    () => habilidades.filter((h) => h.fonte === FONTE_CATARINENSE && h.objeto_conhecimento),
-    [habilidades]
+    () =>
+      habilidades.filter((h) =>
+        fonte === FONTE_BNCC ? h.fonte === FONTE_BNCC : h.fonte === FONTE_CATARINENSE && h.objeto_conhecimento
+      ),
+    [habilidades, fonte]
   );
 
   const anosDisponiveis = useMemo(() => {
@@ -127,30 +141,45 @@ export default function ObjetoConhecimentoPicker({
     const mapa = new Map<string, HabilidadeCurricular[]>();
     for (const h of linhasCatarinense) {
       if (!anosDoRotulo(h.ano_serie).includes(ano)) continue;
-      const chave = `${h.disciplina_id ?? ""}||${h.objeto_conhecimento as string}`;
-      const lista = mapa.get(chave) ?? [];
-      lista.push(h);
-      mapa.set(chave, lista);
+      // Catarinense: um objeto por linha. BNCC: a linha pode trazer vários objetos; a
+      // habilidade aparece em cada um deles.
+      const nomes = ehBncc
+        ? (h.objeto_conhecimento ? h.objeto_conhecimento.split(SEPARADOR_BNCC) : [GRUPO_BNCC])
+        : [h.objeto_conhecimento as string];
+      for (const nome of nomes) {
+        const chave = `${h.disciplina_id ?? ""}||${nome.trim()}`;
+        const lista = mapa.get(chave) ?? [];
+        lista.push(h);
+        mapa.set(chave, lista);
+      }
     }
     const nomeDisc = (id: string) => nomesDisciplinas?.[id] ?? "";
     return Array.from(mapa.entries())
       .map(([chave, itens]) => {
         const objeto = chave.slice(chave.indexOf("||") + 2);
         const disciplina = nomeDisc(chave.slice(0, chave.indexOf("||")));
-        return { chave, objeto, disciplina, itens };
+        const ordenados = ehBncc
+          ? [...itens].sort((a, b) => (a.codigo ?? "").localeCompare(b.codigo ?? ""))
+          : itens;
+        return { chave, objeto, disciplina, itens: ordenados };
       })
       .sort(
         (a, b) =>
           a.disciplina.localeCompare(b.disciplina, "pt-BR", { sensitivity: "base" }) ||
           a.objeto.localeCompare(b.objeto, "pt-BR", { sensitivity: "base" })
       );
-  }, [linhasCatarinense, ano, nomesDisciplinas]);
+  }, [linhasCatarinense, ano, nomesDisciplinas, ehBncc]);
 
   const objetosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     if (!termo) return objetos;
-    return objetos.filter(({ objeto, disciplina }) => `${disciplina} ${objeto}`.toLowerCase().includes(termo));
-  }, [objetos, busca]);
+    return objetos.filter(({ objeto, disciplina, itens }) => {
+      const base = `${disciplina} ${objeto}`;
+      // Na BNCC a busca também olha o código e o texto das habilidades.
+      const texto = ehBncc ? `${base} ${itens.map((h) => `${h.codigo ?? ""} ${h.descricao}`).join(" ")}` : base;
+      return texto.toLowerCase().includes(termo);
+    });
+  }, [objetos, busca, ehBncc]);
 
   function alternar(id: string) {
     setSelecionadas((atual) => {
@@ -196,13 +225,14 @@ export default function ObjetoConhecimentoPicker({
           <select
             id={idFonte}
             value={fonte}
-            onChange={(e) => setFonte(e.target.value)}
+            onChange={(e) => {
+              setFonte(e.target.value);
+              setObjetoAtivo(null);
+            }}
             className="input-field"
           >
             <option value={FONTE_CATARINENSE}>Currículo Catarinense</option>
-            <option value="bncc" disabled>
-              BNCC (em breve)
-            </option>
+            <option value={FONTE_BNCC}>BNCC</option>
           </select>
         </div>
         <div>
@@ -230,7 +260,9 @@ export default function ObjetoConhecimentoPicker({
 
       {objetos.length === 0 ? (
         <p className="mt-3 rounded-md border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-400">
-          Ainda não há objetos de conhecimento cadastrados para esta disciplina neste ano.
+          {ehBncc
+            ? "Ainda não há habilidades da BNCC cadastradas para esta disciplina neste ano."
+            : "Ainda não há objetos de conhecimento cadastrados para esta disciplina neste ano."}
         </p>
       ) : (
         <div className="mt-3 rounded-md border border-slate-300">
@@ -239,7 +271,9 @@ export default function ObjetoConhecimentoPicker({
               Objetos de conhecimento <span className="font-normal text-slate-400">(ordem alfabética)</span>
             </p>
             <p className="text-xs text-slate-400">
-              Clique em um objeto para ver as habilidades e os conteúdos sugeridos.
+              {ehBncc
+                ? "Clique em um objeto para ver e marcar as habilidades da BNCC. A BNCC não traz lista de conteúdos: escreva-os no campo do plano."
+                : "Clique em um objeto para ver as habilidades e os conteúdos sugeridos."}
             </p>
             <label htmlFor={idBusca} className="sr-only">
               Buscar objeto de conhecimento
@@ -249,7 +283,7 @@ export default function ObjetoConhecimentoPicker({
               type="text"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar objeto de conhecimento..."
+              placeholder={ehBncc ? "Buscar por código ou texto..." : "Buscar objeto de conhecimento..."}
               className="mt-2 w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500"
             />
           </div>
@@ -301,7 +335,10 @@ export default function ObjetoConhecimentoPicker({
                               onChange={() => alternar(h.id)}
                               className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                             />
-                            <span className="text-slate-600">{h.descricao}</span>
+                            <span className="text-slate-600">
+                              {h.codigo && <span className="font-medium text-slate-900">({h.codigo}) </span>}
+                              {h.descricao}
+                            </span>
                           </label>
                         ))}
                       </div>
@@ -310,7 +347,12 @@ export default function ObjetoConhecimentoPicker({
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                           Conteúdos sugeridos
                         </p>
-                        {conteudos.length > 0 ? (
+                        {ehBncc ? (
+                          <p className="mt-1 text-sm text-slate-400">
+                            A BNCC não traz conteúdos para o objeto. Você pode acrescentá-lo ao plano e
+                            detalhar os conteúdos no campo ao lado.
+                          </p>
+                        ) : conteudos.length > 0 ? (
                           <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-slate-600">
                             {conteudos.map((c) => (
                               <li key={c}>{c}</li>
@@ -323,7 +365,7 @@ export default function ObjetoConhecimentoPicker({
                         )}
                         <button
                           type="button"
-                          onClick={() => onAdicionarConteudos([nomeDoObjeto(objeto), ...conteudos])}
+                          onClick={() => onAdicionarConteudos([ehBncc ? objeto : nomeDoObjeto(objeto), ...conteudos])}
                           className="btn-secondary mt-2 !px-3 !py-1.5 !text-xs"
                         >
                           {conteudos.length > 0

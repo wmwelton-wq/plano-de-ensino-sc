@@ -12,6 +12,7 @@ export default async function NovoPlanoMedioTecnicoPage() {
     { data: escolas },
     { data: habilidades },
     { data: competencias },
+    { data: objetosMedio },
   ] = await Promise.all([
     supabase.from("disciplinas").select("*").eq("etapa", "Ensino Médio").order("nome"),
     supabase.from("cursos_tecnicos").select("*").order("nome"),
@@ -22,6 +23,7 @@ export default async function NovoPlanoMedioTecnicoPage() {
       .eq("validado", true)
       .order("codigo"),
     supabase.from("competencias_curriculares").select("*").order("numero"),
+    supabase.from("objetos_conhecimento_medio").select("*").order("objeto"),
   ]);
 
   return (
@@ -37,6 +39,7 @@ export default async function NovoPlanoMedioTecnicoPage() {
           cursos={cursos ?? []}
           escolas={escolas ?? []}
           habilidades={habilidades ?? []}
+          objetosMedio={objetosMedio ?? []}
           competencias={competencias ?? []}
           action={criarPlano}
           textoBotao="Salvar plano"
