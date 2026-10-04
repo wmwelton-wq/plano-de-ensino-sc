@@ -12,6 +12,10 @@ interface ObjetoConhecimentoPickerProps {
   /** Chamado ao clicar em "Adicionar ao plano": recebe as linhas a acrescentar no campo de conteúdos. */
   onAdicionarConteudos: (linhas: string[]) => void;
   vazio: string;
+  /** Nomes dos componentes (usado quando o plano reúne mais de um componente curricular). */
+  nomesDisciplinas?: Record<string, string>;
+  /** Ano sugerido (ex.: vindo do seletor de turma); o professor pode trocar. */
+  anoSugerido?: number | null;
 }
 
 const FONTE_CATARINENSE = "curriculo_catarinense";
@@ -21,7 +25,7 @@ function anosDoRotulo(rotulo: string | null): number[] {
   if (!rotulo) return [];
   const numeros = Array.from(rotulo.matchAll(/(\d+)\s*º/g)).map((m) => Number(m[1]));
   if (numeros.length === 0) return [];
-  if (numeros.length >= 2 && /\bao\b/i.test(rotulo)) {
+  if (numeros.length >= 2 && /\s(a|ao|até)\s/i.test(rotulo)) {
     const anos: number[] = [];
     for (let a = numeros[0]; a <= numeros[numeros.length - 1]; a++) anos.push(a);
     return anos;
@@ -64,6 +68,8 @@ export default function ObjetoConhecimentoPicker({
   selecionadasIniciais,
   onAdicionarConteudos,
   vazio,
+  nomesDisciplinas,
+  anoSugerido = null,
 }: ObjetoConhecimentoPickerProps) {
   const idFonte = useId();
   const idAno = useId();
@@ -92,14 +98,25 @@ export default function ObjetoConhecimentoPicker({
     return Array.from(conjunto).sort((a, b) => a - b);
   }, [linhasCatarinense]);
 
-  const [ano, setAno] = useState<number | null>(() => {
+  const [anoManual, setAnoManual] = useState<number | null>(() => {
     for (const id of selecionadasIniciais) {
       const h = porId.get(id);
       const anos = h ? anosDoRotulo(h.ano_serie) : [];
       if (anos.length > 0) return anos[0];
     }
-    return anosDisponiveis[0] ?? null;
+    return null;
   });
+  // O ano escolhido à mão vale mais que a sugestão do seletor de turma.
+  const [anoEscolhido, setAnoEscolhido] = useState(false);
+  const anoPreferido = anoEscolhido ? anoManual : anoSugerido ?? anoManual;
+  const ano =
+    anoPreferido !== null && anosDisponiveis.includes(anoPreferido)
+      ? anoPreferido
+      : anosDisponiveis[0] ?? null;
+  function setAno(a: number) {
+    setAnoManual(a);
+    setAnoEscolhido(true);
+  }
 
   const [objetoAtivo, setObjetoAtivo] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
@@ -110,20 +127,29 @@ export default function ObjetoConhecimentoPicker({
     const mapa = new Map<string, HabilidadeCurricular[]>();
     for (const h of linhasCatarinense) {
       if (!anosDoRotulo(h.ano_serie).includes(ano)) continue;
-      const chave = h.objeto_conhecimento as string;
+      const chave = `${h.disciplina_id ?? ""}||${h.objeto_conhecimento as string}`;
       const lista = mapa.get(chave) ?? [];
       lista.push(h);
       mapa.set(chave, lista);
     }
+    const nomeDisc = (id: string) => nomesDisciplinas?.[id] ?? "";
     return Array.from(mapa.entries())
-      .sort(([a], [b]) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
-      .map(([objeto, itens]) => ({ objeto, itens }));
-  }, [linhasCatarinense, ano]);
+      .map(([chave, itens]) => {
+        const objeto = chave.slice(chave.indexOf("||") + 2);
+        const disciplina = nomeDisc(chave.slice(0, chave.indexOf("||")));
+        return { chave, objeto, disciplina, itens };
+      })
+      .sort(
+        (a, b) =>
+          a.disciplina.localeCompare(b.disciplina, "pt-BR", { sensitivity: "base" }) ||
+          a.objeto.localeCompare(b.objeto, "pt-BR", { sensitivity: "base" })
+      );
+  }, [linhasCatarinense, ano, nomesDisciplinas]);
 
   const objetosFiltrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     if (!termo) return objetos;
-    return objetos.filter(({ objeto }) => objeto.toLowerCase().includes(termo));
+    return objetos.filter(({ objeto, disciplina }) => `${disciplina} ${objeto}`.toLowerCase().includes(termo));
   }, [objetos, busca]);
 
   function alternar(id: string) {
@@ -153,8 +179,8 @@ export default function ObjetoConhecimentoPicker({
   return (
     <div>
       {/* As habilidades marcadas seguem para o formulário por estes campos ocultos. */}
-      {Array.from(selecionadas).map((id) => (
-        <input key={id} type="hidden" name="habilidade_ids" value={id} />
+      {selecionadasLista.map((h) => (
+        <input key={h.id} type="hidden" name="habilidade_ids" value={h.id} />
       ))}
 
       <input type="hidden" name="fonte_curriculo" value={fonte} />
@@ -234,21 +260,24 @@ export default function ObjetoConhecimentoPicker({
                 Nenhum objeto encontrado para essa busca.
               </li>
             )}
-            {objetosFiltrados.map(({ objeto, itens }) => {
-              const aberto = objetoAtivo === objeto;
+            {objetosFiltrados.map(({ chave, objeto, disciplina, itens }) => {
+              const aberto = objetoAtivo === chave;
               const marcadas = itens.filter((h) => selecionadas.has(h.id)).length;
               const conteudos = semDuplicatas(itens.flatMap((h) => itensDeConteudo(h.conteudos)));
               return (
-                <li key={objeto}>
+                <li key={chave}>
                   <button
                     type="button"
                     aria-expanded={aberto}
-                    onClick={() => setObjetoAtivo(aberto ? null : objeto)}
+                    onClick={() => setObjetoAtivo(aberto ? null : chave)}
                     className={`flex w-full items-start justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50 ${
                       aberto ? "bg-primary-50/60" : ""
                     }`}
                   >
-                    <span className="text-slate-800">{objeto}</span>
+                    <span className="text-slate-800">
+                      {disciplina && <strong>{disciplina} — </strong>}
+                      {objeto}
+                    </span>
                     <span className="shrink-0 text-xs text-slate-400">
                       {marcadas > 0 ? `${marcadas} marcada(s) · ` : ""}
                       {itens.length} habilidade(s) {aberto ? "▲" : "▼"}

@@ -1,12 +1,16 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
 import ReferenciasCampo from "./referencias-campo";
-import TurmaSelector from "./turma-selector";
+import TurmaSelector, { separarTurma } from "./turma-selector";
+import EditorTextoRico, { type EditorTextoRicoHandle } from "./editor-texto-rico";
+import SugestoesPanel from "./sugestoes-panel";
+import ObjetoConhecimentoPicker from "./objeto-conhecimento-picker";
+import { CRITERIOS_AVALIACAO, INSTRUMENTOS_AVALIACAO } from "./sugestoes-avaliacao";
 
 interface PlanoFormFundamentalAnosIniciaisProps {
   disciplinas: Disciplina[];
@@ -46,6 +50,22 @@ export default function PlanoFormFundamentalAnosIniciais({
   );
   const [usarCurriculoDigital, setUsarCurriculoDigital] = useState(
     plano?.usar_curriculo_digital ?? true
+  );
+
+  // Editores formatados e ano sugerido pela turma escolhida (ex.: "3º Ano" -> 3).
+  const refConteudos = useRef<EditorTextoRicoHandle>(null);
+  const refAvaliacao = useRef<EditorTextoRicoHandle>(null);
+  const refInstrumentos = useRef<EditorTextoRicoHandle>(null);
+  const anoDaSerie = (serie: string | null | undefined) => {
+    const m = /(\d+)\s*º/.exec(serie ?? "");
+    return m ? Number(m[1]) : null;
+  };
+  const [anoSugerido, setAnoSugerido] = useState<number | null>(
+    anoDaSerie(separarTurma("fundamental_anos_iniciais", plano?.turma).serie)
+  );
+  const nomesDisciplinas = useMemo(
+    () => Object.fromEntries(disciplinas.map((d) => [d.id, d.nome])),
+    [disciplinas]
   );
 
   function alternarComponente(id: string) {
@@ -130,7 +150,12 @@ export default function PlanoFormFundamentalAnosIniciais({
           </p>
         </div>
 
-        <TurmaSelector etapa="fundamental_anos_iniciais" valorInicial={plano?.turma} rotuloSerie="Ano" />
+        <TurmaSelector
+          etapa="fundamental_anos_iniciais"
+          valorInicial={plano?.turma}
+          rotuloSerie="Ano"
+          onSerieChange={(serie) => setAnoSugerido(anoDaSerie(serie))}
+        />
 
         <div>
           <label htmlFor="segundo_professor_nome" className="field-label">
@@ -245,26 +270,29 @@ export default function PlanoFormFundamentalAnosIniciais({
         </label>
         <p className="text-xs text-slate-400">
           Conteúdos, conceitos e princípios a serem trabalhados, de acordo com o Currículo Base do
-          Território Catarinense (CBTC). Um item por linha.
+          Território Catarinense (CBTC). Escreva livremente ou use o botão de adicionar do seletor logo abaixo.
         </p>
-        <textarea
+        <EditorTextoRico
           id="conteudos_programaticos"
           name="conteudos_programaticos"
-          rows={4}
-          defaultValue={plano?.conteudos_programaticos ?? ""}
-          className="input-field"
+          valorInicial={plano?.conteudos_programaticos}
+          editorRef={refConteudos}
+          linhas={5}
         />
       </div>
 
-      <HabilidadePicker
-        titulo="Habilidade(s)"
-        descricaoAjuda="Do Currículo Base do Território Catarinense (CBTC) / BNCC, filtradas pelo(s) componente(s) selecionado(s) acima."
+      <ObjetoConhecimentoPicker
+        titulo="Objeto de conhecimento e habilidades do currículo"
+        descricaoAjuda="Escolha o ano, abra um objeto de conhecimento e marque as habilidades. Só é possível selecionar a partir da lista, dos componentes marcados acima."
         habilidades={habilidadesCurriculo}
         selecionadasIniciais={habilidadesSelecionadasIds}
+        onAdicionarConteudos={(linhas) => refConteudos.current?.anexar(linhas, "paragrafos")}
+        nomesDisciplinas={nomesDisciplinas}
+        anoSugerido={anoSugerido}
         vazio={
           componentesSelecionados.size > 0
             ? "Ainda não há habilidades cadastradas para o(s) componente(s) selecionado(s)."
-            : "Selecione ao menos um componente curricular acima para ver as habilidades disponíveis."
+            : "Selecione ao menos um componente curricular acima para ver os objetos de conhecimento disponíveis."
         }
       />
 
@@ -289,12 +317,11 @@ export default function PlanoFormFundamentalAnosIniciais({
           aula. Se envolver mais de um componente curricular, descreva a sequência didática de
           forma interdisciplinar.
         </p>
-        <textarea
+        <EditorTextoRico
           id="metodologia"
           name="metodologia"
-          rows={6}
-          defaultValue={plano?.metodologia ?? ""}
-          className="input-field"
+          valorInicial={plano?.metodologia}
+          linhas={6}
         />
       </div>
 
@@ -306,12 +333,18 @@ export default function PlanoFormFundamentalAnosIniciais({
           Ex.: prova, lista de exercícios, portfólio, trabalho, seminário, produções orais. Um item
           por linha.
         </p>
-        <textarea
+        <EditorTextoRico
           id="instrumentos_avaliacao"
           name="instrumentos_avaliacao"
-          rows={3}
-          defaultValue={plano?.instrumentos_avaliacao ?? ""}
-          className="input-field"
+          valorInicial={plano?.instrumentos_avaliacao}
+          textoAntigoComoLista
+          editorRef={refInstrumentos}
+          linhas={4}
+        />
+        <SugestoesPanel
+          rotulo="instrumentos"
+          itens={INSTRUMENTOS_AVALIACAO}
+          onAdicionar={(item) => refInstrumentos.current?.anexar([item], "lista")}
         />
       </div>
 
@@ -323,12 +356,18 @@ export default function PlanoFormFundamentalAnosIniciais({
           De acordo com as habilidades desenvolvidas. Um critério por linha — vira lista com
           marcadores no PDF.
         </p>
-        <textarea
+        <EditorTextoRico
           id="avaliacao"
           name="avaliacao"
-          rows={4}
-          defaultValue={plano?.avaliacao ?? ""}
-          className="input-field"
+          valorInicial={plano?.avaliacao}
+          textoAntigoComoLista
+          editorRef={refAvaliacao}
+          linhas={5}
+        />
+        <SugestoesPanel
+          rotulo="critérios"
+          itens={CRITERIOS_AVALIACAO}
+          onAdicionar={(item) => refAvaliacao.current?.anexar([item], "lista")}
         />
       </div>
 

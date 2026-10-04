@@ -74,3 +74,48 @@ export const INSTRUMENTOS_AVALIACAO: string[] = [
 export function ordenarAlfabeticamente(itens: string[]): string[] {
   return [...itens].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
 }
+
+/** Educação Infantil: avaliação por observação, escuta e registro (sem notas ou provas). */
+export const CRITERIOS_INFANTIL: string[] = [
+  "Amplia o vocabulário e a comunicação com adultos e crianças",
+  "Demonstra autonomia nas rotinas de higiene, alimentação e descanso",
+  "Demonstra curiosidade e interesse por explorar materiais e ambientes",
+  "Expressa desejos, necessidades e sentimentos por diferentes linguagens",
+  "Participa das brincadeiras e das atividades propostas",
+  "Interage com os colegas e respeita as regras de convivência",
+  "Cuida dos materiais, dos espaços e dos pertences",
+  "Explora diferentes materiais, texturas, sons e cores",
+  "Reconhece e valoriza suas produções e as dos colegas",
+  "Desenvolve a coordenação motora ampla e fina",
+  "Participa de rodas de conversa, contação de histórias e cantigas",
+  "Resolve pequenos conflitos com a mediação do adulto",
+  "Constrói vínculos de afeto com os adultos e com as crianças",
+  "Reconhece o próprio nome e o dos colegas",
+  "Representa suas ideias por meio de desenho, pintura, modelagem e outras expressões",
+  "Estabelece relações de quantidade, tempo e espaço em situações do cotidiano",
+  "Demonstra atenção e interesse pelas narrativas e pelos livros",
+  "Participa de jogos simbólicos e faz de conta",
+  "Respeita o tempo e a vez do outro",
+  "Evolui na percepção do próprio corpo e de seus limites",
+];
+
+export const INSTRUMENTOS_INFANTIL: string[] = [
+  "Álbum de fotografias das experiências",
+  "Anotações do professor sobre falas e gestos das crianças",
+  "Avaliação diagnóstica no início do período",
+  "Conversas e escuta das crianças",
+  "Desenhos e produções das crianças",
+  "Diário de bordo",
+  "Documentação pedagógica (painéis e murais)",
+  "Fichas de acompanhamento do desenvolvimento",
+  "Fichas de observação",
+  "Portfólio individual",
+  "Registros em áudio e vídeo",
+  "Registros fotográficos",
+  "Registro de brincadeiras e interações",
+  "Relatório descritivo individual",
+  "Relatório coletivo da turma",
+  "Rodas de conversa avaliativas",
+  "Roteiro de observação da rotina",
+  "Diálogo com as famílias (devolutivas e reuniões)",
+];

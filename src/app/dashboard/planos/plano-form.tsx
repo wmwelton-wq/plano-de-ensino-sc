@@ -14,7 +14,7 @@ import type {
 import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
 import ReferenciasCampo from "./referencias-campo";
-import TurmaSelector from "./turma-selector";
+import TurmaSelector, { separarTurma } from "./turma-selector";
 import ObjetoConhecimentoPicker from "./objeto-conhecimento-picker";
 import CompetenciaPicker from "./competencia-picker";
 import EditorTextoRico, { type EditorTextoRicoHandle } from "./editor-texto-rico";
@@ -84,6 +84,13 @@ export default function PlanoForm({
   // Editores formatados: o seletor de objetos (Anos Finais) e as listas de
   // sugestões acrescentam itens a eles por estes "handles".
   const conteudosRef = useRef<EditorTextoRicoHandle>(null);
+  const anoDaSerie = (serie: string | null | undefined) => {
+    const m = /(\d+)\s*º/.exec(serie ?? "");
+    return m ? Number(m[1]) : null;
+  };
+  const [anoSugerido, setAnoSugerido] = useState<number | null>(
+    anoDaSerie(separarTurma(etapa, plano?.turma).serie)
+  );
   const avaliacaoRef = useRef<EditorTextoRicoHandle>(null);
   const instrumentosRef = useRef<EditorTextoRicoHandle>(null);
 
@@ -214,6 +221,7 @@ export default function PlanoForm({
           etapa={etapa}
           valorInicial={plano?.turma}
           rotuloSerie={rotuloTurma === "Ano/turma" ? "Ano" : "Série/ano"}
+          onSerieChange={(serie) => setAnoSugerido(anoDaSerie(serie))}
         />
 
         <div>
@@ -337,6 +345,7 @@ export default function PlanoForm({
           habilidades={habilidadesCurriculo}
           selecionadasIniciais={habilidadesSelecionadasIds}
           onAdicionarConteudos={adicionarConteudos}
+          anoSugerido={anoSugerido}
           vazio={
             vinculo
               ? "Ainda não há habilidades cadastradas para esta disciplina no banco de dados."

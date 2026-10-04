@@ -1,11 +1,14 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import type { Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
 import ReferenciasCampo from "./referencias-campo";
+import EditorTextoRico, { type EditorTextoRicoHandle } from "./editor-texto-rico";
+import SugestoesPanel from "./sugestoes-panel";
+import { CRITERIOS_INFANTIL, INSTRUMENTOS_INFANTIL } from "./sugestoes-avaliacao";
 import TurmaSelector, { GRUPO_ETARIO_POR_SERIE } from "./turma-selector";
 
 interface PlanoFormInfantilProps {
@@ -69,6 +72,8 @@ export default function PlanoFormInfantil({
 }: PlanoFormInfantilProps) {
   const [estado, formAction, pendente] = useActionState(action, {});
   const [campoPrincipal, setCampoPrincipal] = useState(plano?.disciplina_id ?? "");
+  const refAvaliacao = useRef<EditorTextoRicoHandle>(null);
+  const refInstrumentos = useRef<EditorTextoRicoHandle>(null);
   const [grupoEtario, setGrupoEtario] = useState(plano?.grupo_etario ?? "");
 
   return (
@@ -235,21 +240,48 @@ export default function PlanoFormInfantil({
         vazio="Ainda não há objetivos de aprendizagem e desenvolvimento cadastrados para a Educação Infantil no banco de dados."
       />
 
-      {camposTexto.map(({ campo, rotulo, dica, rows }) => (
-        <div key={campo}>
-          <label htmlFor={campo} className="field-label">
-            {rotulo}
-          </label>
-          {dica && <p className="text-xs text-slate-400">{dica}</p>}
-          <textarea
-            id={campo}
-            name={campo}
-            rows={rows}
-            defaultValue={(plano?.[campo] as string) ?? ""}
-            className="input-field"
-          />
-        </div>
-      ))}
+      {camposTexto.map(({ campo, rotulo, dica, rows }) => {
+        const formatado = campo !== "objetivos";
+        const sugestoes =
+          campo === "avaliacao"
+            ? { itens: CRITERIOS_INFANTIL, rotulo: "critérios", ref: refAvaliacao }
+            : campo === "instrumentos_avaliacao"
+            ? { itens: INSTRUMENTOS_INFANTIL, rotulo: "instrumentos", ref: refInstrumentos }
+            : null;
+        return (
+          <div key={campo}>
+            <label htmlFor={campo} className="field-label">
+              {rotulo}
+            </label>
+            {dica && <p className="text-xs text-slate-400">{dica}</p>}
+            {formatado ? (
+              <EditorTextoRico
+                id={campo}
+                name={campo}
+                valorInicial={plano?.[campo] as string | null | undefined}
+                textoAntigoComoLista={campo === "avaliacao" || campo === "instrumentos_avaliacao"}
+                editorRef={sugestoes?.ref}
+                linhas={rows + 1}
+              />
+            ) : (
+              <textarea
+                id={campo}
+                name={campo}
+                rows={rows}
+                defaultValue={(plano?.[campo] as string) ?? ""}
+                className="input-field"
+              />
+            )}
+            {sugestoes && (
+              <SugestoesPanel
+                rotulo={sugestoes.rotulo}
+                itens={sugestoes.itens}
+                onAdicionar={(item) => sugestoes.ref.current?.anexar([item], "lista")}
+              />
+            )}
+          </div>
+        );
+      })}
 
       <div>
         <label htmlFor="referencias" className="field-label">
