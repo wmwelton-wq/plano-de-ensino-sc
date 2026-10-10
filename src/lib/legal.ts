@@ -5,7 +5,7 @@
  */
 export const NOME_SERVICO = "Plano Docente";
 export const SITE = "planodocente.com.br";
-export const EMAIL_CONTATO = "wm_welton@hotmail.com";
+export const EMAIL_CONTATO = "contato@planodocente.com.br";
 
 /** Identificador gravado junto com o aceite (AAAA-MM-DD da última revisão). */
 export const VERSAO_DOCUMENTOS_LEGAIS = "2026-10-07";
