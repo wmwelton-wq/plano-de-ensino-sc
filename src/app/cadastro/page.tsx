@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Turnstile from "@/components/turnstile";
 import { verificarTurnstile } from "@/lib/turnstile-client";
+import { TEXTO_ACEITE, VERSAO_DOCUMENTOS_LEGAIS } from "@/lib/legal";
 
 export default function CadastroPage() {
   const supabase = createClient();
@@ -12,6 +13,7 @@ export default function CadastroPage() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [aceitou, setAceitou] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
   const [carregando, setCarregando] = useState(false);
@@ -24,6 +26,11 @@ export default function CadastroPage() {
 
     if (senha.length < 8) {
       setErro("A senha precisa ter pelo menos 8 caracteres.");
+      return;
+    }
+
+    if (!aceitou) {
+      setErro("Para criar a conta, leia e aceite os Termos de Uso e o Aviso de Privacidade.");
       return;
     }
 
@@ -48,7 +55,12 @@ export default function CadastroPage() {
       email,
       password: senha,
       options: {
-        data: { nome },
+        // Registro do aceite (versão dos documentos e momento do aceite).
+        data: {
+          nome,
+          aceite_termos_versao: VERSAO_DOCUMENTOS_LEGAIS,
+          aceite_termos_em: new Date().toISOString(),
+        },
       },
     });
 
@@ -150,6 +162,38 @@ export default function CadastroPage() {
                 className="input-field"
               />
               <p className="field-hint">Mínimo de 8 caracteres.</p>
+            </div>
+
+            <div className="flex items-start gap-2.5">
+              <input
+                id="aceite"
+                type="checkbox"
+                required
+                checked={aceitou}
+                onChange={(e) => setAceitou(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-primary-600 focus:ring-2 focus:ring-primary-500/40"
+              />
+              <label htmlFor="aceite" className="text-sm leading-snug text-slate-600">
+                Li e aceito os{" "}
+                <Link
+                  href="/termos-de-uso"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link-primary"
+                >
+                  Termos de Uso
+                </Link>{" "}
+                e o{" "}
+                <Link
+                  href="/privacidade"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link-primary"
+                >
+                  Aviso de Privacidade
+                </Link>
+                . {TEXTO_ACEITE}
+              </label>
             </div>
 
             <Turnstile key={turnstileKey} onToken={setTurnstileToken} />

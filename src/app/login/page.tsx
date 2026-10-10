@@ -127,6 +127,18 @@ export default function LoginPage() {
             Ainda não tem conta? <Link href="/cadastro" className="link-primary">Cadastre-se</Link>
           </p>
         </div>
+
+        <p className="mt-6 text-center text-xs text-slate-400">
+          <Link href="/termos-de-uso" className="link-primary text-xs">
+            Termos de Uso
+          </Link>
+          <span className="mx-2" aria-hidden="true">
+            ·
+          </span>
+          <Link href="/privacidade" className="link-primary text-xs">
+            Aviso de Privacidade
+          </Link>
+        </p>
       </div>
     </main>
   );
