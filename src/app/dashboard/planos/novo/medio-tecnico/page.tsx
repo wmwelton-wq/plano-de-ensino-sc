@@ -29,7 +29,7 @@ export default async function NovoPlanoMedioTecnicoPage() {
       <h1 className="text-2xl font-semibold text-slate-900">
         Novo plano — Ensino Médio e Cursos Técnicos
       </h1>
-      <div className="mt-6 card p-6">
+      <div className="mt-6">
         <PlanoForm
           etapa="ensino_medio"
           disciplinas={disciplinas ?? []}

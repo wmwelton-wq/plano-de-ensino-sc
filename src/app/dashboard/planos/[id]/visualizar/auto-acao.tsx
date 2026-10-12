@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { gerarPdfDoElemento } from "@/lib/gerar-pdf";
+import { gerarWordDoElemento } from "@/lib/gerar-word";
+import { baixarArquivo } from "@/lib/baixar-arquivo";
 
 interface AutoAcaoProps {
   acao?: string;
@@ -32,16 +34,15 @@ export default function AutoAcao({ acao, titulo }: AutoAcaoProps) {
 
         if (acao === "salvar") {
           setMensagem("Gerando PDF...");
-          const arquivo = await gerarPdfDoElemento("plano-conteudo", titulo);
-          const url = URL.createObjectURL(arquivo);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = arquivo.name;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
-          setMensagem("PDF salvo no dispositivo.");
+          baixarArquivo(await gerarPdfDoElemento("plano-conteudo", titulo));
+          setMensagem("PDF baixado.");
+          return;
+        }
+
+        if (acao === "word") {
+          setMensagem("Gerando documento Word...");
+          baixarArquivo(await gerarWordDoElemento("plano-conteudo", titulo));
+          setMensagem("Documento Word baixado.");
           return;
         }
 

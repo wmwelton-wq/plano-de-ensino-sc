@@ -9,7 +9,11 @@
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background:
+    radial-gradient(60rem 28rem at 85% -10%, rgba(56, 189, 248, 0.10), transparent 60%),
+    radial-gradient(48rem 24rem at -10% 0%, rgba(37, 99, 235, 0.08), transparent 60%),
+    var(--background);
+  background-attachment: fixed;
 }
 
 @layer base {
@@ -80,6 +84,44 @@ body {
     content: attr(data-placeholder);
     color: #94a3b8;
     pointer-events: none;
+  }
+
+  /* Botões azuis de destaque (ações principais do formulário e do plano) */
+  .btn-azul {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-700 via-primary-600 to-sky-500 px-5 py-3 text-sm font-semibold text-white shadow-glow ring-1 ring-inset ring-white/15 transition hover:brightness-110 hover:shadow-lg active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+
+  .btn-azul-suave {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-primary-300 bg-primary-50 px-4 py-2.5 text-sm font-semibold text-primary-700 shadow-sm transition hover:border-primary-400 hover:bg-primary-100 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+
+  .btn-perigo-suave {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
+  }
+
+  /* Seções do formulário do plano: cada etapa tem um título em caixa azul. */
+  .secao-plano {
+    @apply scroll-mt-28 overflow-hidden rounded-2xl border border-primary-200/70 bg-white shadow-md shadow-primary-900/[0.06];
+  }
+
+  .secao-cabecalho {
+    @apply relative flex items-center gap-3 bg-gradient-to-r from-primary-800 via-primary-600 to-sky-500 px-5 py-3.5 text-white;
+  }
+
+  .secao-cabecalho::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(40rem 8rem at 100% 0%, rgba(255, 255, 255, 0.18), transparent 60%);
+  }
+
+  .secao-numero {
+    @apply relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-bold ring-1 ring-inset ring-white/50 backdrop-blur;
+  }
+
+  .secao-corpo {
+    @apply space-y-5 bg-gradient-to-b from-primary-50/40 to-white p-5;
   }
 
   /* Cartões */

@@ -92,6 +92,12 @@ export interface CompetenciaCurricular {
   created_at: string;
 }
 
+/** Habilidade digitada à mão pelo professor (fora das listas oficiais). */
+export interface HabilidadeManual {
+  codigo: string | null;
+  descricao: string;
+}
+
 export interface PlanoDeEnsino {
   id: string;
   professor_id: string;
@@ -106,6 +112,8 @@ export interface PlanoDeEnsino {
   /** Logo/brasão da escola no cabeçalho (o espaço fica reservado do lado oposto ao brasão do Estado). */
   incluir_logo_escola: boolean;
   usar_curriculo_digital: boolean;
+  /** Habilidades do currículo de educação digital digitadas manualmente. */
+  habilidades_manuais: HabilidadeManual[] | null;
   titulo: string;
   ano_letivo: number;
   turma: string | null;

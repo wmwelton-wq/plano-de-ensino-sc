@@ -16,7 +16,7 @@ export default function ExcluirButton({
     >
       <button
         type="submit"
-        className="btn-text-danger"
+        className="btn-perigo-suave"
       >
         Excluir plano
       </button>

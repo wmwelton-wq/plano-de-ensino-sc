@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import PrintButton from "./print-button";
+import BarraAcoesPlano from "./barra-acoes-plano";
 import AutoAcao from "./auto-acao";
 import { ehHtml, sanitizarHtml } from "@/lib/texto-rico";
 
@@ -94,9 +94,18 @@ export default async function VisualizarPlanoPage({
   const habilidadesCurriculo = (habilidadesTodas ?? []).filter(
     (h) => h.fonte !== "curriculo_educacao_digital"
   );
-  const habilidadesDigitais = plano.usar_curriculo_digital
-    ? (habilidadesTodas ?? []).filter((h) => h.fonte === "curriculo_educacao_digital")
-    : [];
+  // Habilidades digitais da lista + as que o professor escreveu à mão (fora da lista).
+  const habilidadesDigitais: { id: string; codigo: string | null; descricao: string }[] =
+    plano.usar_curriculo_digital
+      ? [
+          ...(habilidadesTodas ?? []).filter((h) => h.fonte === "curriculo_educacao_digital"),
+          ...(plano.habilidades_manuais ?? []).map((m, i) => ({
+            id: `manual-${i}`,
+            codigo: m.codigo,
+            descricao: m.descricao,
+          })),
+        ]
+      : [];
 
   const competenciaIds = (vinculosCompetencias ?? []).map((v) => v.competencia_id);
   const { data: competenciasSelecionadas } =
@@ -134,7 +143,7 @@ export default async function VisualizarPlanoPage({
         >
           <span aria-hidden="true">← </span>Voltar para edição
         </Link>
-        <PrintButton />
+        <BarraAcoesPlano titulo={plano.titulo} />
       </div>
 
       <AutoAcao acao={auto} titulo={plano.titulo} />

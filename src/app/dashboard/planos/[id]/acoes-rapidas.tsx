@@ -23,8 +23,8 @@ export default function AcoesRapidas({ planoId }: AcoesRapidasProps) {
   const base = `/dashboard/planos/${planoId}/visualizar`;
 
   return (
-    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <p className="mb-3 text-sm font-medium text-slate-700">
+    <div className="mt-4 rounded-2xl border border-primary-100 bg-primary-50/60 p-4">
+      <p className="mb-3 text-sm font-semibold text-primary-800">
         Depois de salvar, use os atalhos abaixo:
       </p>
       <div className="flex flex-wrap gap-3">
@@ -32,15 +32,23 @@ export default function AcoesRapidas({ planoId }: AcoesRapidasProps) {
           type="button"
           onClick={() => router.push(`${base}?auto=salvar`)}
           aria-label="Baixar este plano de ensino como PDF para este dispositivo"
-          className="btn-primary"
+          className="btn-azul"
         >
-          Salvar no dispositivo
+          Baixar PDF
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push(`${base}?auto=word`)}
+          aria-label="Baixar este plano de ensino como documento do Word"
+          className="btn-azul"
+        >
+          Baixar Word
         </button>
         <button
           type="button"
           onClick={() => router.push(`${base}?auto=imprimir`)}
           aria-label="Abrir a caixa de impressão do navegador com este plano de ensino"
-          className="btn-secondary"
+          className="btn-azul-suave"
         >
           Imprimir
         </button>
@@ -48,7 +56,7 @@ export default function AcoesRapidas({ planoId }: AcoesRapidasProps) {
           type="button"
           onClick={() => router.push(`${base}?auto=compartilhar`)}
           aria-label="Compartilhar o PDF deste plano de ensino, ou baixá-lo se o navegador não tiver essa opção"
-          className="btn-secondary"
+          className="btn-azul-suave"
         >
           Compartilhar
         </button>

@@ -10,7 +10,7 @@ interface OpcoesLogoProps {
  */
 export default function OpcoesLogo({ plano }: OpcoesLogoProps) {
   return (
-    <fieldset className="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+    <fieldset className="sm:col-span-2 rounded-xl border border-primary-100 bg-white p-4 shadow-sm">
       <legend className="px-1 text-sm font-bold text-slate-800">Brasões do cabeçalho</legend>
       <p className="text-xs text-slate-400">
         O brasão do Estado fica à esquerda e o da escola, à direita (a logo vem do cadastro da escola).

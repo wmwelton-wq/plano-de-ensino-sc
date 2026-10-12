@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { EtapaPlano } from "@/lib/database.types";
+import type { EtapaPlano, HabilidadeManual } from "@/lib/database.types";
 import { prepararCampoParaSalvar } from "@/lib/texto-rico";
 
 export interface EstadoFormulario {
@@ -36,6 +36,35 @@ function lerVinculo(formData: FormData) {
 function lerFonteCurriculo(formData: FormData): { fonte_curriculo?: "bncc" | "curriculo_catarinense" } {
   const valor = formData.get("fonte_curriculo");
   return valor === "bncc" || valor === "curriculo_catarinense" ? { fonte_curriculo: valor } : {};
+}
+
+/**
+ * Habilidades digitais escritas à mão pelo professor (fora da lista). Só
+ * gravamos a coluna quando o formulário envia o marcador
+ * "tem_habilidades_manuais" — assim formulários que não têm o campo (ex.:
+ * Educação Infantil) nunca apagam o que já está salvo. Com o currículo
+ * digital desligado, a lista é zerada.
+ */
+function lerHabilidadesManuais(formData: FormData): { habilidades_manuais?: HabilidadeManual[] } {
+  if (!formData.has("tem_habilidades_manuais")) return {};
+  if (formData.get("usar_curriculo_digital") !== "on") return { habilidades_manuais: [] };
+
+  const codigos = formData.getAll("habilidade_manual_codigo");
+  const descricoes = formData.getAll("habilidade_manual_descricao");
+  const lista: HabilidadeManual[] = [];
+  descricoes.forEach((d, i) => {
+    const descricao = typeof d === "string" ? d.trim().slice(0, 2000) : "";
+    if (!descricao) return;
+    const c = codigos[i];
+    const codigo = typeof c === "string" && c.trim() ? c.trim().slice(0, 40) : null;
+    lista.push({ codigo, descricao });
+  });
+  return { habilidades_manuais: lista.slice(0, 50) };
+}
+
+/** "Objetivos (uso interno)": só mexemos na coluna se o formulário enviar o campo. */
+function lerObjetivos(formData: FormData): { objetivos?: string | null } {
+  return formData.has("objetivos") ? { objetivos: (formData.get("objetivos") as string) || null } : {};
 }
 
 function lerHabilidadeIds(formData: FormData) {
@@ -170,13 +199,14 @@ export async function criarPlano(
       incluir_logo_estado: formData.get("incluir_logo_estado") === "on",
       incluir_logo_escola: formData.get("incluir_logo_escola") === "on",
       usar_curriculo_digital: formData.get("usar_curriculo_digital") === "on",
+      ...lerHabilidadesManuais(formData),
       titulo: formData.get("titulo") as string,
       ano_letivo: Number(formData.get("ano_letivo")),
       turma: (formData.get("turma") as string) || null,
       data_inicio: (formData.get("data_inicio") as string) || null,
       data_fim: (formData.get("data_fim") as string) || null,
       quantidade_aulas: quantidadeAulasRaw ? Number(quantidadeAulasRaw) : null,
-      objetivos: (formData.get("objetivos") as string) || null,
+      ...lerObjetivos(formData),
       conteudos_programaticos: prepararCampoParaSalvar(formData.get("conteudos_programaticos")),
       metodologia: prepararCampoParaSalvar(formData.get("metodologia")),
       avaliacao: prepararCampoParaSalvar(formData.get("avaliacao")),
@@ -245,13 +275,14 @@ export async function atualizarPlano(
       incluir_logo_estado: formData.get("incluir_logo_estado") === "on",
       incluir_logo_escola: formData.get("incluir_logo_escola") === "on",
       usar_curriculo_digital: formData.get("usar_curriculo_digital") === "on",
+      ...lerHabilidadesManuais(formData),
       titulo: formData.get("titulo") as string,
       ano_letivo: Number(formData.get("ano_letivo")),
       turma: (formData.get("turma") as string) || null,
       data_inicio: (formData.get("data_inicio") as string) || null,
       data_fim: (formData.get("data_fim") as string) || null,
       quantidade_aulas: quantidadeAulasRaw ? Number(quantidadeAulasRaw) : null,
-      objetivos: (formData.get("objetivos") as string) || null,
+      ...lerObjetivos(formData),
       conteudos_programaticos: prepararCampoParaSalvar(formData.get("conteudos_programaticos")),
       metodologia: prepararCampoParaSalvar(formData.get("metodologia")),
       avaliacao: prepararCampoParaSalvar(formData.get("avaliacao")),

@@ -4,7 +4,7 @@ import { useId, useMemo, useState } from "react";
 import type { CompetenciaCurricular } from "@/lib/database.types";
 
 interface CompetenciaPickerProps {
-  titulo: string;
+  titulo?: string;
   descricaoAjuda?: string;
   competencias: CompetenciaCurricular[];
   selecionadasIniciais: string[];
@@ -12,7 +12,6 @@ interface CompetenciaPickerProps {
 }
 
 export default function CompetenciaPicker({
-  titulo,
   descricaoAjuda,
   competencias,
   selecionadasIniciais,
@@ -47,18 +46,17 @@ export default function CompetenciaPicker({
   }
 
   return (
-    <div>
-      <label className="field-label">{titulo}</label>
-      {descricaoAjuda && <p className="text-xs text-slate-400">{descricaoAjuda}</p>}
+    <div className="space-y-2">
+      {descricaoAjuda && <p className="text-xs text-slate-500">{descricaoAjuda}</p>}
 
       {competencias.length === 0 ? (
-        <p className="mt-2 rounded-md border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-400">
+        <p className="rounded-xl border border-dashed border-primary-200 bg-white px-3 py-4 text-sm text-slate-500">
           {vazio}
         </p>
       ) : (
-        <div className="mt-1 rounded-md border border-slate-300">
+        <div className="overflow-hidden rounded-xl border border-primary-200 bg-white shadow-sm">
           <label htmlFor={buscaId} className="sr-only">
-            Buscar em &quot;{titulo}&quot; por palavra-chave
+            Buscar competência por palavra-chave
           </label>
           <input
             id={buscaId}
@@ -66,7 +64,7 @@ export default function CompetenciaPicker({
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar por palavra-chave..."
-            className="w-full border-b border-slate-200 px-3 py-2 text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary-500"
+            className="w-full border-b border-primary-100 bg-primary-50/40 px-3 py-2.5 text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary-500"
           />
           <div className="max-h-56 overflow-y-auto p-2">
             {filtradas.length === 0 && (
@@ -77,7 +75,7 @@ export default function CompetenciaPicker({
             {filtradas.map((c) => (
               <label
                 key={c.id}
-                className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-sm hover:bg-slate-50"
+                className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-2 text-sm hover:bg-primary-50/60"
               >
                 <input
                   type="checkbox"
@@ -96,7 +94,7 @@ export default function CompetenciaPicker({
               </label>
             ))}
           </div>
-          <p className="border-t border-slate-200 px-3 py-1.5 text-xs text-slate-400">
+          <p className="border-t border-primary-100 px-3 py-1.5 text-xs font-semibold text-primary-700">
             {selecionadas.size} selecionada(s)
           </p>
         </div>

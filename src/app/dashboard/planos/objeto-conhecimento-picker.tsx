@@ -1,11 +1,10 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import type { HabilidadeCurricular } from "@/lib/database.types";
+import SecaoPlano from "./secao-plano";
 
-interface ObjetoConhecimentoPickerProps {
-  titulo: string;
-  descricaoAjuda?: string;
+interface ObjetosEHabilidadesProps {
   /** Habilidades (de todas as fontes) da disciplina escolhida, exceto as de educação digital. */
   habilidades: HabilidadeCurricular[];
   selecionadasIniciais: string[];
@@ -16,6 +15,12 @@ interface ObjetoConhecimentoPickerProps {
   nomesDisciplinas?: Record<string, string>;
   /** Ano sugerido (ex.: vindo do seletor de turma); o professor pode trocar. */
   anoSugerido?: number | null;
+  /** Campo de texto "Objeto(s) de conhecimento em estudo/conteúdos", que fica logo abaixo do botão de sugestões. */
+  editorConteudos: ReactNode;
+  numeroObjetos: number;
+  numeroHabilidades: number;
+  idObjetos: string;
+  idHabilidades: string;
 }
 
 const FONTE_CATARINENSE = "curriculo_catarinense";
@@ -65,19 +70,30 @@ function semDuplicatas(itens: string[]): string[] {
   return saida;
 }
 
-export default function ObjetoConhecimentoPicker({
-  titulo,
-  descricaoAjuda,
+/**
+ * Duas etapas do plano que compartilham o mesmo currículo/ano:
+ *  1) Objetos de conhecimento e conteúdos — botão azul que abre as sugestões e,
+ *     logo abaixo, o campo de texto onde o objeto/conteúdo entra no plano;
+ *  2) Selecionar habilidades — lista por objeto de conhecimento, com as
+ *     habilidades marcadas sempre visíveis.
+ */
+export default function ObjetosEHabilidades({
   habilidades,
   selecionadasIniciais,
   onAdicionarConteudos,
   vazio,
   nomesDisciplinas,
   anoSugerido = null,
-}: ObjetoConhecimentoPickerProps) {
+  editorConteudos,
+  numeroObjetos,
+  numeroHabilidades,
+  idObjetos,
+  idHabilidades,
+}: ObjetosEHabilidadesProps) {
   const idFonte = useId();
   const idAno = useId();
-  const idBusca = useId();
+  const idBuscaObj = useId();
+  const idBuscaHab = useId();
 
   const porId = useMemo(() => new Map(habilidades.map((h) => [h.id, h])), [habilidades]);
 
@@ -96,7 +112,7 @@ export default function ObjetoConhecimentoPicker({
   );
 
   const ehBncc = fonte === FONTE_BNCC;
-  const linhasCatarinense = useMemo(
+  const linhasCurriculo = useMemo(
     () =>
       habilidades.filter((h) =>
         fonte === FONTE_BNCC ? h.fonte === FONTE_BNCC : h.fonte === FONTE_CATARINENSE && h.objeto_conhecimento
@@ -106,11 +122,11 @@ export default function ObjetoConhecimentoPicker({
 
   const anosDisponiveis = useMemo(() => {
     const conjunto = new Set<number>();
-    for (const h of linhasCatarinense) {
+    for (const h of linhasCurriculo) {
       for (const a of anosDoRotulo(h.ano_serie)) conjunto.add(a);
     }
     return Array.from(conjunto).sort((a, b) => a - b);
-  }, [linhasCatarinense]);
+  }, [linhasCurriculo]);
 
   const [anoManual, setAnoManual] = useState<number | null>(() => {
     for (const id of selecionadasIniciais) {
@@ -132,14 +148,18 @@ export default function ObjetoConhecimentoPicker({
     setAnoEscolhido(true);
   }
 
-  const [objetoAtivo, setObjetoAtivo] = useState<string | null>(null);
-  const [busca, setBusca] = useState("");
+  const [painelObjetos, setPainelObjetos] = useState(false);
+  const [painelHabilidades, setPainelHabilidades] = useState(false);
+  const [objetoAtivoObj, setObjetoAtivoObj] = useState<string | null>(null);
+  const [objetoAtivoHab, setObjetoAtivoHab] = useState<string | null>(null);
+  const [buscaObj, setBuscaObj] = useState("");
+  const [buscaHab, setBuscaHab] = useState("");
 
   // Habilidades do ano escolhido, agrupadas por objeto de conhecimento.
   const objetos = useMemo(() => {
     if (ano === null) return [];
     const mapa = new Map<string, HabilidadeCurricular[]>();
-    for (const h of linhasCatarinense) {
+    for (const h of linhasCurriculo) {
       if (!anosDoRotulo(h.ano_serie).includes(ano)) continue;
       // Catarinense: um objeto por linha. BNCC: a linha pode trazer vários objetos; a
       // habilidade aparece em cada um deles.
@@ -168,9 +188,9 @@ export default function ObjetoConhecimentoPicker({
           a.disciplina.localeCompare(b.disciplina, "pt-BR", { sensitivity: "base" }) ||
           a.objeto.localeCompare(b.objeto, "pt-BR", { sensitivity: "base" })
       );
-  }, [linhasCatarinense, ano, nomesDisciplinas, ehBncc]);
+  }, [linhasCurriculo, ano, nomesDisciplinas, ehBncc]);
 
-  const objetosFiltrados = useMemo(() => {
+  function filtrar(busca: string) {
     const termo = busca.trim().toLowerCase();
     if (!termo) return objetos;
     return objetos.filter(({ objeto, disciplina, itens }) => {
@@ -179,7 +199,9 @@ export default function ObjetoConhecimentoPicker({
       const texto = ehBncc ? `${base} ${itens.map((h) => `${h.codigo ?? ""} ${h.descricao}`).join(" ")}` : base;
       return texto.toLowerCase().includes(termo);
     });
-  }, [objetos, busca, ehBncc]);
+  }
+  const objetosFiltradosObj = useMemo(() => filtrar(buscaObj), [objetos, buscaObj, ehBncc]); // eslint-disable-line react-hooks/exhaustive-deps
+  const objetosFiltradosHab = useMemo(() => filtrar(buscaHab), [objetos, buscaHab, ehBncc]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function alternar(id: string) {
     setSelecionadas((atual) => {
@@ -190,228 +212,332 @@ export default function ObjetoConhecimentoPicker({
     });
   }
 
-  if (habilidades.length === 0) {
-    return (
-      <div>
-        <p className="field-label">{titulo}</p>
-        <p className="mt-2 rounded-md border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-400">
-          {vazio}
-        </p>
-      </div>
-    );
+  function trocarFonte(valor: string) {
+    setFonte(valor);
+    setObjetoAtivoObj(null);
+    setObjetoAtivoHab(null);
   }
 
   const selecionadasLista = Array.from(selecionadas)
     .map((id) => porId.get(id))
     .filter((h): h is HabilidadeCurricular => Boolean(h));
 
+  const vazioLista = habilidades.length === 0;
+
+  const filtros = (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div>
+        <label htmlFor={idFonte} className="field-label">
+          Currículo de referência
+        </label>
+        <select id={idFonte} value={fonte} onChange={(e) => trocarFonte(e.target.value)} className="input-field">
+          <option value={FONTE_CATARINENSE}>Currículo Catarinense</option>
+          <option value={FONTE_BNCC}>BNCC</option>
+        </select>
+      </div>
+      <div>
+        <label htmlFor={idAno} className="field-label">
+          Ano
+        </label>
+        <select
+          id={idAno}
+          value={ano ?? ""}
+          onChange={(e) => {
+            setAno(Number(e.target.value));
+            setObjetoAtivoObj(null);
+            setObjetoAtivoHab(null);
+          }}
+          className="input-field"
+          disabled={anosDisponiveis.length === 0}
+        >
+          {anosDisponiveis.map((a) => (
+            <option key={a} value={a}>
+              {a}º ano
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
+  const semObjetos = (
+    <p className="rounded-xl border border-dashed border-primary-200 bg-white px-3 py-4 text-sm text-slate-500">
+      {ehBncc
+        ? "Ainda não há habilidades da BNCC cadastradas para esta disciplina neste ano."
+        : "Ainda não há objetos de conhecimento cadastrados para esta disciplina neste ano."}
+    </p>
+  );
+
   return (
-    <div>
+    <>
       {/* As habilidades marcadas seguem para o formulário por estes campos ocultos. */}
       {selecionadasLista.map((h) => (
         <input key={h.id} type="hidden" name="habilidade_ids" value={h.id} />
       ))}
-
       <input type="hidden" name="fonte_curriculo" value={fonte} />
 
-      <p className="field-label">{titulo}</p>
-      {descricaoAjuda && <p className="text-xs text-slate-400">{descricaoAjuda}</p>}
-
-      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label htmlFor={idFonte} className="field-label">
-            Currículo de referência
-          </label>
-          <select
-            id={idFonte}
-            value={fonte}
-            onChange={(e) => {
-              setFonte(e.target.value);
-              setObjetoAtivo(null);
-            }}
-            className="input-field"
-          >
-            <option value={FONTE_CATARINENSE}>Currículo Catarinense</option>
-            <option value={FONTE_BNCC}>BNCC</option>
-          </select>
-        </div>
-        <div>
-          <label htmlFor={idAno} className="field-label">
-            Ano
-          </label>
-          <select
-            id={idAno}
-            value={ano ?? ""}
-            onChange={(e) => {
-              setAno(Number(e.target.value));
-              setObjetoAtivo(null);
-            }}
-            className="input-field"
-            disabled={anosDisponiveis.length === 0}
-          >
-            {anosDisponiveis.map((a) => (
-              <option key={a} value={a}>
-                {a}º ano
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {objetos.length === 0 ? (
-        <p className="mt-3 rounded-md border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-400">
-          {ehBncc
-            ? "Ainda não há habilidades da BNCC cadastradas para esta disciplina neste ano."
-            : "Ainda não há objetos de conhecimento cadastrados para esta disciplina neste ano."}
-        </p>
-      ) : (
-        <div className="mt-3 rounded-md border border-slate-300">
-          <div className="border-b border-slate-200 px-3 py-2">
-            <p className="text-sm font-bold text-slate-800">
-              Objetos de conhecimento <span className="font-normal text-slate-400">(ordem alfabética)</span>
-            </p>
-            <p className="text-xs text-slate-400">
-              {ehBncc
-                ? "Clique em um objeto para ver e marcar as habilidades da BNCC. A BNCC não traz lista de conteúdos: escreva-os no campo do plano."
-                : "Clique em um objeto para ver as habilidades e os conteúdos sugeridos."}
-            </p>
-            <label htmlFor={idBusca} className="sr-only">
-              Buscar objeto de conhecimento
-            </label>
-            <input
-              id={idBusca}
-              type="text"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder={ehBncc ? "Buscar por código ou texto..." : "Buscar objeto de conhecimento..."}
-              className="mt-2 w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500"
-            />
-          </div>
-
-          <ul className="max-h-[28rem] divide-y divide-slate-100 overflow-y-auto">
-            {objetosFiltrados.length === 0 && (
-              <li className="px-3 py-3 text-sm text-slate-400">
-                Nenhum objeto encontrado para essa busca.
-              </li>
-            )}
-            {objetosFiltrados.map(({ chave, objeto, disciplina, itens }) => {
-              const aberto = objetoAtivo === chave;
-              const marcadas = itens.filter((h) => selecionadas.has(h.id)).length;
-              const conteudos = semDuplicatas(itens.flatMap((h) => itensDeConteudo(h.conteudos)));
-              return (
-                <li key={chave}>
-                  <button
-                    type="button"
-                    aria-expanded={aberto}
-                    onClick={() => setObjetoAtivo(aberto ? null : chave)}
-                    className={`flex w-full items-start justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50 ${
-                      aberto ? "bg-primary-50/60" : ""
-                    }`}
-                  >
-                    <span className="text-slate-800">
-                      {disciplina && <strong>{disciplina} — </strong>}
-                      {objeto}
-                    </span>
-                    <span className="shrink-0 text-xs text-slate-400">
-                      {marcadas > 0 ? `${marcadas} marcada(s) · ` : ""}
-                      {itens.length} habilidade(s) {aberto ? "▲" : "▼"}
-                    </span>
-                  </button>
-
-                  {aberto && (
-                    <div className="space-y-3 bg-slate-50/60 px-3 pb-3 pt-1">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                          Habilidades
-                        </p>
-                        {itens.map((h) => (
-                          <label
-                            key={h.id}
-                            className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1.5 text-sm hover:bg-white"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selecionadas.has(h.id)}
-                              onChange={() => alternar(h.id)}
-                              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                            />
-                            <span className="text-slate-600">
-                              {h.codigo && <span className="font-medium text-slate-900">({h.codigo}) </span>}
-                              {h.descricao}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                          Conteúdos sugeridos
-                        </p>
-                        {ehBncc ? (
-                          <p className="mt-1 text-sm text-slate-400">
-                            A BNCC não traz conteúdos para o objeto. Você pode acrescentá-lo ao plano e
-                            detalhar os conteúdos no campo ao lado.
-                          </p>
-                        ) : conteudos.length > 0 ? (
-                          <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-slate-600">
-                            {conteudos.map((c) => (
-                              <li key={c}>{c}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="mt-1 text-sm text-slate-400">
-                            Este objeto não traz conteúdos sugeridos no currículo.
-                          </p>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => onAdicionarConteudos([ehBncc ? objeto : nomeDoObjeto(objeto), ...conteudos])}
-                          className="btn-secondary mt-2 !px-3 !py-1.5 !text-xs"
-                        >
-                          {conteudos.length > 0
-                            ? "Adicionar objeto e conteúdos ao plano"
-                            : "Adicionar objeto ao plano"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
-      <div className="mt-3 rounded-md border border-slate-200 bg-white">
-        <p className="border-b border-slate-100 px-3 py-1.5 text-sm font-bold text-slate-800">
-          Habilidades selecionadas no plano ({selecionadasLista.length})
-        </p>
-        {selecionadasLista.length === 0 ? (
-          <p className="px-3 py-2 text-sm text-slate-400">
-            Nenhuma habilidade selecionada ainda. Abra um objeto de conhecimento acima e marque as
-            habilidades.
+      {/* ───────── Etapa: objetos de conhecimento e conteúdos ───────── */}
+      <SecaoPlano
+        id={idObjetos}
+        numero={numeroObjetos}
+        titulo="Objetos de conhecimento e conteúdos"
+        descricao="Use as sugestões do currículo ou escreva livremente no campo abaixo."
+      >
+        {vazioLista ? (
+          <p className="rounded-xl border border-dashed border-primary-200 bg-white px-3 py-4 text-sm text-slate-500">
+            {vazio}
           </p>
         ) : (
-          <ul className="divide-y divide-slate-100">
-            {selecionadasLista.map((h) => (
-              <li key={h.id} className="flex items-start justify-between gap-3 px-3 py-2 text-sm">
-                <span className="text-slate-600">
-                  {h.codigo && <span className="font-medium text-slate-900">({h.codigo}) </span>}
-                  {h.descricao}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => alternar(h.id)}
-                  className="btn-text-danger shrink-0"
-                  aria-label="Remover habilidade do plano"
-                >
-                  Remover
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-3">
+            <button
+              type="button"
+              aria-expanded={painelObjetos}
+              onClick={() => setPainelObjetos((a) => !a)}
+              className="btn-azul w-full sm:w-auto"
+            >
+              <span aria-hidden="true">{painelObjetos ? "▲" : "＋"}</span>
+              {painelObjetos
+                ? "Fechar sugestões de objetos e conteúdos"
+                : "Clique aqui para adicionar objetos e conteúdos sugeridos"}
+            </button>
+
+            {painelObjetos && (
+              <div className="space-y-3 rounded-xl border border-primary-200 bg-white p-4 shadow-sm">
+                {filtros}
+                {objetos.length === 0 ? (
+                  semObjetos
+                ) : (
+                  <div className="overflow-hidden rounded-xl border border-primary-200">
+                    <div className="border-b border-primary-100 bg-primary-50/50 px-3 py-2">
+                      <p className="text-sm font-bold text-slate-800">
+                        Objetos de conhecimento <span className="font-normal text-slate-400">(ordem alfabética)</span>
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {ehBncc
+                          ? "Clique em um objeto e use o botão azul para colocá-lo no plano. A BNCC não traz lista de conteúdos: escreva-os no campo abaixo."
+                          : "Clique em um objeto para ver os conteúdos sugeridos e use o botão azul para colocá-los no plano."}
+                      </p>
+                      <label htmlFor={idBuscaObj} className="sr-only">
+                        Buscar objeto de conhecimento
+                      </label>
+                      <input
+                        id={idBuscaObj}
+                        type="text"
+                        value={buscaObj}
+                        onChange={(e) => setBuscaObj(e.target.value)}
+                        placeholder={ehBncc ? "Buscar por código ou texto..." : "Buscar objeto de conhecimento..."}
+                        className="mt-2 w-full rounded-lg border border-primary-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+                      />
+                    </div>
+                    <ul className="max-h-[26rem] divide-y divide-slate-100 overflow-y-auto">
+                      {objetosFiltradosObj.length === 0 && (
+                        <li className="px-3 py-3 text-sm text-slate-400">Nenhum objeto encontrado para essa busca.</li>
+                      )}
+                      {objetosFiltradosObj.map(({ chave, objeto, disciplina, itens }) => {
+                        const aberto = objetoAtivoObj === chave;
+                        const conteudos = semDuplicatas(itens.flatMap((h) => itensDeConteudo(h.conteudos)));
+                        return (
+                          <li key={chave}>
+                            <button
+                              type="button"
+                              aria-expanded={aberto}
+                              onClick={() => setObjetoAtivoObj(aberto ? null : chave)}
+                              className={`flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left text-sm hover:bg-primary-50/50 ${
+                                aberto ? "bg-primary-50/70" : ""
+                              }`}
+                            >
+                              <span className="text-slate-800">
+                                {disciplina && <strong>{disciplina} — </strong>}
+                                {objeto}
+                              </span>
+                              <span className="shrink-0 text-xs font-semibold text-primary-600">{aberto ? "▲" : "▼"}</span>
+                            </button>
+                            {aberto && (
+                              <div className="space-y-2 bg-primary-50/40 px-3 pb-3 pt-1">
+                                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                  Conteúdos sugeridos
+                                </p>
+                                {ehBncc ? (
+                                  <p className="text-sm text-slate-500">
+                                    A BNCC não traz conteúdos para o objeto. Você pode acrescentá-lo ao plano e
+                                    detalhar os conteúdos no campo abaixo.
+                                  </p>
+                                ) : conteudos.length > 0 ? (
+                                  <ul className="list-disc space-y-0.5 pl-5 text-sm text-slate-600">
+                                    {conteudos.map((c) => (
+                                      <li key={c}>{c}</li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  <p className="text-sm text-slate-500">
+                                    Este objeto não traz conteúdos sugeridos no currículo.
+                                  </p>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    onAdicionarConteudos([ehBncc ? objeto : nomeDoObjeto(objeto), ...conteudos])
+                                  }
+                                  className="btn-azul !px-4 !py-2 !text-xs"
+                                >
+                                  <span aria-hidden="true">＋</span>
+                                  {conteudos.length > 0
+                                    ? "Adicionar objeto e conteúdos ao plano"
+                                    : "Adicionar objeto ao plano"}
+                                </button>
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
-      </div>
-    </div>
+
+        {editorConteudos}
+      </SecaoPlano>
+
+      {/* ───────── Etapa: selecionar habilidades ───────── */}
+      <SecaoPlano
+        id={idHabilidades}
+        numero={numeroHabilidades}
+        titulo="Selecionar habilidades"
+        descricao="Escolha, a partir dos objetos de conhecimento, as habilidades que serão trabalhadas."
+      >
+        {vazioLista ? (
+          <p className="rounded-xl border border-dashed border-primary-200 bg-white px-3 py-4 text-sm text-slate-500">
+            {vazio}
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <button
+              type="button"
+              aria-expanded={painelHabilidades}
+              onClick={() => setPainelHabilidades((a) => !a)}
+              className="btn-azul w-full sm:w-auto"
+            >
+              <span aria-hidden="true">{painelHabilidades ? "▲" : "＋"}</span>
+              {painelHabilidades ? "Fechar lista de habilidades" : "Clique para adicionar habilidades"}
+            </button>
+
+            {painelHabilidades && (
+              <div className="space-y-3 rounded-xl border border-primary-200 bg-white p-4 shadow-sm">
+                {filtros}
+                {objetos.length === 0 ? (
+                  semObjetos
+                ) : (
+                  <div className="overflow-hidden rounded-xl border border-primary-200">
+                    <div className="border-b border-primary-100 bg-primary-50/50 px-3 py-2">
+                      <p className="text-xs text-slate-500">
+                        Clique no botão azul de um objeto para ver e marcar as habilidades.
+                      </p>
+                      <label htmlFor={idBuscaHab} className="sr-only">
+                        Buscar objeto ou habilidade
+                      </label>
+                      <input
+                        id={idBuscaHab}
+                        type="text"
+                        value={buscaHab}
+                        onChange={(e) => setBuscaHab(e.target.value)}
+                        placeholder={ehBncc ? "Buscar por código ou texto..." : "Buscar objeto de conhecimento..."}
+                        className="mt-2 w-full rounded-lg border border-primary-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+                      />
+                    </div>
+                    <ul className="max-h-[28rem] divide-y divide-slate-100 overflow-y-auto">
+                      {objetosFiltradosHab.length === 0 && (
+                        <li className="px-3 py-3 text-sm text-slate-400">Nenhum objeto encontrado para essa busca.</li>
+                      )}
+                      {objetosFiltradosHab.map(({ chave, objeto, disciplina, itens }) => {
+                        const aberto = objetoAtivoHab === chave;
+                        const marcadas = itens.filter((h) => selecionadas.has(h.id)).length;
+                        return (
+                          <li key={chave}>
+                            <div
+                              className={`flex flex-wrap items-start justify-between gap-3 px-3 py-2.5 text-sm ${
+                                aberto ? "bg-primary-50/70" : ""
+                              }`}
+                            >
+                              <span className="min-w-0 flex-1 text-slate-800">
+                                {disciplina && <strong>{disciplina} — </strong>}
+                                {objeto}
+                              </span>
+                              <button
+                                type="button"
+                                aria-expanded={aberto}
+                                onClick={() => setObjetoAtivoHab(aberto ? null : chave)}
+                                className="btn-azul-suave shrink-0 !px-3 !py-1.5 !text-xs"
+                              >
+                                {marcadas > 0 ? `${marcadas} marcada(s) · ` : ""}
+                                {aberto ? "Fechar" : "Clique para adicionar habilidades"} ({itens.length}){" "}
+                                {aberto ? "▲" : "▼"}
+                              </button>
+                            </div>
+                            {aberto && (
+                              <div className="bg-primary-50/40 px-3 pb-3 pt-1">
+                                {itens.map((h) => (
+                                  <label
+                                    key={h.id}
+                                    className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1.5 text-sm hover:bg-white"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selecionadas.has(h.id)}
+                                      onChange={() => alternar(h.id)}
+                                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                                    />
+                                    <span className="text-slate-600">
+                                      {h.codigo && <span className="font-medium text-slate-900">({h.codigo}) </span>}
+                                      {h.descricao}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="rounded-xl border border-primary-100 bg-white">
+          <p className="border-b border-primary-100 px-3 py-2 text-sm font-bold text-slate-800">
+            Habilidades no plano <span className="font-normal text-slate-400">({selecionadasLista.length})</span>
+          </p>
+          {selecionadasLista.length === 0 ? (
+            <p className="px-3 py-2.5 text-sm text-slate-400">
+              Nenhuma habilidade escolhida ainda. Use o botão azul acima.
+            </p>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {selecionadasLista.map((h) => (
+                <li key={h.id} className="flex items-start justify-between gap-3 px-3 py-2 text-sm">
+                  <span className="text-slate-600">
+                    {h.codigo && <span className="font-medium text-slate-900">({h.codigo}) </span>}
+                    {h.descricao}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => alternar(h.id)}
+                    className="btn-text-danger shrink-0"
+                    aria-label="Remover habilidade do plano"
+                  >
+                    Remover
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </SecaoPlano>
+    </>
   );
 }

@@ -51,25 +51,48 @@ export default async function EditarPlanoPage({
 
   const cabecalho = (
     <>
-    <VoltarLink href="/dashboard" rotulo="Voltar aos meus planos" />
-    <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Editar plano de ensino</h1>
-        <p className="text-sm text-slate-500">{ROTULOS_ETAPA[etapa]}</p>
+      <VoltarLink href="/dashboard" rotulo="Voltar aos meus planos" />
+      <div className="mt-2 overflow-hidden rounded-2xl border border-primary-200/70 bg-gradient-to-r from-primary-800 via-primary-700 to-sky-600 p-5 text-white shadow-glow">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">Editar plano de ensino</h1>
+            <p className="text-sm text-primary-100">{ROTULOS_ETAPA[etapa]}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/dashboard/planos/${id}/visualizar`}
+              className="btn-azul-suave !border-white/40 !bg-white !text-primary-700"
+            >
+              Visualizar plano
+            </Link>
+            <Link
+              href={`/dashboard/planos/${id}/visualizar?auto=salvar`}
+              className="btn-azul !from-primary-500 !via-primary-500 !to-sky-400 !ring-white/40"
+            >
+              Baixar PDF
+            </Link>
+            <Link
+              href={`/dashboard/planos/${id}/visualizar?auto=word`}
+              className="btn-azul !from-primary-500 !via-primary-500 !to-sky-400 !ring-white/40"
+            >
+              Baixar Word
+            </Link>
+            <Link
+              href={`/dashboard/planos/${id}/visualizar?auto=imprimir`}
+              className="btn-azul !from-primary-500 !via-primary-500 !to-sky-400 !ring-white/40"
+            >
+              Imprimir
+            </Link>
+            <Link
+              href={`/dashboard/planos/${id}/replicar`}
+              className="btn-azul-suave !border-white/40 !bg-white !text-primary-700"
+            >
+              Replicar para outras turmas
+            </Link>
+            <ExcluirButton excluirAction={excluirComId} />
+          </div>
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        <Link href={`/dashboard/planos/${id}/replicar`} className="btn-secondary">
-          Replicar para outras turmas
-        </Link>
-        <Link
-          href={`/dashboard/planos/${id}/visualizar`}
-          className="btn-secondary"
-        >
-          Visualizar / Imprimir PDF
-        </Link>
-        <ExcluirButton excluirAction={excluirComId} />
-      </div>
-    </div>
     </>
   );
 
@@ -82,7 +105,7 @@ export default async function EditarPlanoPage({
     return (
       <div>
         {cabecalho}
-        <div className="mt-6 card p-6">
+        <div className="mt-6">
           <PlanoFormInfantil
             camposExperiencia={camposExperiencia ?? []}
             escolas={escolas ?? []}
@@ -114,7 +137,7 @@ export default async function EditarPlanoPage({
     return (
       <div>
         {cabecalho}
-        <div className="mt-6 card p-6">
+        <div className="mt-6">
           <PlanoFormFundamentalAnosIniciais
             disciplinas={disciplinas ?? []}
             escolas={escolas ?? []}
@@ -156,7 +179,7 @@ export default async function EditarPlanoPage({
   return (
     <div>
       {cabecalho}
-      <div className="mt-6 card p-6">
+      <div className="mt-6">
         <PlanoForm
           etapa={etapa}
           disciplinas={disciplinas ?? []}

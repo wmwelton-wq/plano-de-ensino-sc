@@ -23,7 +23,7 @@ export default async function NovoPlanoFundamentalAnosIniciaisPage() {
       <h1 className="text-2xl font-semibold text-slate-900">
         Novo plano — Ensino Fundamental, Anos Iniciais (1º ao 5º ano)
       </h1>
-      <div className="mt-6 card p-6">
+      <div className="mt-6">
         <PlanoFormFundamentalAnosIniciais
           disciplinas={disciplinas ?? []}
           escolas={escolas ?? []}

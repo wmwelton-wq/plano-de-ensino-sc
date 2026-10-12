@@ -17,7 +17,7 @@ export default async function NovoPlanoInfantilPage() {
     <div>
       <VoltarLink />
       <h1 className="text-2xl font-semibold text-slate-900">Novo plano — Educação Infantil</h1>
-      <div className="mt-6 card p-6">
+      <div className="mt-6">
         <PlanoFormInfantil
           camposExperiencia={camposExperiencia ?? []}
           escolas={escolas ?? []}
