@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import type { MouseEvent as MouseEventReact, ReactNode } from "react";
+import type { MouseEvent as MouseEventReact, PointerEvent as PointerEventReact, ReactNode } from "react";
 import { MARCADOR_HTML, sanitizarHtml, valorGravadoParaHtml } from "@/lib/texto-rico";
 import { FAMILIA_FONTE } from "@/lib/estilo-plano";
 
@@ -85,8 +85,8 @@ const FIGURAS =
   );
 
 const botao =
-  "inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-sm text-slate-700 transition hover:bg-primary-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-40";
-const botaoAtivo = "bg-primary-100 text-primary-800";
+  "inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-primary-300 bg-white px-2.5 text-sm font-semibold text-primary-900 shadow-sm transition hover:border-primary-500 hover:bg-primary-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:opacity-40";
+const botaoAtivo = "!border-primary-600 !bg-primary-100 !text-primary-800";
 
 const MAX_CARACTERES = 3_300_000;
 
@@ -190,6 +190,31 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [] }
   const [colunasTabela, setColunasTabela] = useState(3);
   const [aviso, setAviso] = useState<string | null>(null);
   const [tamanhoAtual, setTamanhoAtual] = useState(0);
+  const caixaRef = useRef<HTMLDivElement>(null);
+  const [retImg, setRetImg] = useState<{ l: number; t: number; w: number; h: number } | null>(null);
+
+  /** Posição da imagem escolhida, para desenhar a moldura e a alça de arrastar. */
+  const medirImagem = useCallback(() => {
+    const caixa = caixaRef.current;
+    if (!imagem || !caixa || !imagem.isConnected) {
+      setRetImg(null);
+      return;
+    }
+    const c = caixa.getBoundingClientRect();
+    const r = imagem.getBoundingClientRect();
+    setRetImg({ l: r.left - c.left, t: r.top - c.top, w: r.width, h: r.height });
+  }, [imagem]);
+
+  useEffect(() => {
+    medirImagem();
+    const area = areaRef.current;
+    area?.addEventListener("scroll", medirImagem);
+    window.addEventListener("resize", medirImagem);
+    return () => {
+      area?.removeEventListener("scroll", medirImagem);
+      window.removeEventListener("resize", medirImagem);
+    };
+  }, [medirImagem, tamanhoAtual]);
 
   /** Grava no campo escondido o HTML higienizado do que está na área. */
   const sincronizar = useCallback(() => {
@@ -577,6 +602,165 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [] }
     sincronizar();
   }
 
+  /** Largura útil da área de escrita (sem as margens internas). */
+  function larguraUtilArea(): number {
+    const area = areaRef.current;
+    if (!area) return 600;
+    const cs = getComputedStyle(area);
+    return area.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  }
+
+  function aumentarImagem(fator: number) {
+    if (!imagem) return;
+    const w = Math.max(24, Math.min(larguraUtilArea(), imagem.getBoundingClientRect().width * fator));
+    imagem.style.width = `${Math.round(w)}px`;
+    imagem.style.height = "";
+    imagem.style.maxWidth = "100%";
+    sincronizar();
+    medirImagem();
+  }
+
+  /** Arrastar a alça no canto da imagem muda o tamanho (mantendo a proporção). */
+  function arrastarAlcaImagem(e: PointerEventReact) {
+    const img = imagem;
+    if (!img) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const x0 = e.clientX;
+    const w0 = img.getBoundingClientRect().width;
+    const max = larguraUtilArea();
+    const mover = (ev: PointerEvent) => {
+      const w = Math.max(24, Math.min(max, w0 + (ev.clientX - x0)));
+      img.style.width = `${Math.round(w)}px`;
+      img.style.height = "";
+      img.style.maxWidth = "100%";
+      medirImagem();
+    };
+    const soltar = () => {
+      document.removeEventListener("pointermove", mover);
+      document.removeEventListener("pointerup", soltar);
+      sincronizar();
+      medirImagem();
+    };
+    document.addEventListener("pointermove", mover);
+    document.addEventListener("pointerup", soltar);
+  }
+
+  // ── Tabelas: arrastar as bordas e ajustar todas as linhas de uma vez ──
+  type BordaTabela = { tipo: "col" | "lin"; td: HTMLTableCellElement };
+
+  function bordaPerto(e: { clientX: number; clientY: number; target: EventTarget }): BordaTabela | null {
+    const area = areaRef.current;
+    const alvo = e.target as HTMLElement;
+    const td = alvo.closest?.("td,th") as HTMLTableCellElement | null;
+    if (!td || !area || !area.contains(td)) return null;
+    const r = td.getBoundingClientRect();
+    const T = 6;
+    if (Math.abs(e.clientX - r.right) <= T) return { tipo: "col", td };
+    if (Math.abs(e.clientX - r.left) <= T && td.previousElementSibling) {
+      return { tipo: "col", td: td.previousElementSibling as HTMLTableCellElement };
+    }
+    if (Math.abs(e.clientY - r.bottom) <= T) return { tipo: "lin", td };
+    const tr = td.parentElement as HTMLTableRowElement | null;
+    if (Math.abs(e.clientY - r.top) <= T && tr?.previousElementSibling) {
+      return { tipo: "lin", td: (tr.previousElementSibling as HTMLTableRowElement).cells[0] };
+    }
+    return null;
+  }
+
+  /** Congela as larguras atuais das colunas em porcentagem (para poder arrastar com precisão). */
+  function fixarLarguras(tabela: HTMLTableElement) {
+    const tw = tabela.getBoundingClientRect().width || 1;
+    Array.from(tabela.rows).forEach((tr) =>
+      Array.from(tr.cells).forEach((c) => {
+        c.style.width = `${Math.round((c.getBoundingClientRect().width / tw) * 1000) / 10}%`;
+      })
+    );
+  }
+
+  function aplicarAlturaLinha(tr: HTMLTableRowElement, h: number) {
+    const v = `${Math.round(Math.max(18, h))}px`;
+    tr.style.height = v;
+    Array.from(tr.cells).forEach((c) => {
+      c.style.height = v;
+    });
+  }
+
+  function arrastarBordaTabela(e: PointerEventReact, b: BordaTabela) {
+    const tabela = b.td.closest("table") as HTMLTableElement | null;
+    if (!tabela) return;
+    e.preventDefault();
+    const x0 = e.clientX;
+    const y0 = e.clientY;
+
+    if (b.tipo === "lin") {
+      const tr = b.td.parentElement as HTMLTableRowElement;
+      const h0 = tr.getBoundingClientRect().height;
+      const mover = (ev: PointerEvent) => aplicarAlturaLinha(tr, h0 + (ev.clientY - y0));
+      const soltar = () => {
+        document.removeEventListener("pointermove", mover);
+        document.removeEventListener("pointerup", soltar);
+        sincronizar();
+      };
+      document.addEventListener("pointermove", mover);
+      document.addEventListener("pointerup", soltar);
+      return;
+    }
+
+    const tw0 = tabela.getBoundingClientRect().width || 1;
+    const idx = b.td.cellIndex;
+    const ultima = idx >= (tabela.rows[0]?.cells.length ?? 1) - 1;
+    fixarLarguras(tabela);
+    const esq0 = parseFloat(b.td.style.width) || 20;
+    const dir0 = ultima ? 0 : parseFloat((b.td.nextElementSibling as HTMLElement | null)?.style.width ?? "") || 20;
+    const util = larguraUtilArea();
+    const mover = (ev: PointerEvent) => {
+      const dx = ev.clientX - x0;
+      if (ultima) {
+        const novo = Math.max(80, Math.min(util, tw0 + dx));
+        tabela.style.width = `${Math.round((novo / util) * 1000) / 10}%`;
+        return;
+      }
+      const d = (dx / tw0) * 100;
+      const dd = Math.max(-(esq0 - 4), Math.min(dir0 - 4, d));
+      Array.from(tabela.rows).forEach((tr) => {
+        const a = tr.cells[idx];
+        const c = tr.cells[idx + 1];
+        if (a) a.style.width = `${Math.round((esq0 + dd) * 10) / 10}%`;
+        if (c) c.style.width = `${Math.round((dir0 - dd) * 10) / 10}%`;
+      });
+    };
+    const soltar = () => {
+      document.removeEventListener("pointermove", mover);
+      document.removeEventListener("pointerup", soltar);
+      sincronizar();
+    };
+    document.addEventListener("pointermove", mover);
+    document.addEventListener("pointerup", soltar);
+  }
+
+  function alturaTodasLinhas(delta: number) {
+    const tabela = celulaAtual()?.closest("table") as HTMLTableElement | null;
+    if (!tabela) return;
+    Array.from(tabela.rows).forEach((tr) => aplicarAlturaLinha(tr, tr.getBoundingClientRect().height + delta));
+    sincronizar();
+  }
+
+  function larguraTabela(deltaPct: number) {
+    const tabela = celulaAtual()?.closest("table") as HTMLTableElement | null;
+    if (!tabela) return;
+    const atual = (tabela.getBoundingClientRect().width / larguraUtilArea()) * 100;
+    tabela.style.width = `${Math.round(Math.max(20, Math.min(100, atual + deltaPct)))}%`;
+    sincronizar();
+  }
+
+  function colunasIguais() {
+    const tabela = celulaAtual()?.closest("table") as HTMLTableElement | null;
+    if (!tabela) return;
+    reequilibrarColunas(tabela);
+    sincronizar();
+  }
+
   function inserirReferencias() {
     if (referencias.length === 0) return;
     const html = referencias.map((r) => `<p style="text-align: justify">${escaparHtml(r)}</p>`).join("");
@@ -633,7 +817,7 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [] }
   const excedeu = tamanhoAtual > MAX_CARACTERES;
 
   return (
-    <div className="rounded-xl border border-primary-300 bg-white shadow-sm focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/25">
+    <div ref={caixaRef} className="relative rounded-xl border border-primary-300 bg-white shadow-sm focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/25">
       <div role="toolbar" aria-label="Formatação do texto" className="space-y-1 rounded-t-xl border-b border-primary-200 bg-gradient-to-b from-primary-50 to-white px-2 py-2">
         {/* ── Fonte ── */}
         <div className="flex flex-wrap items-center gap-1">
@@ -876,6 +1060,12 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [] }
             <B titulo="Excluir esta coluna" onClick={() => tabelaAcao("delCol")}>✕ Coluna</B>
             <B titulo="Excluir a tabela inteira" onClick={() => tabelaAcao("delTabela")}>✕ Tabela</B>
             <Sep />
+            <B titulo="Aumentar a altura de todas as linhas" onClick={() => alturaTodasLinhas(12)}>↕ Linhas mais altas</B>
+            <B titulo="Diminuir a altura de todas as linhas" onClick={() => alturaTodasLinhas(-12)}>↕ Linhas mais baixas</B>
+            <B titulo="Deixar a tabela mais larga" onClick={() => larguraTabela(10)}>↔ Tabela mais larga</B>
+            <B titulo="Deixar a tabela mais estreita" onClick={() => larguraTabela(-10)}>↔ Tabela mais estreita</B>
+            <B titulo="Colunas com a mesma largura" onClick={colunasIguais}>▥ Colunas iguais</B>
+            <Sep />
             <B titulo="Com bordas" onClick={() => bordasTabela(true)}>▦ Bordas</B>
             <B titulo="Sem bordas" onClick={() => bordasTabela(false)}>▢ Sem bordas</B>
             <B titulo="Alinhar o texto da célula no alto" onClick={() => alinharCelula("top")}>⤒</B>
@@ -904,6 +1094,8 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [] }
                 {p}%
               </B>
             ))}
+            <B titulo="Aumentar a imagem" onClick={() => aumentarImagem(1.15)}>＋ Maior</B>
+            <B titulo="Diminuir a imagem" onClick={() => aumentarImagem(1 / 1.15)}>－ Menor</B>
             <B titulo="Tamanho original" onClick={() => larguraImagem("auto")}>Original</B>
             <Sep />
             <B titulo="Imagem à esquerda" onClick={() => comando("justifyLeft")}>⯇≡</B>
@@ -918,6 +1110,25 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [] }
           </p>
         )}
       </div>
+
+      {imagem && retImg && (
+        <>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute z-10 rounded-sm border-2 border-primary-600"
+            style={{ left: retImg.l, top: retImg.t, width: retImg.w, height: retImg.h }}
+          />
+          <div
+            role="slider"
+            aria-label="Arraste para aumentar ou diminuir a imagem"
+            title="Arraste para aumentar ou diminuir a imagem"
+            onMouseDown={(e) => e.preventDefault()}
+            onPointerDown={arrastarAlcaImagem}
+            className="absolute z-20 h-4 w-4 cursor-nwse-resize rounded-sm border-2 border-white bg-primary-600 shadow-md"
+            style={{ left: retImg.l + retImg.w - 8, top: retImg.t + retImg.h - 8, touchAction: "none" }}
+          />
+        </>
+      )}
 
       <div
         id={id}
@@ -939,6 +1150,15 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [] }
           setImagem(alvo.tagName === "IMG" ? (alvo as HTMLImageElement) : null);
         }}
         onKeyUp={() => setAviso(null)}
+        onPointerDown={(e) => {
+          const b = bordaPerto(e);
+          if (b) arrastarBordaTabela(e, b);
+        }}
+        onPointerMove={(e) => {
+          if (e.buttons !== 0) return;
+          const b = bordaPerto(e);
+          e.currentTarget.style.cursor = b ? (b.tipo === "col" ? "col-resize" : "row-resize") : "";
+        }}
         onPaste={(e) => {
           const arquivo = Array.from(e.clipboardData.files).find((f) => f.type.startsWith("image/"));
           if (arquivo) {
@@ -970,7 +1190,7 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [] }
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-primary-100 px-3 py-1.5 text-xs text-slate-500">
         <span>
-          Dica: cole textos do Word, arraste imagens para cá e use &quot;Tabela&quot; para montar quadros. Tudo sai igual no PDF.
+          Dica: arraste a bordinha das linhas e colunas da tabela para mudar o tamanho; clique numa imagem e arraste a alça azul do canto (ou arraste a própria imagem para mudar de lugar). Tudo sai igual no PDF.
         </span>
         <span className={excedeu ? "font-bold text-red-600" : ""}>
           {excedeu

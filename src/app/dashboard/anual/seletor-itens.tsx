@@ -33,10 +33,10 @@ interface SeletorItensProps {
 }
 
 const chip = (ativo: boolean) =>
-  `rounded-full border px-3 py-1 text-xs font-semibold transition ${
+  `rounded-xl border-2 px-4 py-2 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 ${
     ativo
-      ? "border-primary-600 bg-primary-600 text-white shadow-sm"
-      : "border-primary-200 bg-white text-primary-700 hover:bg-primary-50"
+      ? "border-primary-700 bg-gradient-to-r from-primary-700 via-primary-600 to-sky-500 text-white shadow-md"
+      : "border-primary-400 bg-white text-primary-800 shadow-sm hover:bg-primary-50"
   }`;
 
 /**
@@ -64,12 +64,13 @@ export default function SeletorItens({
   const idManual = useId();
   const idCodigo = useId();
   const [busca, setBusca] = useState("");
-  const [fonte, setFonte] = useState("todas");
-  const [grupo, setGrupo] = useState("todos");
-  const [ano, setAno] = useState(anoDaTurma ? "turma" : "todos");
+  // null = sem filtro (mostra tudo). Clicar de novo no botão marcado tira o filtro.
+  const [fonte, setFonte] = useState<string | null>(null);
+  const [grupo, setGrupo] = useState<string | null>(null);
+  const [ano, setAno] = useState<string | null>(anoDaTurma ? "turma" : null);
   // Quando o professor escolhe/troca a série da turma, o filtro acompanha.
   useEffect(() => {
-    setAno(anoDaTurma ? "turma" : "todos");
+    setAno(anoDaTurma ? "turma" : null);
   }, [anoDaTurma]);
   const [soMarcadas, setSoMarcadas] = useState(false);
   const [textoManual, setTextoManual] = useState("");
@@ -85,9 +86,9 @@ export default function SeletorItens({
     const termo = chaveTexto(busca);
     return opcoes.filter((o) => {
       if (soMarcadas && !marcadas.has(o.id)) return false;
-      if (filtrarPorFonte && fonte !== "todas" && o.fonte !== fonte) return false;
-      if (filtrarPorGrupo && grupo !== "todos" && o.grupo !== grupo) return false;
-      if (anos.length > 0 && ano !== "todos" && o.anos.length > 0) {
+      if (filtrarPorFonte && fonte !== null && o.fonte !== fonte) return false;
+      if (filtrarPorGrupo && grupo !== null && o.grupo !== grupo) return false;
+      if (anos.length > 0 && ano !== null && o.anos.length > 0) {
         if (ano === "turma") {
           if (anoDaTurma != null && !o.anos.some((a) => anoCombina(a, anoDaTurma))) return false;
         } else if (!o.anos.includes(ano)) {
@@ -167,46 +168,37 @@ export default function SeletorItens({
             />
 
             {temFiltros && (
-              <div className="space-y-1.5">
+              <div className="space-y-2.5">
                 {filtrarPorFonte && fontes.length > 1 && (
-                  <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filtrar por origem">
-                    <span className="text-xs font-semibold text-slate-500">Origem:</span>
-                    <button type="button" className={chip(fonte === "todas")} onClick={() => setFonte("todas")}>
-                      Todas
-                    </button>
+                  <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por origem">
+                    <span className="text-sm font-bold text-slate-700">Origem:</span>
                     {fontes.map((f) => (
-                      <button key={f} type="button" className={chip(fonte === f)} onClick={() => setFonte(f)}>
+                      <button key={f} type="button" className={chip(fonte === f)} onClick={() => setFonte(fonte === f ? null : f)}>
                         {ROTULO_FONTE[f] ?? f}
                       </button>
                     ))}
                   </div>
                 )}
                 {filtrarPorGrupo && grupos.length > 1 && (
-                  <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filtrar por tipo">
-                    <span className="text-xs font-semibold text-slate-500">Tipo:</span>
-                    <button type="button" className={chip(grupo === "todos")} onClick={() => setGrupo("todos")}>
-                      Todos
-                    </button>
+                  <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por tipo">
+                    <span className="text-sm font-bold text-slate-700">Tipo:</span>
                     {grupos.map((g) => (
-                      <button key={g} type="button" className={chip(grupo === g)} onClick={() => setGrupo(g)}>
+                      <button key={g} type="button" className={chip(grupo === g)} onClick={() => setGrupo(grupo === g ? null : g)}>
                         {g}
                       </button>
                     ))}
                   </div>
                 )}
                 {anos.length > 0 && opcoes.some((o) => o.anos.length > 0) && (
-                  <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filtrar por ano">
-                    <span className="text-xs font-semibold text-slate-500">Ano/série:</span>
+                  <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por ano">
+                    <span className="text-sm font-bold text-slate-700">Ano/série:</span>
                     {anoDaTurma != null && (
-                      <button type="button" className={chip(ano === "turma")} onClick={() => setAno("turma")}>
+                      <button type="button" className={chip(ano === "turma")} onClick={() => setAno(ano === "turma" ? null : "turma")}>
                         Da minha turma ({anoDaTurma}º)
                       </button>
                     )}
-                    <button type="button" className={chip(ano === "todos")} onClick={() => setAno("todos")}>
-                      Todos os anos
-                    </button>
                     {anos.map((a) => (
-                      <button key={a} type="button" className={chip(ano === a)} onClick={() => setAno(a)}>
+                      <button key={a} type="button" className={chip(ano === a)} onClick={() => setAno(ano === a ? null : a)}>
                         {a}
                       </button>
                     ))}
@@ -216,10 +208,10 @@ export default function SeletorItens({
             )}
 
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={marcarVisiveis} className="btn-azul-suave !px-3 !py-1.5 !text-xs">
-                Marcar todas as listadas ({visiveis.length})
+              <button type="button" onClick={marcarVisiveis} className="btn-azul-suave !px-4 !py-2 !text-sm !border-2 !border-primary-500">
+                Marcar as listadas ({visiveis.length})
               </button>
-              <button type="button" onClick={desmarcarVisiveis} className="btn-azul-suave !px-3 !py-1.5 !text-xs">
+              <button type="button" onClick={desmarcarVisiveis} className="btn-azul-suave !px-4 !py-2 !text-sm !border-2 !border-primary-500">
                 Desmarcar as listadas
               </button>
               <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-slate-600">
@@ -236,7 +228,7 @@ export default function SeletorItens({
 
           <div className="overflow-y-auto p-2" style={{ maxHeight: `${alturaRem}rem` }}>
             {visiveis.length === 0 && (
-              <p className="px-2 py-3 text-sm text-slate-400">Nada encontrado com esses filtros. Use &quot;Todos os anos&quot; ou limpe a busca.</p>
+              <p className="px-2 py-3 text-sm text-slate-400">Nada encontrado com esses filtros. Clique de novo num botão marcado para tirar o filtro, ou limpe a busca.</p>
             )}
             {visiveis.map((o) => (
               <label

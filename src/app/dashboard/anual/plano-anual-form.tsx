@@ -175,7 +175,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
     trimestres,
   });
 
-  const textoLivreInicial = plano ? plano.texto_livre : TEXTO_LIVRE_INICIAL;
+  const textoLivreInicial = plano?.texto_livre ?? TEXTO_LIVRE_INICIAL;
 
   return (
     <form

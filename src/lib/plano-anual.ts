@@ -1,7 +1,6 @@
 // Tipos, normalização e utilidades do Plano de Ensino ANUAL.
 // (Sem dependência de DOM nem de Supabase: roda no servidor e no navegador.)
 
-import { MARCADOR_HTML } from "./texto-rico";
 
 /** Um item de uma lista de marcar (ementa, habilidade, objeto, competência...). */
 export interface ItemLista {
@@ -270,6 +269,5 @@ export function referenciasSugeridas(etapa: string): string[] {
   ];
 }
 
-/** Conteúdo inicial do campo livre (novo plano): só o início do item 6, para o professor continuar. */
-export const TEXTO_LIVRE_INICIAL =
-  MARCADOR_HTML + "<p>6. <b><u>Relação do componente curricular com outras áreas:</u></b> </p><p><br></p>";
+/** O texto livre começa vazio: o professor escreve o que quiser. */
+export const TEXTO_LIVRE_INICIAL = "";
