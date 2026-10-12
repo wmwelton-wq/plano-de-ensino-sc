@@ -3,6 +3,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import BarraAcoesPlano from "./barra-acoes-plano";
 import AutoAcao from "./auto-acao";
+import ImpressaoPaginada from "./impressao-paginada";
+import { ESTILO_TEXTO_PLANO } from "@/lib/estilo-plano";
 import { ehHtml, sanitizarHtml } from "@/lib/texto-rico";
 import type { HabilidadeManual } from "@/lib/database.types";
 
@@ -151,39 +153,18 @@ export default async function VisualizarPlanoPage({
 
       <style>{`@page { size: A4 ${paisagem ? "landscape" : "portrait"}; margin: 0; }`}</style>
 
+      {/* Precisa vir antes do AutoAcao: registra o preparo da impressão antes de o auto-imprimir disparar. */}
+      <ImpressaoPaginada paisagem={paisagem} />
       <AutoAcao acao={auto} titulo={plano.titulo} paisagem={paisagem} />
 
       {/*
-        A moldura (borda/sombra) abaixo é só um efeito visual de "cartão"
-        para a pré-visualização em tela — nunca deve aparecer no PDF nem
-        na impressão. Por isso fica num wrapper separado do conteúdo
-        capturado (#plano-conteudo): o html2canvas usado em "Salvar no
-        dispositivo"/"Compartilhar" (ver src/lib/gerar-pdf.ts) só
-        rasteriza o que estiver dentro de #plano-conteudo, e a impressão
-        nativa (Ctrl+P) já remove a moldura via `print:*` abaixo.
+        A moldura (borda/sombra) abaixo é só o "cartão" da pré-visualização em tela.
+        Na impressão ela some (print:hidden) e quem imprime são as páginas montadas
+        por ImpressaoPaginada a partir de #plano-conteudo; o PDF e o Word também
+        leem #plano-conteudo (ver src/lib/gerar-pdf.ts e gerar-word.ts).
       */}
-      <div className={`mx-auto ${paisagem ? "max-w-[297mm]" : "max-w-[210mm]"} rounded-xl border border-slate-300 bg-white shadow-lg shadow-slate-900/10 print:rounded-none print:border-0 print:shadow-none`}>
-        {/*
-          Impressão: @page tem margem 0 (assim o navegador não imprime data, título,
-          endereço e número de página). As margens de 2 cm nas laterais vêm do
-          padding do conteúdo; a margem de 1,5 cm em cima e embaixo de CADA página
-          vem do cabeçalho/rodapé vazios desta tabela, que o navegador repete.
-        */}
-        <table className="w-full border-collapse">
-          <thead className="hidden print:table-header-group">
-            <tr>
-              <td className="h-[1.5cm] p-0" />
-            </tr>
-          </thead>
-          <tfoot className="hidden print:table-footer-group">
-            <tr>
-              <td className="h-[1.5cm] p-0" />
-            </tr>
-          </tfoot>
-          <tbody>
-            <tr>
-              <td className="p-0 align-top">
-        <div id="plano-conteudo" className="px-4 py-6 text-sm text-black sm:px-[2cm] sm:py-[1.5cm] print:px-[2cm] print:py-0">
+      <div className={`mx-auto ${paisagem ? "max-w-[297mm]" : "max-w-[210mm]"} rounded-xl border border-slate-300 bg-white shadow-lg shadow-slate-900/10 print:hidden`}>
+        <div id="plano-conteudo" style={ESTILO_TEXTO_PLANO} className="px-4 py-6 sm:px-[2cm] sm:py-[1.5cm]">
           {/* Cabeçalho */}
         {ehAnosIniciais ? (
           <div className="mb-4 flex items-start gap-3">
@@ -471,10 +452,6 @@ export default async function VisualizarPlanoPage({
           </table>
         )}
         </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
   );
