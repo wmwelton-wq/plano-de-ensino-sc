@@ -87,7 +87,7 @@ export default async function EditarPlanoPage({
               href={`/dashboard/planos/${id}/replicar`}
               className="btn-azul-suave !border-white/40 !bg-white !text-primary-700"
             >
-              Replicar para outras turmas
+              Replicar para outras escolas
             </Link>
             <ExcluirButton excluirAction={excluirComId} />
           </div>

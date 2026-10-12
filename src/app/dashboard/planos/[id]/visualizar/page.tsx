@@ -59,6 +59,8 @@ export default async function VisualizarPlanoPage({
   }
 
   const ehAnosIniciais = plano.etapa === "fundamental_anos_iniciais";
+  // Modelo oficial dos Anos Iniciais é em paisagem; as demais etapas saem em retrato.
+  const paisagem = ehAnosIniciais;
 
   const [
     { data: professor },
@@ -137,17 +139,19 @@ export default async function VisualizarPlanoPage({
 
   return (
     <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:py-0">
-      <div className="mx-auto mb-4 flex max-w-[297mm] items-center justify-between px-4 print:hidden">
+      <div className={`mx-auto mb-4 flex ${paisagem ? "max-w-[297mm]" : "max-w-[210mm]"} items-center justify-between px-4 print:hidden`}>
         <Link
           href={`/dashboard/planos/${id}`}
           className="rounded-lg px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-200/70 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
         >
           <span aria-hidden="true">← </span>Voltar para edição
         </Link>
-        <BarraAcoesPlano titulo={plano.titulo} />
+        <BarraAcoesPlano titulo={plano.titulo} paisagem={paisagem} />
       </div>
 
-      <AutoAcao acao={auto} titulo={plano.titulo} />
+      <style>{`@page { size: A4 ${paisagem ? "landscape" : "portrait"}; margin: 0; }`}</style>
+
+      <AutoAcao acao={auto} titulo={plano.titulo} paisagem={paisagem} />
 
       {/*
         A moldura (borda/sombra) abaixo é só um efeito visual de "cartão"
@@ -158,8 +162,28 @@ export default async function VisualizarPlanoPage({
         rasteriza o que estiver dentro de #plano-conteudo, e a impressão
         nativa (Ctrl+P) já remove a moldura via `print:*` abaixo.
       */}
-      <div className="mx-auto max-w-[297mm] rounded-xl border border-slate-300 bg-white shadow-lg shadow-slate-900/10 print:rounded-none print:border-0 print:shadow-none">
-        <div id="plano-conteudo" className="p-8 text-sm text-black print:p-0">
+      <div className={`mx-auto ${paisagem ? "max-w-[297mm]" : "max-w-[210mm]"} rounded-xl border border-slate-300 bg-white shadow-lg shadow-slate-900/10 print:rounded-none print:border-0 print:shadow-none`}>
+        {/*
+          Impressão: @page tem margem 0 (assim o navegador não imprime data, título,
+          endereço e número de página). As margens de 2 cm nas laterais vêm do
+          padding do conteúdo; a margem de 1,5 cm em cima e embaixo de CADA página
+          vem do cabeçalho/rodapé vazios desta tabela, que o navegador repete.
+        */}
+        <table className="w-full border-collapse">
+          <thead className="hidden print:table-header-group">
+            <tr>
+              <td className="h-[1.5cm] p-0" />
+            </tr>
+          </thead>
+          <tfoot className="hidden print:table-footer-group">
+            <tr>
+              <td className="h-[1.5cm] p-0" />
+            </tr>
+          </tfoot>
+          <tbody>
+            <tr>
+              <td className="p-0 align-top">
+        <div id="plano-conteudo" className="px-4 py-6 text-sm text-black sm:px-[2cm] sm:py-[1.5cm] print:px-[2cm] print:py-0">
           {/* Cabeçalho */}
         {ehAnosIniciais ? (
           <div className="mb-4 flex items-start gap-3">
@@ -287,7 +311,7 @@ export default async function VisualizarPlanoPage({
                     Caminho metodológico para desenvolvimento da habilidade (descrever passo a passo)
                   </td>
                 </tr>
-                <tr className="break-inside-avoid">
+                <tr>
                   <td className="border border-black p-2 align-top">
                     <TextoOuParagrafos texto={plano.conteudos_programaticos} />
                   </td>
@@ -346,21 +370,21 @@ export default async function VisualizarPlanoPage({
           <table className="w-full border-collapse border border-black">
             <tbody>
               {!ehInfantil && (
-                <Linha rotulo="Área(s) de Conhecimento(s)">{areaConhecimento}</Linha>
+                <Linha rotulo="Área(s) de Conhecimento(s)" curta>{areaConhecimento}</Linha>
               )}
-              <Linha rotulo={ehInfantil ? "Campo(s) de experiência:" : "Componentes curriculares envolvidos:"}>
+              <Linha curta rotulo={ehInfantil ? "Campo(s) de experiência:" : "Componentes curriculares envolvidos:"}>
                 {componenteCurricular}
               </Linha>
               {!ehInfantil && (
-                <Linha rotulo="Número de aulas">
+                <Linha rotulo="Número de aulas" curta>
                   {plano.quantidade_aulas ? `${plano.quantidade_aulas} aulas` : ""}
                 </Linha>
               )}
-              <Linha rotulo="Data de início">{formatarData(plano.data_inicio)}</Linha>
-              <Linha rotulo="Data de fim">{formatarData(plano.data_fim)}</Linha>
-              <Linha rotulo={rotuloTurma}>{plano.turma}</Linha>
-              {ehInfantil && <Linha rotulo="Grupo etário:">{plano.grupo_etario}</Linha>}
-              <Linha rotulo="Professor(a):">{professor?.nome}</Linha>
+              <Linha rotulo="Data de início" curta>{formatarData(plano.data_inicio)}</Linha>
+              <Linha rotulo="Data de fim" curta>{formatarData(plano.data_fim)}</Linha>
+              <Linha rotulo={rotuloTurma} curta>{plano.turma}</Linha>
+              {ehInfantil && <Linha rotulo="Grupo etário:" curta>{plano.grupo_etario}</Linha>}
+              <Linha rotulo="Professor(a):" curta>{professor?.nome}</Linha>
               {!ehInfantil && (
                 <Linha rotulo="Competência específica do Componente Curricular:">
                   {(competenciasSelecionadas ?? []).length > 0 ? (
@@ -447,15 +471,28 @@ export default async function VisualizarPlanoPage({
           </table>
         )}
         </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-function Linha({ rotulo, children }: { rotulo: string; children: React.ReactNode }) {
+function Linha({
+  rotulo,
+  children,
+  curta = false,
+}: {
+  rotulo: string;
+  children: React.ReactNode;
+  /** Linhas curtas nunca se dividem entre páginas; as longas podem, para não deixar espaço vazio. */
+  curta?: boolean;
+}) {
   return (
-    <tr className="break-inside-avoid">
-      <td className="w-64 border border-black bg-slate-50 p-2 align-top font-bold print:bg-white">
+    <tr className={curta ? "break-inside-avoid" : undefined}>
+      <td className="w-[28%] border border-black bg-slate-50 p-2 align-top font-bold print:bg-white">
         {rotulo}
       </td>
       <td className="border border-black p-2 align-top">{children}</td>

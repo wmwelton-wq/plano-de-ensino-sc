@@ -8,6 +8,7 @@ import { baixarArquivo } from "@/lib/baixar-arquivo";
 interface AutoAcaoProps {
   acao?: string;
   titulo: string;
+  paisagem: boolean;
 }
 
 /**
@@ -17,7 +18,8 @@ interface AutoAcaoProps {
  * Assim o professor tem a ação em um clique só, sem precisar procurar o
  * botão certo nesta página.
  */
-export default function AutoAcao({ acao, titulo }: AutoAcaoProps) {
+export default function AutoAcao({ acao, titulo, paisagem }: AutoAcaoProps) {
+  const orientacao = paisagem ? "paisagem" : "retrato";
   const [mensagem, setMensagem] = useState<string | null>(null);
   const executado = useRef(false);
 
@@ -34,21 +36,21 @@ export default function AutoAcao({ acao, titulo }: AutoAcaoProps) {
 
         if (acao === "salvar") {
           setMensagem("Gerando PDF...");
-          baixarArquivo(await gerarPdfDoElemento("plano-conteudo", titulo));
+          baixarArquivo(await gerarPdfDoElemento("plano-conteudo", titulo, orientacao));
           setMensagem("PDF baixado.");
           return;
         }
 
         if (acao === "word") {
           setMensagem("Gerando documento Word...");
-          baixarArquivo(await gerarWordDoElemento("plano-conteudo", titulo));
+          baixarArquivo(await gerarWordDoElemento("plano-conteudo", titulo, orientacao));
           setMensagem("Documento Word baixado.");
           return;
         }
 
         if (acao === "compartilhar") {
           setMensagem("Gerando PDF...");
-          const arquivo = await gerarPdfDoElemento("plano-conteudo", titulo);
+          const arquivo = await gerarPdfDoElemento("plano-conteudo", titulo, orientacao);
 
           if (
             typeof navigator !== "undefined" &&
@@ -88,7 +90,7 @@ export default function AutoAcao({ acao, titulo }: AutoAcaoProps) {
     }
 
     executar();
-  }, [acao, titulo]);
+  }, [acao, titulo, paisagem]);
 
   if (!mensagem) return null;
 

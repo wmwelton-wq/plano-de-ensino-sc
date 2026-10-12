@@ -316,9 +316,11 @@ export async function excluirPlano(planoId: string) {
 }
 
 /**
- * Cria cópias do plano para outras turmas. Cada cópia nasce como rascunho,
+ * Cria cópias do plano para outras ESCOLAS. Cada cópia nasce como rascunho,
  * guarda a referência ao plano de origem (replicado_de_id) e leva junto as
- * habilidades, competências e componentes escolhidos.
+ * habilidades, competências e componentes escolhidos. Para cada escola o
+ * professor pode ajustar título, turma, período e número de aulas; o restante
+ * do plano pode ser editado depois (ou logo em seguida, com "abrir_edicao").
  */
 export async function replicarPlano(
   planoId: string,
@@ -334,26 +336,33 @@ export async function replicarPlano(
     return { erro: "Sessão expirada. Faça login novamente." };
   }
 
-  const turmas = Array.from(
+  const escolaIds = Array.from(
     new Set(
       formData
-        .getAll("turmas_destino")
-        .filter((v): v is string => typeof v === "string")
-        .map((v) => v.trim())
-        .filter((v) => v.length > 0)
+        .getAll("escola_ids")
+        .filter((v): v is string => typeof v === "string" && v.length > 0)
     )
   );
-  if (turmas.length === 0) {
-    return { erro: "Informe ao menos uma turma de destino." };
+  if (escolaIds.length === 0) {
+    return { erro: "Selecione ao menos uma escola de destino." };
   }
-  if (turmas.length > 30) {
-    return { erro: "Replique para no máximo 30 turmas por vez." };
+  if (escolaIds.length > 30) {
+    return { erro: "Replique para no máximo 30 escolas por vez." };
   }
 
-  // O RLS garante que só enxergamos planos do próprio professor.
-  const { data: origem } = await supabase.from("planos_de_ensino").select("*").eq("id", planoId).single();
+  // O RLS garante que só enxergamos planos e escolas do próprio professor.
+  const [{ data: origem }, { data: escolasDestino }] = await Promise.all([
+    supabase.from("planos_de_ensino").select("*").eq("id", planoId).single(),
+    supabase.from("escolas").select("id, nome").in("id", escolaIds),
+  ]);
   if (!origem) {
     return { erro: "Plano de origem não encontrado." };
+  }
+  const nomePorEscola = new Map<string, string>(
+    (escolasDestino ?? []).map((e: { id: string; nome: string }): [string, string] => [e.id, e.nome])
+  );
+  if (escolaIds.some((id) => !nomePorEscola.has(id))) {
+    return { erro: "Alguma das escolas selecionadas não foi encontrada. Atualize a página e tente de novo." };
   }
 
   const [{ data: hab }, { data: comp }, { data: disc }] = await Promise.all([
@@ -367,15 +376,51 @@ export async function replicarPlano(
     delete base[campo];
   }
 
-  let criados = 0;
-  for (const turma of turmas) {
-    const titulo = origem.titulo.includes(turma) ? origem.titulo : `${origem.titulo} — ${turma}`;
+  const texto = (chave: string, padrao: string | null) => {
+    const v = formData.get(chave);
+    if (typeof v !== "string") return padrao;
+    const limpo = v.trim();
+    return limpo.length > 0 ? limpo : null;
+  };
+
+  // Valida tudo antes de criar a primeira cópia (assim não fica pela metade).
+  const copias = escolaIds.map((escolaId) => {
+    const nomeEscola = nomePorEscola.get(escolaId) ?? "";
+    const quantidadeRaw = texto(`quantidade_aulas_${escolaId}`, null);
+    return {
+      escolaId,
+      nomeEscola,
+      titulo: texto(`titulo_${escolaId}`, origem.titulo) ?? origem.titulo,
+      turma: texto(`turma_${escolaId}`, null),
+      data_inicio: texto(`data_inicio_${escolaId}`, null),
+      data_fim: texto(`data_fim_${escolaId}`, null),
+      quantidade_aulas: quantidadeRaw && Number(quantidadeRaw) > 0 ? Number(quantidadeRaw) : null,
+    };
+  });
+
+  if (origem.etapa === "fundamental_anos_iniciais") {
+    for (const c of copias) {
+      if (!c.data_inicio || !c.data_fim) continue;
+      const dias = (new Date(c.data_fim).getTime() - new Date(c.data_inicio).getTime()) / 86400000;
+      if (dias < 0) return { erro: `${c.nomeEscola}: a data de fim não pode ser anterior à data de início.` };
+      if (dias > 30) {
+        return { erro: `${c.nomeEscola}: o período do plano não pode ultrapassar 30 dias (modelo oficial dos Anos Iniciais).` };
+      }
+    }
+  }
+
+  const criados: string[] = [];
+  for (const c of copias) {
     const { data: novo, error } = await supabase
       .from("planos_de_ensino")
       .insert({
         ...base,
-        titulo,
-        turma,
+        escola_id: c.escolaId,
+        titulo: c.titulo,
+        turma: c.turma,
+        data_inicio: c.data_inicio,
+        data_fim: c.data_fim,
+        quantidade_aulas: c.quantidade_aulas,
         status: "rascunho",
         gerado_por_ia: false,
         replicado_de_id: planoId,
@@ -386,11 +431,12 @@ export async function replicarPlano(
     if (error || !novo) {
       return {
         erro:
-          criados > 0
-            ? `Foram criados ${criados} plano(s), mas houve falha ao criar o da turma "${turma}". Confira em "Meus planos".`
+          criados.length > 0
+            ? `Foram criados ${criados.length} plano(s), mas houve falha ao criar o da escola "${c.nomeEscola}". Confira em "Meus planos".`
             : "Não foi possível replicar o plano. Tente novamente.",
       };
     }
+    criados.push(novo.id);
 
     if (hab && hab.length > 0) {
       await supabase
@@ -400,16 +446,18 @@ export async function replicarPlano(
     if (comp && comp.length > 0) {
       await supabase
         .from("planos_competencias")
-        .insert(comp.map((c) => ({ plano_id: novo.id, competencia_id: c.competencia_id })));
+        .insert(comp.map((x) => ({ plano_id: novo.id, competencia_id: x.competencia_id })));
     }
     if (disc && disc.length > 0) {
       await supabase
         .from("planos_disciplinas")
         .insert(disc.map((d) => ({ plano_id: novo.id, disciplina_id: d.disciplina_id })));
     }
-    criados += 1;
   }
 
   revalidatePath("/dashboard");
+  if (formData.get("abrir_edicao") === "on" && criados.length > 0) {
+    redirect(`/dashboard/planos/${criados[0]}`);
+  }
   redirect("/dashboard");
 }

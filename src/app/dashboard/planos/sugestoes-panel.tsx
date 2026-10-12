@@ -22,18 +22,21 @@ export default function SugestoesPanel({ rotulo, itens, onAdicionar }: Sugestoes
   }, [ordenados, busca]);
 
   return (
-    <div className="mt-2">
+    <div className="mt-3">
       <button
         type="button"
         aria-expanded={aberto}
         onClick={() => setAberto((a) => !a)}
-        className="text-sm font-semibold text-primary-600 hover:text-primary-700 hover:underline"
+        className="btn-azul !px-4 !py-2.5"
       >
-        {aberto ? "▲ Ocultar sugestões" : "▼ Ver sugestões"} ({rotulo}: {ordenados.length})
+        <span aria-hidden="true">{aberto ? "▲" : "▼"}</span>
+        {aberto
+          ? `Ocultar sugestões de ${rotulo}`
+          : `Clique aqui para ver sugestões de ${rotulo} (${ordenados.length})`}
       </button>
 
       {aberto && (
-        <div className="mt-2 rounded-md border border-slate-300 bg-white">
+        <div className="mt-3 rounded-xl border border-primary-200 bg-white shadow-sm">
           <label htmlFor={idBusca} className="sr-only">
             Buscar nas sugestões
           </label>
@@ -43,7 +46,7 @@ export default function SugestoesPanel({ rotulo, itens, onAdicionar }: Sugestoes
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar nas sugestões..."
-            className="w-full rounded-t-md border-b border-slate-200 px-3 py-2 text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary-500"
+            className="w-full rounded-t-xl border-b border-primary-100 px-3 py-2 text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary-500"
           />
           <ul className="max-h-56 divide-y divide-slate-100 overflow-y-auto">
             {filtrados.length === 0 && (
@@ -54,7 +57,7 @@ export default function SugestoesPanel({ rotulo, itens, onAdicionar }: Sugestoes
                 <button
                   type="button"
                   onClick={() => onAdicionar(item)}
-                  className="flex w-full items-start gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+                  className="flex w-full items-start gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-primary-50"
                 >
                   <span aria-hidden="true" className="font-bold text-primary-600">
                     +

@@ -6,7 +6,8 @@
 // imagens do cabeçalho). Para o resultado ficar fiel à tela, cada elemento
 // do clone recebe como estilo "inline" os estilos já calculados pelo
 // navegador no elemento original — assim não dependemos das classes do
-// Tailwind, que o Word não conhece.
+// Tailwind, que o Word não conhece. Página A4 (retrato ou paisagem, conforme a
+// etapa), com 2 cm de margem à esquerda e à direita e 1,5 cm em cima e embaixo.
 
 function nomeArquivo(titulo: string): string {
   const base = titulo
@@ -19,7 +20,6 @@ function nomeArquivo(titulo: string): string {
 }
 
 const PROPRIEDADES = [
-  "font-family",
   "font-size",
   "font-weight",
   "font-style",
@@ -79,6 +79,9 @@ function copiarEstilos(original: Element, clone: Element) {
       const pct = Math.round((original.offsetWidth / tabela.offsetWidth) * 1000) / 10;
       partes.push(`width:${pct}%`);
     }
+  } else if (tag === "TR") {
+    // Linhas curtas não se dividem entre páginas; as longas podem, para não deixar espaço vazio.
+    if (original.offsetHeight > 0 && original.offsetHeight <= 140) partes.push("page-break-inside:avoid");
   } else if (tag === "UL" || tag === "OL") {
     partes.push(`padding-left:${cs.getPropertyValue("padding-left") || "0px"}`);
   }
@@ -141,7 +144,11 @@ function utf8ParaBase64(texto: string): string {
  * Monta o arquivo .doc (MHTML) a partir do elemento com o id informado
  * e o devolve como File, pronto para download.
  */
-export async function gerarWordDoElemento(elementId: string, titulo: string): Promise<File> {
+export async function gerarWordDoElemento(
+  elementId: string,
+  titulo: string,
+  orientacao: "retrato" | "paisagem" = "retrato"
+): Promise<File> {
   const elemento = document.getElementById(elementId);
   if (!elemento) {
     throw new Error("Conteúdo do plano não encontrado para gerar o Word.");
@@ -175,17 +182,17 @@ export async function gerarWordDoElemento(elementId: string, titulo: string): Pr
     partesImagem.push({ local, base64: png.base64 });
   }
 
+  const tamanhoPagina = orientacao === "paisagem" ? "841.9pt 595.3pt" : "595.3pt 841.9pt";
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <title>${titulo.replace(/[<>&]/g, "")}</title>
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
 <style>
-@page WordSection1 { size: 841.9pt 595.3pt; mso-page-orientation: landscape; margin: 28.3pt 28.3pt 28.3pt 28.3pt; }
+@page WordSection1 { size: ${tamanhoPagina}; mso-page-orientation: ${orientacao === "paisagem" ? "landscape" : "portrait"}; margin: 42.5pt 56.7pt 42.5pt 56.7pt; mso-header-margin: 21.3pt; mso-footer-margin: 21.3pt; }
 div.WordSection1 { page: WordSection1; }
 body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #000000; }
 table { border-collapse: collapse; }
-tr { page-break-inside: avoid; }
 p { margin-top: 0; margin-bottom: 4pt; }
 </style>
 </head>
