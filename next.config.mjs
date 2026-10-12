@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // O plano anual pode levar imagens coladas no texto livre (já reduzidas no
+  // navegador): o limite padrão de 1 MB das ações do servidor seria pequeno.
+  // 4 MB fica abaixo do teto de 4,5 MB das funções da Vercel.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "4mb",
+    },
+  },
   // Cabeçalhos de segurança aplicados a toda resposta. Adicionados na
   // auditoria de segurança: o app já tinha RLS, verificação dupla de sessão
   // (proxy + layout) e Cache-Control correto contra vazamento de sessão via

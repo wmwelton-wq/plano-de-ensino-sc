@@ -80,6 +80,30 @@ body {
   .texto-rico li {
     margin-bottom: 0.125rem;
   }
+  .texto-rico h1 { font-size: 1.5em; font-weight: 700; margin: 0 0 0.5rem; }
+  .texto-rico h2 { font-size: 1.25em; font-weight: 700; margin: 0 0 0.5rem; }
+  .texto-rico h3 { font-size: 1.1em; font-weight: 700; margin: 0 0 0.5rem; }
+  .texto-rico blockquote {
+    margin: 0 0 0.5rem;
+    padding-left: 0.75rem;
+    border-left: 3px solid #cbd5e1;
+  }
+  .texto-rico table {
+    border-collapse: collapse;
+    margin: 0 0 0.5rem;
+  }
+  .texto-rico td,
+  .texto-rico th {
+    padding: 4px 6px;
+    vertical-align: top;
+  }
+  .texto-rico img {
+    display: inline-block;
+    max-width: 100%;
+    height: auto;
+  }
+  .texto-rico sub { vertical-align: sub; font-size: 0.75em; }
+  .texto-rico sup { vertical-align: super; font-size: 0.75em; }
   .editor-rico:empty::before {
     content: attr(data-placeholder);
     color: #94a3b8;

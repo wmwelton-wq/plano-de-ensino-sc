@@ -17,6 +17,19 @@ interface EstiloTexto {
   minusculas: boolean;
   sublinhado: boolean;
   riscado: boolean;
+  /** Fonte padrão do PDF mais parecida com a do texto. */
+  familia: "helvetica" | "times" | "courier";
+  /** Valor CSS de font-family, para desenhar caracteres especiais no canvas. */
+  familiaCss: string;
+  pesoCss: string;
+}
+
+/** As fontes embutidas do PDF são só três: escolhe a que mais se parece com a fonte pedida. */
+function familiaDoPdf(css: string): "helvetica" | "times" | "courier" {
+  const primeira = (css.split(",")[0] ?? "").replace(/["']/g, "").trim().toLowerCase();
+  if (/courier|consolas|monaco|mono/.test(primeira)) return "courier";
+  if (!/sans/.test(primeira) && /times|georgia|cambria|garamond|palatino|book antiqua|serif/.test(primeira)) return "times";
+  return "helvetica";
 }
 
 function lerCor(valor: string): [number, number, number] {
@@ -54,11 +67,6 @@ function limparTexto(texto: string): string {
       case "…":
         s += "...";
         break;
-      case "•":
-      case "●":
-      case "◦":
-        s += "-";
-        break;
       case "€":
         s += "EUR";
         break;
@@ -92,6 +100,9 @@ function estiloDe(el: Element, raiz: Element, cache: Map<Element, EstiloTexto>):
     minusculas: cs.textTransform === "lowercase",
     sublinhado,
     riscado,
+    familia: familiaDoPdf(cs.fontFamily),
+    familiaCss: cs.fontFamily,
+    pesoCss: cs.fontWeight,
   };
   cache.set(el, estilo);
   return estilo;
@@ -179,6 +190,68 @@ function imagemParaDados(img: HTMLImageElement, larguraPx: number): { dados: str
   }
 }
 
+/** O caractere (ou sequência) pode ser escrito com as fontes do PDF? */
+function ehSeguro(grupo: string): boolean {
+  for (const ch of grupo) {
+    const c = ch.codePointAt(0) ?? 0;
+    if (c <= 255) continue;
+    if ("‘’‚“”„–—−…€".includes(ch)) continue;
+    return false;
+  }
+  return true;
+}
+
+function grafemas(texto: string): { texto: string; indice: number }[] {
+  const saida: { texto: string; indice: number }[] = [];
+  const Seg = (Intl as unknown as { Segmenter?: new (l?: string, o?: { granularity: string }) => { segment: (t: string) => Iterable<{ segment: string; index: number }> } }).Segmenter;
+  if (Seg) {
+    for (const g of new Seg("pt", { granularity: "grapheme" }).segment(texto)) saida.push({ texto: g.segment, indice: g.index });
+    return saida;
+  }
+  let i = 0;
+  for (const ch of texto) {
+    saida.push({ texto: ch, indice: i });
+    i += ch.length;
+  }
+  return saida;
+}
+
+/** Desenha um símbolo/emoji num canvas (com a fonte e a cor do texto) e devolve a imagem. */
+function simboloParaDados(
+  grupo: string,
+  larguraPx: number,
+  alturaPx: number,
+  subidaPx: number,
+  estilo: EstiloTexto
+): string | null {
+  try {
+    const escala = 4;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.ceil(larguraPx * escala));
+    canvas.height = Math.max(1, Math.ceil(alturaPx * escala));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.font = `${estilo.italico ? "italic " : ""}${estilo.pesoCss} ${estilo.tamanhoPx * escala}px ${estilo.familiaCss}`;
+    ctx.fillStyle = `rgb(${estilo.cor[0]},${estilo.cor[1]},${estilo.cor[2]})`;
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText(grupo, 0, subidaPx * escala);
+    return canvas.toDataURL("image/png");
+  } catch {
+    return null;
+  }
+}
+
+/** Cor de fundo (com ou sem transparência) misturada ao branco; null se não houver fundo. */
+function lerFundo(valor: string): [number, number, number] | null {
+  const m = /rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+))?/.exec(valor);
+  if (!m) return null;
+  const a = m[4] === undefined ? 1 : Number(m[4]);
+  if (!(a > 0)) return null;
+  const mix = (c: number) => Math.round(255 + (Number(c) - 255) * Math.min(1, a));
+  const cor: [number, number, number] = [mix(Number(m[1])), mix(Number(m[2])), mix(Number(m[3]))];
+  return cor[0] === 255 && cor[1] === 255 && cor[2] === 255 ? null : cor;
+}
+
 const LADOS = [
   { nome: "Top", linha: (r: DOMRect) => [r.left, r.top, r.right, r.top] },
   { nome: "Right", linha: (r: DOMRect) => [r.right, r.top, r.right, r.bottom] },
@@ -201,6 +274,17 @@ export async function desenharPaginaNoPdf(
   const Y = (px: number) => origemYmm + (px - raiz.top) * MM_POR_PX;
 
   const todos = Array.from(pagina.querySelectorAll("*"));
+
+  // 0) Fundos coloridos (sombreamento de células/parágrafos, marca-texto), antes de tudo.
+  for (const el of todos) {
+    const fundo = lerFundo(getComputedStyle(el).backgroundColor);
+    if (!fundo) continue;
+    pdf.setFillColor(fundo[0], fundo[1], fundo[2]);
+    for (const r of Array.from(el.getClientRects())) {
+      if (r.width <= 0 || r.height <= 0) continue;
+      pdf.rect(X(r.left), Y(r.top), r.width * MM_POR_PX, r.height * MM_POR_PX, "F");
+    }
+  }
 
   // 1) Bordas (células de tabela etc.), como linhas.
   pdf.setLineCap(2);
@@ -241,9 +325,9 @@ export async function desenharPaginaNoPdf(
     if (!pai || !no.data.trim()) continue;
     if (getComputedStyle(pai).visibility === "hidden") continue;
     const estilo = estiloDe(pai, pagina, cacheEstilos);
-    const { subida } = metricasDaFonte(pai, cacheMetricas);
+    const { subida, altura: alturaFonte } = metricasDaFonte(pai, cacheMetricas);
     const fonte = estilo.negrito ? (estilo.italico ? "bolditalic" : "bold") : estilo.italico ? "italic" : "normal";
-    pdf.setFont("helvetica", fonte);
+    pdf.setFont(estilo.familia, fonte);
     pdf.setFontSize(estilo.tamanhoPx * PT_POR_PX);
     pdf.setTextColor(estilo.cor[0], estilo.cor[1], estilo.cor[2]);
     pdf.setDrawColor(estilo.cor[0], estilo.cor[1], estilo.cor[2]);
@@ -256,6 +340,40 @@ export async function desenharPaginaNoPdf(
       range.setEnd(no, m.index + m[0].length);
       const rects = range.getClientRects();
       if (rects.length === 0) continue;
+
+      if (!ehSeguro(m[0])) {
+        // Palavra com símbolo/emoji: letras normais viram texto; símbolos viram imagem.
+        for (const g of grafemas(m[0])) {
+          const ini = m.index + g.indice;
+          range.setStart(no, ini);
+          range.setEnd(no, ini + g.texto.length);
+          const rg = range.getClientRects()[0];
+          if (!rg) continue;
+          if (ehSeguro(g.texto)) {
+            let t = g.texto;
+            if (estilo.maiusculas) t = t.toUpperCase();
+            else if (estilo.minusculas) t = t.toLowerCase();
+            t = limparTexto(t);
+            if (t) pdf.text(t, X(rg.left), Y(rg.top + subida));
+          } else {
+            const dados = simboloParaDados(g.texto, rg.width, alturaFonte, subida, estilo);
+            if (dados) {
+              pdf.addImage(dados, "PNG", X(rg.left), Y(rg.top), rg.width * MM_POR_PX, alturaFonte * MM_POR_PX, `sim:${g.texto}:${estilo.tamanhoPx}:${estilo.cor.join(",")}:${estilo.pesoCss}:${estilo.italico ? 1 : 0}`);
+            }
+          }
+          const baseG = rg.top + subida;
+          if (estilo.sublinhado) {
+            const yl = Y(baseG + estilo.tamanhoPx * 0.1);
+            pdf.line(X(rg.left), yl, X(rg.right), yl);
+          }
+          if (estilo.riscado) {
+            const yl = Y(baseG - estilo.tamanhoPx * 0.3);
+            pdf.line(X(rg.left), yl, X(rg.right), yl);
+          }
+        }
+        continue;
+      }
+
       const pedacos =
         rects.length === 1
           ? [{ texto: m[0], rect: rects[0] }]

@@ -46,22 +46,57 @@ function nosUteis(el: Element): ChildNode[] {
 function ehContainerDeBlocos(el: Element): boolean {
   if (!CONTAINERS.has(el.tagName)) return false;
   const nos = nosUteis(el);
-  return nos.length > 0 && nos.every((n) => n.nodeType === 1 && BLOCOS.has((n as Element).tagName));
+  return nos.some((n) => n.nodeType === 1 && BLOCOS.has((n as Element).tagName));
 }
 
 /** Quebra o conteúdo de uma célula nos menores blocos que podem ir para páginas diferentes. */
 function coletarAtomos(container: Element, cadeia: Element[], saida: Atomo[]) {
   const nos = nosUteis(container);
-  const soBlocos = nos.length > 0 && nos.every((n) => n.nodeType === 1 && BLOCOS.has((n as Element).tagName));
-  if (!soBlocos) {
+  const temBloco = nos.some((n) => n.nodeType === 1 && BLOCOS.has((n as Element).tagName));
+  if (!temBloco) {
     saida.push({ cadeia, nos: Array.from(container.childNodes) });
     return;
   }
+  // Trechos soltos (texto/inline) entre blocos formam um item próprio, na ordem em que aparecem.
+  let solto: Node[] = [];
+  const fecharSolto = () => {
+    if (solto.length > 0) saida.push({ cadeia, nos: solto });
+    solto = [];
+  };
   for (const n of nos) {
+    if (n.nodeType !== 1 || !BLOCOS.has((n as Element).tagName)) {
+      solto.push(n);
+      continue;
+    }
+    fecharSolto();
     const el = n as Element;
-    if (ehContainerDeBlocos(el)) coletarAtomos(el, [...cadeia, el], saida);
-    else saida.push({ cadeia, nos: [el] });
+    if (el.tagName === "TABLE") {
+      // Tabela dentro da célula (ex.: texto livre): cada linha pode ir para uma página diferente.
+      const linhas = Array.from((el as HTMLTableElement).rows);
+      if (linhas.length === 0) {
+        saida.push({ cadeia, nos: [el] });
+        continue;
+      }
+      for (const tr of linhas) {
+        const grupo = tr.parentElement ?? el;
+        saida.push({ cadeia: grupo === el ? [...cadeia, el] : [...cadeia, el, grupo], nos: [tr] });
+      }
+    } else if (ehContainerDeBlocos(el)) {
+      coletarAtomos(el, [...cadeia, el], saida);
+    } else {
+      saida.push({ cadeia, nos: [el] });
+    }
   }
+  fecharSolto();
+}
+
+/** Copia a tabela sem as linhas, mantendo as larguras das colunas (<colgroup>). */
+function copiaDaTabela(orig: Element): HTMLElement {
+  const t = orig.cloneNode(false) as HTMLElement;
+  Array.from(orig.children)
+    .filter((c) => c.tagName === "COLGROUP")
+    .forEach((c) => t.appendChild(c.cloneNode(true)));
+  return t;
 }
 
 /** Clona um nó fixando o tamanho das imagens (o clone ainda não as carregou). */
@@ -96,7 +131,9 @@ function colocarAtomo(alvo: Alvo, atomo: Atomo): () => void {
   let pai: HTMLElement = k === 0 ? alvo.raiz : alvo.cadeiaClone[k - 1];
   let primeiroCriado: HTMLElement | null = null;
   for (let j = k; j < atomo.cadeia.length; j++) {
-    const envoltorio = atomo.cadeia[j].cloneNode(false) as HTMLElement;
+    // Tabelas que continuam na página seguinte mantêm as larguras das colunas (<colgroup>).
+    const envoltorio =
+      atomo.cadeia[j].tagName === "TABLE" ? copiaDaTabela(atomo.cadeia[j]) : (atomo.cadeia[j].cloneNode(false) as HTMLElement);
     pai.appendChild(envoltorio);
     if (!primeiroCriado) primeiroCriado = envoltorio;
     alvo.cadeiaOrig.push(atomo.cadeia[j]);
@@ -150,7 +187,7 @@ export function paginarPlano(original: HTMLElement, larguraPx: number, alturaUti
 
   function garantirTabela(orig: Element): { tbody: HTMLElement; criada: boolean } {
     if (tabelaAtual && tabelaAtual.orig === orig) return { tbody: tabelaAtual.tbody, criada: false };
-    const t = orig.cloneNode(false) as HTMLElement;
+    const t = copiaDaTabela(orig);
     const tb = document.createElement("tbody");
     t.appendChild(tb);
     pagina.appendChild(t);
@@ -193,7 +230,7 @@ export function paginarPlano(original: HTMLElement, larguraPx: number, alturaUti
   function alturaIsolada(tabela: Element, tr: Element): number {
     const teste = criarPagina();
     hospedeiro.appendChild(teste);
-    const t = tabela.cloneNode(false) as HTMLElement;
+    const t = copiaDaTabela(tabela);
     const tb = document.createElement("tbody");
     t.appendChild(tb);
     tb.appendChild(clonar(tr));
@@ -286,6 +323,12 @@ export function paginarPlano(original: HTMLElement, larguraPx: number, alturaUti
   }
 
   function adicionarLinha(tabela: Element, tr: Element) {
+    // Linha de título (data-reservar="N"): precisa de N px livres na página, senão o título
+    // iria sozinho para o pé da página e o conteúdo começaria só na seguinte.
+    const reservar = Number(tr.getAttribute("data-reservar") ?? "0");
+    if (reservar > 0 && !paginaVazia() && limite - altura() < reservar) {
+      novaPagina();
+    }
     if (tentarLinhaInteira(tabela, tr)) return;
     const evitar =
       tr.classList.contains("break-inside-avoid") || alturaIsolada(tabela, tr) <= limite * 0.3;

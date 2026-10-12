@@ -20,6 +20,7 @@ function nomeArquivo(titulo: string): string {
 }
 
 const PROPRIEDADES = [
+  "font-family",
   "font-size",
   "font-weight",
   "font-style",
@@ -27,6 +28,7 @@ const PROPRIEDADES = [
   "text-decoration-line",
   "text-transform",
   "line-height",
+  "text-indent",
   "vertical-align",
   "color",
   "background-color",
