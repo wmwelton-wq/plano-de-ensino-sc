@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import BarraAcoesPlano from "./barra-acoes-plano";
 import AutoAcao from "./auto-acao";
 import { ehHtml, sanitizarHtml } from "@/lib/texto-rico";
+import type { HabilidadeManual } from "@/lib/database.types";
 
 function linhas(texto: string | null): string[] {
   if (!texto) return [];
@@ -99,7 +100,7 @@ export default async function VisualizarPlanoPage({
     plano.usar_curriculo_digital
       ? [
           ...(habilidadesTodas ?? []).filter((h) => h.fonte === "curriculo_educacao_digital"),
-          ...(plano.habilidades_manuais ?? []).map((m, i) => ({
+          ...((plano.habilidades_manuais as HabilidadeManual[] | null) ?? []).map((m: HabilidadeManual, i: number) => ({
             id: `manual-${i}`,
             codigo: m.codigo,
             descricao: m.descricao,
