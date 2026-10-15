@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useImperativeHandle, useRef, useState } from "react";
+import { useCallback, useId, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { MouseEvent as MouseEventReact, Ref } from "react";
 import { MARCADOR_HTML, sanitizarHtml, valorGravadoParaHtml } from "@/lib/texto-rico";
 
@@ -93,6 +93,9 @@ export default function EditorTextoRico({
   // da edição (a área de escrita não é controlada pelo React).
   const [htmlInicial] = useState(() => valorGravadoParaHtml(valorInicial, textoAntigoComoLista));
   const [valorCampo, setValorCampo] = useState(() => (htmlInicial ? MARCADOR_HTML + htmlInicial : ""));
+  // Mesmo objeto em toda renderização: assim o React nunca reescreve o conteúdo que o professor (ou as
+  // caixinhas) colocou na área de escrita.
+  const conteudoInicial = useMemo(() => ({ __html: htmlInicial }), [htmlInicial]);
 
   const ouvintes = useRef(new Set<(linhas: string[]) => void>());
 
@@ -363,7 +366,7 @@ export default function EditorTextoRico({
         }}
         className="texto-rico editor-rico max-w-none overflow-y-auto rounded-b-lg px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none"
         style={{ minHeight: `${linhas * 1.5}rem`, resize: "vertical" }}
-        dangerouslySetInnerHTML={{ __html: htmlInicial }}
+        dangerouslySetInnerHTML={conteudoInicial}
       />
 
       <input type="hidden" name={name} value={valorCampo} />

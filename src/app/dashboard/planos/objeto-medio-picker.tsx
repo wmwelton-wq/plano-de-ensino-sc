@@ -1,9 +1,9 @@
 "use client";
 
-import { useId, useMemo, useState, type RefObject } from "react";
+import { useEffect, useId, useMemo, useState, type RefObject } from "react";
 import type { ObjetoConhecimentoMedio } from "@/lib/database.types";
 import type { EditorTextoRicoHandle } from "./editor-texto-rico";
-import { useAvisoTemporario, useLinhasDoEditor } from "./linhas-do-editor";
+import { useAvisoTemporario, useCaixinhasIndependentes, type ItemCaixinha } from "./linhas-do-editor";
 
 interface ObjetoMedioPickerProps {
   /** Objetos de conhecimento da disciplina escolhida (todas as séries). */
@@ -31,7 +31,7 @@ export default function ObjetoMedioPicker({
 }: ObjetoMedioPickerProps) {
   const idSerie = useId();
   const idBusca = useId();
-  const texto = useLinhasDoEditor(editorRef);
+  const caixas = useCaixinhasIndependentes(editorRef);
   const { aviso, mostrar } = useAvisoTemporario();
 
   const series = useMemo(
@@ -60,6 +60,18 @@ export default function ObjetoMedioPicker({
     return doAno.filter((o) => `${o.objeto} ${o.conteudos ?? ""}`.toLowerCase().includes(termo));
   }, [doAno, busca]);
 
+  // Plano já salvo: marca as caixinhas dos objetos e conteúdos que já estão escritos no campo.
+  const { textoPronto, jaDecidiu, semear } = caixas;
+  useEffect(() => {
+    if (objetos.length === 0 || !textoPronto || jaDecidiu()) return;
+    const candidatos: ItemCaixinha[] = [];
+    for (const o of doAno) {
+      candidatos.push({ chave: `o:${o.id}`, linha: o.objeto });
+      for (const c of itensDeConteudo(o.conteudos)) candidatos.push({ chave: `c:${o.id}||${c}`, linha: c, pai: `o:${o.id}` });
+    }
+    semear(candidatos);
+  }, [doAno, textoPronto]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (objetos.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-primary-200 bg-white px-3 py-4 text-sm text-slate-500">
@@ -74,7 +86,7 @@ export default function ObjetoMedioPicker({
         type="button"
         aria-expanded={painelAberto}
         onClick={() => setPainelAberto((a) => !a)}
-        className="btn-azul w-full sm:w-auto"
+        className="btn-verde w-full sm:w-auto"
       >
         <span aria-hidden="true">{painelAberto ? "▲" : "＋"}</span>
         {painelAberto
@@ -144,16 +156,18 @@ export default function ObjetoMedioPicker({
               {filtrados.map((o) => {
                 const aberto = ativo === o.id;
                 const conteudos = itensDeConteudo(o.conteudos);
-                const objetoMarcado = texto.tem(o.objeto);
-                const conteudosMarcados = conteudos.filter((c) => texto.tem(c)).length;
-                const parcial = conteudos.length > 0 && !objetoMarcado ? conteudosMarcados > 0 : objetoMarcado && conteudosMarcados < conteudos.length;
+                const itemObjeto: ItemCaixinha = { chave: `o:${o.id}`, linha: o.objeto };
+                const itensConteudo: ItemCaixinha[] = conteudos.map((c) => ({ chave: `c:${o.id}||${c}`, linha: c }));
+                const objetoMarcado = caixas.marcado(itemObjeto.chave);
+                const conteudosMarcados = itensConteudo.filter((i) => caixas.marcado(i.chave)).length;
+                const parcial = conteudosMarcados > 0 && (!objetoMarcado || conteudosMarcados < conteudos.length);
 
                 function alternarObjeto() {
                   if (objetoMarcado || conteudosMarcados > 0) {
-                    texto.desmarcar([o.objeto, ...conteudos]);
+                    caixas.desmarcar([itemObjeto, ...itensConteudo]);
                     mostrar("Retirado do plano.");
                   } else {
-                    texto.marcar([o.objeto, ...conteudos], "paragrafos");
+                    caixas.marcar([itemObjeto, ...itensConteudo]);
                     mostrar(
                       conteudos.length > 0
                         ? "Objeto e conteúdos adicionados ao plano, no campo logo abaixo."
@@ -161,12 +175,12 @@ export default function ObjetoMedioPicker({
                     );
                   }
                 }
-                function alternarConteudo(c: string) {
-                  if (texto.tem(c)) {
-                    texto.desmarcar([c]);
+                function alternarConteudo(i: ItemCaixinha) {
+                  if (caixas.marcado(i.chave)) {
+                    caixas.desmarcar([i]);
                     mostrar("Conteúdo retirado do plano.");
                   } else {
-                    texto.marcar(objetoMarcado ? [c] : [o.objeto, c], "paragrafos");
+                    caixas.marcar(objetoMarcado ? [i] : [itemObjeto, i]);
                     mostrar("Conteúdo adicionado ao plano, no campo logo abaixo.");
                   }
                 }
@@ -203,18 +217,18 @@ export default function ObjetoMedioPicker({
                     {aberto && conteudos.length > 0 && (
                       <div className="space-y-0.5 bg-primary-50/40 px-3 pb-3 pt-1 pl-9">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Conteúdos sugeridos</p>
-                        {conteudos.map((c) => (
+                        {itensConteudo.map((ic) => (
                           <label
-                            key={c}
+                            key={ic.chave}
                             className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-sm text-slate-700 hover:bg-white"
                           >
                             <input
                               type="checkbox"
-                              checked={texto.tem(c)}
-                              onChange={() => alternarConteudo(c)}
+                              checked={caixas.marcado(ic.chave)}
+                              onChange={() => alternarConteudo(ic)}
                               className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                             />
-                            <span>{c}</span>
+                            <span>{ic.linha}</span>
                           </label>
                         ))}
                       </div>

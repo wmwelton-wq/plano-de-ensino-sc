@@ -100,7 +100,7 @@ export default function HabilidadePicker({
             type="button"
             aria-expanded={aberto}
             onClick={() => setAberto((a) => !a)}
-            className="btn-azul"
+            className="btn-verde"
           >
             <span aria-hidden="true">{aberto ? "▲" : "＋"}</span>
             {aberto ? "Fechar lista de habilidades" : rotuloBotao}
@@ -165,7 +165,7 @@ export default function HabilidadePicker({
               type="button"
               onClick={incluirManual}
               disabled={descricaoManual.trim().length === 0}
-              className="btn-azul !py-2"
+              className="btn-verde !py-2"
             >
               Incluir no plano
             </button>

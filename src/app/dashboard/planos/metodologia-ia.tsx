@@ -79,7 +79,7 @@ export default function MetodologiaIA({ children, onGerar }: MetodologiaIAProps)
   return (
     <div ref={raiz} className="space-y-4">
       <div className="space-y-3 rounded-xl border border-primary-200 bg-white p-4 shadow-sm">
-        <button type="button" onClick={gerar} disabled={gerando} className="btn-azul w-full sm:w-auto">
+        <button type="button" onClick={gerar} disabled={gerando} className="btn-verde w-full sm:w-auto">
           <span aria-hidden="true">✦</span>
           {gerando ? "Criando..." : "Criar caminho metodológico com IA"}
         </button>

@@ -164,10 +164,36 @@ async function carregarImagem(img: HTMLImageElement): Promise<void> {
   });
 }
 
+/**
+ * JPEG: usa o arquivo original, byte a byte (sem redesenhar nem recomprimir), para não perder nitidez.
+ * Só quando a imagem não é grande demais para o tamanho em que aparece (senão o PDF ficaria pesado).
+ */
+async function jpegOriginal(img: HTMLImageElement, larguraPx: number): Promise<string | null> {
+  try {
+    const src = img.currentSrc || img.src;
+    if (!src || !img.naturalWidth || img.naturalWidth > larguraPx * 6) return null;
+    const ehJpeg = /\.jpe?g($|\?)/i.test(src) || src.startsWith("data:image/jpeg");
+    if (!ehJpeg) return null;
+    const resposta = await fetch(src, { cache: "force-cache" });
+    if (!resposta.ok) return null;
+    const blob = await resposta.blob();
+    if (blob.type !== "image/jpeg") return null;
+    return await new Promise<string | null>((resolve) => {
+      const leitor = new FileReader();
+      leitor.onload = () => resolve(typeof leitor.result === "string" ? leitor.result : null);
+      leitor.onerror = () => resolve(null);
+      leitor.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 function imagemParaDados(img: HTMLImageElement, larguraPx: number): { dados: string; formato: "JPEG" | "PNG" } | null {
   try {
     if (!img.naturalWidth) return null;
-    const escala = Math.min(1, (larguraPx * 3) / img.naturalWidth);
+    // Até 6x o tamanho em que aparece (≈ 570 dpi), sem ampliar além do original.
+    const escala = Math.min(1, (larguraPx * 6) / img.naturalWidth);
     const w = Math.max(1, Math.round(img.naturalWidth * escala));
     const h = Math.max(1, Math.round(img.naturalHeight * escala));
     const canvas = document.createElement("canvas");
@@ -181,9 +207,11 @@ function imagemParaDados(img: HTMLImageElement, larguraPx: number): { dados: str
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, w, h);
     }
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     ctx.drawImage(img, 0, 0, w, h);
     return ehJpeg
-      ? { dados: canvas.toDataURL("image/jpeg", 0.92), formato: "JPEG" }
+      ? { dados: canvas.toDataURL("image/jpeg", 1), formato: "JPEG" }
       : { dados: canvas.toDataURL("image/png"), formato: "PNG" };
   } catch {
     return null; // imagem de outro site sem permissão: fica em branco
@@ -225,7 +253,7 @@ function simboloParaDados(
   estilo: EstiloTexto
 ): string | null {
   try {
-    const escala = 4;
+    const escala = 8;
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.ceil(larguraPx * escala));
     canvas.height = Math.max(1, Math.ceil(alturaPx * escala));
@@ -310,8 +338,22 @@ export async function desenharPaginaNoPdf(
     await carregarImagem(img);
     const rect = img.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) continue;
-    const dados = imagemParaDados(img, rect.width);
-    if (dados) pdf.addImage(dados.dados, dados.formato, X(rect.left), Y(rect.top), rect.width * MM_POR_PX, rect.height * MM_POR_PX);
+    const largura = rect.width * MM_POR_PX;
+    const altura = rect.height * MM_POR_PX;
+    let colocada = false;
+    const original = await jpegOriginal(img, rect.width);
+    if (original) {
+      try {
+        pdf.addImage(original, "JPEG", X(rect.left), Y(rect.top), largura, altura, `orig:${img.currentSrc || img.src}`);
+        colocada = true;
+      } catch {
+        colocada = false; // JPEG de um tipo que o PDF não aceita direto: usa o desenho abaixo
+      }
+    }
+    if (!colocada) {
+      const dados = imagemParaDados(img, rect.width);
+      if (dados) pdf.addImage(dados.dados, dados.formato, X(rect.left), Y(rect.top), largura, altura);
+    }
   }
 
   // 3) Texto, palavra por palavra, nas posições medidas.

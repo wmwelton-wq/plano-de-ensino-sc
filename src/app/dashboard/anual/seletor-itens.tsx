@@ -343,7 +343,7 @@ export default function SeletorItens({
             placeholder={placeholderManual}
             className="input-field !mt-0 flex-1"
           />
-          <button type="button" onClick={adicionarManual} disabled={!textoManual.trim()} className="btn-azul !py-2.5">
+          <button type="button" onClick={adicionarManual} disabled={!textoManual.trim()} className="btn-verde !py-2.5">
             + Adicionar
           </button>
         </div>

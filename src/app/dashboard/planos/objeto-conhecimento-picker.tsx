@@ -1,10 +1,10 @@
 "use client";
 
-import { useId, useMemo, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode, type RefObject } from "react";
 import type { HabilidadeCurricular } from "@/lib/database.types";
 import SecaoPlano from "./secao-plano";
 import type { EditorTextoRicoHandle } from "./editor-texto-rico";
-import { useAvisoTemporario, useLinhasDoEditor } from "./linhas-do-editor";
+import { useAvisoTemporario, useCaixinhasIndependentes, type ItemCaixinha } from "./linhas-do-editor";
 
 interface ObjetosEHabilidadesProps {
   /** Habilidades (de todas as fontes) da disciplina escolhida, exceto as de educação digital. */
@@ -44,6 +44,9 @@ function anosDoRotulo(rotulo: string | null): number[] {
   return numeros;
 }
 
+const chaveObjeto = (chave: string) => `o:${chave}`;
+const chaveConteudo = (chave: string, c: string) => `c:${chave}||${c}`;
+
 /** "Unidade Temática: Objeto" -> "Objeto" (se não houver ": ", devolve o texto inteiro). */
 function nomeDoObjeto(objeto: string): string {
   const i = objeto.indexOf(": ");
@@ -57,6 +60,79 @@ function itensDeConteudo(texto: string | null | undefined): string[] {
     .split("\n")
     .map((l) => l.replace(/^[\s•\-–*]+/, "").trim())
     .filter((l) => l.length > 0);
+}
+
+/** Texto sem acento/maiúscula e com cada palavra reduzida (singular, 6 letras) para comparar nomes quase iguais. */
+function chaveDeParte(t: string): string {
+  return t
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map((w) => w.replace(/s$/, "").slice(0, 6))
+    .join(" ");
+}
+
+/** "Artes Integradas: A / B / C" -> unidade "artes integradas" e partes [a, b, c] (já comparáveis). */
+function partesDoObjeto(objeto: string): { unidade: string; partes: string[] } {
+  const i = objeto.indexOf(": ");
+  const unidade = i >= 0 ? objeto.slice(0, i) : "";
+  const resto = i >= 0 ? objeto.slice(i + 2) : objeto;
+  return {
+    unidade: chaveDeParte(unidade),
+    partes: resto.split(" / ").map(chaveDeParte).filter(Boolean),
+  };
+}
+
+interface GrupoObjeto {
+  chave: string;
+  objeto: string;
+  disciplina: string;
+  itens: HabilidadeCurricular[];
+}
+
+/**
+ * O currículo traz, para o mesmo componente e ano, um objeto "reunido" (ex.: "Artes Integradas: Processo de
+ * criação / Matrizes estéticas e culturais / Patrimônio Cultural / Arte e tecnologia") e também cada parte
+ * solta ("Artes Integradas: Arte e tecnologia"...), repetindo os mesmos conteúdos. Mostramos só o reunido,
+ * com as habilidades e conteúdos de todos juntos: nada se perde, mas não há mais itens repetidos.
+ */
+function reunirObjetosRepetidos(grupos: GrupoObjeto[]): GrupoObjeto[] {
+  const info = grupos.map((g) => ({ g, ...partesDoObjeto(g.objeto), disc: g.chave.slice(0, g.chave.indexOf("||")) }));
+  const destino = new Map<number, number>();
+  info.forEach((a, ia) => {
+    if (a.partes.length === 0) return;
+    let melhor = -1;
+    info.forEach((b, ib) => {
+      if (ia === ib || b.disc !== a.disc || b.unidade !== a.unidade) return;
+      if (!a.partes.every((p) => b.partes.includes(p))) return;
+      const maior = b.partes.length > a.partes.length;
+      const igualMaisCanonico = b.partes.length === a.partes.length && b.g.objeto < a.g.objeto;
+      if (!maior && !igualMaisCanonico) return;
+      if (melhor === -1 || b.partes.length > info[melhor].partes.length) melhor = ib;
+    });
+    if (melhor !== -1) destino.set(ia, melhor);
+  });
+  if (destino.size === 0) return grupos;
+  const extras = new Map<number, HabilidadeCurricular[]>();
+  destino.forEach((ib, ia) => extras.set(ib, [...(extras.get(ib) ?? []), ...info[ia].g.itens]));
+  return info
+    .map((x, i) => ({ x, i }))
+    .filter(({ i }) => !destino.has(i))
+    .map(({ x, i }) => {
+      const adicionais = extras.get(i);
+      if (!adicionais) return x.g;
+      const vistos = new Set(x.g.itens.map((h) => h.id));
+      const itens = [...x.g.itens];
+      for (const h of adicionais) {
+        if (!vistos.has(h.id)) {
+          vistos.add(h.id);
+          itens.push(h);
+        }
+      }
+      return { ...x.g, itens };
+    });
 }
 
 function semDuplicatas(itens: string[]): string[] {
@@ -96,7 +172,7 @@ export default function ObjetosEHabilidades({
   const idAno = useId();
   const idBuscaObj = useId();
   const idBuscaHab = useId();
-  const texto = useLinhasDoEditor(editorRef);
+  const caixas = useCaixinhasIndependentes(editorRef);
   const { aviso, mostrar } = useAvisoTemporario();
 
   const porId = useMemo(() => new Map(habilidades.map((h) => [h.id, h])), [habilidades]);
@@ -178,21 +254,35 @@ export default function ObjetosEHabilidades({
       }
     }
     const nomeDisc = (id: string) => nomesDisciplinas?.[id] ?? "";
-    return Array.from(mapa.entries())
-      .map(([chave, itens]) => {
-        const objeto = chave.slice(chave.indexOf("||") + 2);
-        const disciplina = nomeDisc(chave.slice(0, chave.indexOf("||")));
-        const ordenados = ehBncc
-          ? [...itens].sort((a, b) => (a.codigo ?? "").localeCompare(b.codigo ?? ""))
-          : itens;
-        return { chave, objeto, disciplina, itens: ordenados };
-      })
+    const todos: GrupoObjeto[] = Array.from(mapa.entries()).map(([chave, itens]) => {
+      const objeto = chave.slice(chave.indexOf("||") + 2);
+      const disciplina = nomeDisc(chave.slice(0, chave.indexOf("||")));
+      const ordenados = ehBncc
+        ? [...itens].sort((a, b) => (a.codigo ?? "").localeCompare(b.codigo ?? ""))
+        : itens;
+      return { chave, objeto, disciplina, itens: ordenados };
+    });
+    return (ehBncc ? todos : reunirObjetosRepetidos(todos))
       .sort(
         (a, b) =>
           a.disciplina.localeCompare(b.disciplina, "pt-BR", { sensitivity: "base" }) ||
           a.objeto.localeCompare(b.objeto, "pt-BR", { sensitivity: "base" })
       );
   }, [linhasCurriculo, ano, nomesDisciplinas, ehBncc]);
+
+  // Plano já salvo: marca as caixinhas dos objetos e conteúdos que já estão escritos no campo.
+  const { textoPronto, jaDecidiu, semear } = caixas;
+  useEffect(() => {
+    if (ehBncc || objetos.length === 0 || !textoPronto || jaDecidiu()) return;
+    const candidatos: ItemCaixinha[] = [];
+    for (const o of objetos) {
+      candidatos.push({ chave: chaveObjeto(o.chave), linha: nomeDoObjeto(o.objeto) });
+      for (const c of semDuplicatas(o.itens.flatMap((h) => itensDeConteudo(h.conteudos)))) {
+        candidatos.push({ chave: chaveConteudo(o.chave, c), linha: c, pai: chaveObjeto(o.chave) });
+      }
+    }
+    semear(candidatos);
+  }, [objetos, ehBncc, textoPronto]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function filtrar(busca: string) {
     const termo = busca.trim().toLowerCase();
@@ -297,7 +387,7 @@ export default function ObjetosEHabilidades({
               type="button"
               aria-expanded={painelObjetos}
               onClick={() => setPainelObjetos((a) => !a)}
-              className="btn-azul w-full sm:w-auto"
+              className="btn-verde w-full sm:w-auto"
             >
               <span aria-hidden="true">{painelObjetos ? "▲" : "＋"}</span>
               {painelObjetos
@@ -350,17 +440,19 @@ export default function ObjetosEHabilidades({
                         const aberto = objetoAtivoObj === chave;
                         const conteudos = ehBncc ? [] : semDuplicatas(itens.flatMap((h) => itensDeConteudo(h.conteudos)));
                         const linhaObjeto = ehBncc ? objeto : nomeDoObjeto(objeto);
-                        const objetoMarcado = texto.tem(linhaObjeto);
-                        const conteudosMarcados = conteudos.filter((c) => texto.tem(c)).length;
-                        const parcial = conteudos.length > 0 && !objetoMarcado ? conteudosMarcados > 0 : objetoMarcado && conteudosMarcados < conteudos.length;
+                        const itemObjeto: ItemCaixinha = { chave: chaveObjeto(chave), linha: linhaObjeto };
+                        const itensConteudo: ItemCaixinha[] = conteudos.map((c) => ({ chave: chaveConteudo(chave, c), linha: c }));
+                        const objetoMarcado = caixas.marcado(itemObjeto.chave);
+                        const conteudosMarcados = itensConteudo.filter((i) => caixas.marcado(i.chave)).length;
+                        const parcial = conteudosMarcados > 0 && (!objetoMarcado || conteudosMarcados < conteudos.length);
                         const semCaixa = objeto === GRUPO_BNCC;
 
                         function alternarObjeto() {
                           if (objetoMarcado || conteudosMarcados > 0) {
-                            texto.desmarcar([linhaObjeto, ...conteudos]);
+                            caixas.desmarcar([itemObjeto, ...itensConteudo]);
                             mostrar("Retirado do plano.");
                           } else {
-                            texto.marcar([linhaObjeto, ...conteudos], "paragrafos");
+                            caixas.marcar([itemObjeto, ...itensConteudo]);
                             mostrar(
                               conteudos.length > 0
                                 ? "Objeto e conteúdos adicionados ao plano, no campo logo abaixo."
@@ -368,12 +460,12 @@ export default function ObjetosEHabilidades({
                             );
                           }
                         }
-                        function alternarConteudo(c: string) {
-                          if (texto.tem(c)) {
-                            texto.desmarcar([c]);
+                        function alternarConteudo(i: ItemCaixinha) {
+                          if (caixas.marcado(i.chave)) {
+                            caixas.desmarcar([i]);
                             mostrar("Conteúdo retirado do plano.");
                           } else {
-                            texto.marcar(objetoMarcado ? [c] : [linhaObjeto, c], "paragrafos");
+                            caixas.marcar(objetoMarcado ? [i] : [itemObjeto, i]);
                             mostrar("Conteúdo adicionado ao plano, no campo logo abaixo.");
                           }
                         }
@@ -415,18 +507,18 @@ export default function ObjetosEHabilidades({
                             {aberto && conteudos.length > 0 && (
                               <div className="space-y-0.5 bg-primary-50/40 px-3 pb-3 pt-1 pl-9">
                                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Conteúdos sugeridos</p>
-                                {conteudos.map((c) => (
+                                {itensConteudo.map((ic) => (
                                   <label
-                                    key={c}
+                                    key={ic.chave}
                                     className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-sm text-slate-700 hover:bg-white"
                                   >
                                     <input
                                       type="checkbox"
-                                      checked={texto.tem(c)}
-                                      onChange={() => alternarConteudo(c)}
+                                      checked={caixas.marcado(ic.chave)}
+                                      onChange={() => alternarConteudo(ic)}
                                       className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                                     />
-                                    <span>{c}</span>
+                                    <span>{ic.linha}</span>
                                   </label>
                                 ))}
                               </div>
@@ -465,7 +557,7 @@ export default function ObjetosEHabilidades({
               type="button"
               aria-expanded={painelHabilidades}
               onClick={() => setPainelHabilidades((a) => !a)}
-              className="btn-azul w-full sm:w-auto"
+              className="btn-verde w-full sm:w-auto"
             >
               <span aria-hidden="true">{painelHabilidades ? "▲" : "＋"}</span>
               {painelHabilidades ? "Fechar lista de habilidades" : "Clique para adicionar habilidades"}
@@ -480,7 +572,7 @@ export default function ObjetosEHabilidades({
                   <div className="overflow-hidden rounded-xl border border-primary-200">
                     <div className="border-b border-primary-100 bg-primary-50/50 px-3 py-2">
                       <p className="text-xs text-slate-500">
-                        Clique no botão azul de um objeto para ver e marcar as habilidades.
+                        Clique no botão de um objeto para ver e marcar as habilidades. Ele fica verde quando há habilidades marcadas.
                       </p>
                       <label htmlFor={idBuscaHab} className="sr-only">
                         Buscar objeto ou habilidade
@@ -516,7 +608,7 @@ export default function ObjetosEHabilidades({
                                 type="button"
                                 aria-expanded={aberto}
                                 onClick={() => setObjetoAtivoHab(aberto ? null : chave)}
-                                className="btn-azul-suave shrink-0 !px-3 !py-1.5 !text-xs"
+                                className={`${marcadas > 0 ? "btn-verde-suave" : "btn-azul-suave"} shrink-0 !px-3 !py-1.5 !text-xs`}
                               >
                                 {marcadas > 0 ? `${marcadas} marcada(s) · ` : ""}
                                 {aberto ? "Fechar" : "Clique para adicionar habilidades"} ({itens.length}){" "}
@@ -561,7 +653,7 @@ export default function ObjetosEHabilidades({
           </p>
           {selecionadasLista.length === 0 ? (
             <p className="px-3 py-2.5 text-sm text-slate-400">
-              Nenhuma habilidade escolhida ainda. Use o botão azul acima.
+              Nenhuma habilidade escolhida ainda. Use o botão verde acima.
             </p>
           ) : (
             <ul className="divide-y divide-slate-100">

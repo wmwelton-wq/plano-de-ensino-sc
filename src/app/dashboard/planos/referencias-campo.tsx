@@ -108,7 +108,7 @@ export default function ReferenciasCampo({
 
       {sugeridas.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={adicionarSugeridas} className="btn-azul !px-4 !py-2 !text-sm">
+          <button type="button" onClick={adicionarSugeridas} className="btn-verde !px-4 !py-2 !text-sm">
             <span aria-hidden="true">＋</span> Adicionar referências sugeridas
           </button>
           {completo && (

@@ -32,7 +32,7 @@ export default function SugestoesPanel({ rotulo, itens, editorRef }: SugestoesPa
         type="button"
         aria-expanded={aberto}
         onClick={() => setAberto((a) => !a)}
-        className="btn-azul !px-4 !py-2.5"
+        className="btn-verde !px-4 !py-2.5"
       >
         <span aria-hidden="true">{aberto ? "▲" : "▼"}</span>
         {aberto
