@@ -28,6 +28,8 @@ export interface OpcaoLista {
   grupo?: string;
   /** Anos/séries em que o item aparece ("6º ano"...). Vazio = vale para qualquer ano. */
   anos: string[];
+  /** Só nas habilidades: ids dos objetos de conhecimento ligados a ela no currículo. */
+  relacionados?: string[];
 }
 
 export interface DadosComponente {
@@ -181,6 +183,13 @@ export async function carregarDadosComponente(
       codigo: h.codigo,
       fonte: h.fonte,
       anos: h.ano_serie ? [h.ano_serie.trim()] : [],
+      relacionados:
+        h.fonte === "curriculo_educacao_digital"
+          ? []
+          : [
+              ...dividirObjetos(h.objeto_conhecimento).map((t) => `obj:${chaveTexto(t)}`),
+              ...dividirConteudos(h.conteudos).map((t) => `cont:${chaveTexto(t)}`),
+            ],
     };
   });
 

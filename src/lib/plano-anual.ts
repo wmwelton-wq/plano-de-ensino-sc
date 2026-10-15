@@ -70,6 +70,7 @@ export interface PlanoAnual {
   trimestres: unknown;
   texto_livre: string | null;
   status: "rascunho" | "finalizado";
+  favorito?: boolean;
   created_at: string;
   updated_at: string;
 }

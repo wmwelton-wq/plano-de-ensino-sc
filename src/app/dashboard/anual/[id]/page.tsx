@@ -3,7 +3,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import VoltarLink from "../../planos/voltar-link";
 import ExcluirButton from "../../planos/[id]/excluir-button";
-import PlanoAnualForm from "../plano-anual-form";
+import PlanoAnualComRascunho from "../form-com-rascunho";
+import EstrelaFavorito from "../../meus-planos/estrela-favorito";
 import { atualizarPlanoAnual, excluirPlanoAnual } from "../actions";
 import type { PlanoAnual } from "@/lib/plano-anual";
 
@@ -57,6 +58,15 @@ export default async function EditarPlanoAnualPage({
             <ExcluirButton excluirAction={excluirComId} />
           </div>
         </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/20 pt-4">
+          <EstrelaFavorito tipo="anuais" planoId={id} favorito={!!plano.favorito} rotulo />
+          <Link href={`/dashboard/anual/${id}/duplicar`} className="btn-azul-suave !border-white/40 !bg-white !text-primary-700">
+            Duplicar para outra turma
+          </Link>
+          <Link href={`/dashboard/anual/${id}/mensal`} className="btn-azul-suave !border-white/40 !bg-white !text-primary-700">
+            Gerar planos mensais deste plano
+          </Link>
+        </div>
       </div>
 
       {salvo && (
@@ -66,7 +76,10 @@ export default async function EditarPlanoAnualPage({
       )}
 
       <div className="mt-6">
-        <PlanoAnualForm
+        <PlanoAnualComRascunho
+          chave={`anual:${id}`}
+          limparAoSalvar={["anual:novo"]}
+          salvo={!!salvo}
           escolas={escolas ?? []}
           disciplinas={disciplinas ?? []}
           nomeProfessor=""

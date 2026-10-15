@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Escola } from "@/lib/database.types";
 import type { EstadoFormulario } from "../planos/actions";
@@ -14,6 +14,7 @@ import {
   carregarDadosComponente,
   DADOS_VAZIOS,
   type DadosComponente,
+  opcaoParaItem,
   type DisciplinaBasica,
   type OpcaoLista,
 } from "@/lib/dados-anuais";
@@ -30,9 +31,10 @@ import {
   type TrimestreAnual,
 } from "@/lib/plano-anual";
 import SeletorItens from "./seletor-itens";
+import { CRITERIOS_AVALIACAO, INSTRUMENTOS_AVALIACAO } from "../planos/sugestoes-avaliacao";
 import EditorLivre from "./editor-livre";
 
-interface PlanoAnualFormProps {
+export interface PlanoAnualFormProps {
   escolas: Escola[];
   disciplinas: DisciplinaBasica[];
   nomeProfessor: string;
@@ -94,9 +96,43 @@ function TituloTrimestre({ nome, trimestre }: { nome: string; trimestre: number 
   );
 }
 
+/** "Você marcou estas habilidades; estes objetos de conhecimento estão ligados a elas no currículo." */
+function SugestaoObjetos({ sugeridos, onAdicionar }: { sugeridos: OpcaoLista[]; onAdicionar: (lista: OpcaoLista[]) => void }) {
+  if (sugeridos.length === 0) return null;
+  return (
+    <div className="rounded-xl border-2 border-sky-300 bg-sky-50 p-3">
+      <p className="text-sm font-bold text-sky-900">
+        Sugestão: {sugeridos.length} objeto(s) de conhecimento ligado(s) às habilidades que você marcou
+      </p>
+      <ul className="mt-2 flex flex-wrap gap-2">
+        {sugeridos.slice(0, 12).map((o) => (
+          <li key={o.id}>
+            <button
+              type="button"
+              onClick={() => onAdicionar([o])}
+              title="Adicionar este objeto de conhecimento"
+              className="rounded-lg border border-sky-400 bg-white px-3 py-1.5 text-left text-sm font-semibold text-sky-900 shadow-sm hover:bg-sky-100"
+            >
+              + {o.texto}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {sugeridos.length > 12 && <p className="mt-1 text-xs text-sky-800">Mostrando 12 de {sugeridos.length}. Use &quot;Adicionar todos&quot; ou a lista abaixo.</p>}
+      <button type="button" onClick={() => onAdicionar(sugeridos)} className="btn-azul-suave mt-3 !border-2 !border-sky-500 !px-4 !py-2 !text-sm">
+        Adicionar todos ({sugeridos.length})
+      </button>
+    </div>
+  );
+}
+
 export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, plano, action, textoBotao }: PlanoAnualFormProps) {
   const [estado, formAction, pendente] = useActionState(action, {});
   const [erroLocal, setErroLocal] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const ignorarPendencias = useRef(false);
+  const [conferencia, setConferencia] = useState<string[] | null>(null);
+  const [pedindoConfirmacao, setPedindoConfirmacao] = useState(false);
 
   const inicial = useMemo(
     () =>
@@ -151,6 +187,18 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
     const base = conteudos.length > 0 ? conteudos : dados.objetos;
     return base.map((o) => (o.grupo === "Conteúdo" ? { ...o, grupo: "Objeto de conhecimento" } : o));
   }, [dados.objetos]);
+  /** Objetos de conhecimento ligados às habilidades marcadas no trimestre e que ainda não estão marcados. */
+  function objetosSugeridos(t: TrimestreAnual): OpcaoLista[] {
+    const ids = new Set<string>();
+    for (const h of t.habilidades) {
+      const op = dados.habilidades.find((o) => o.id === h.id);
+      for (const r of op?.relacionados ?? []) ids.add(r);
+    }
+    if (ids.size === 0) return [];
+    const marcados = new Set(t.objetos.map((o) => o.id));
+    return opcoesObjetos.filter((o) => ids.has(o.id) && !marcados.has(o.id));
+  }
+
   const [carregando, setCarregando] = useState(false);
   const [erroDados, setErroDados] = useState<string | null>(null);
 
@@ -198,11 +246,71 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
 
   const textoLivreInicial = plano?.texto_livre ?? TEXTO_LIVRE_INICIAL;
 
+  /** Frases prontas para o texto livre: avaliação e metodologia, montadas com os objetos marcados. */
+  const sugestoesTexto = useMemo(() => {
+    const objetos = Array.from(new Set(trimestres.flatMap((t) => t.objetos.map((o) => o.texto.trim())).filter(Boolean))).slice(0, 8);
+    const modelos = [
+      (o: string) => `Aula expositiva dialogada e problematização inicial sobre ${o}.`,
+      (o: string) => `Atividades práticas, em duplas ou grupos, para explorar ${o}.`,
+      (o: string) => `Pesquisa orientada e socialização dos resultados sobre ${o}.`,
+      (o: string) => `Resolução de situações-problema envolvendo ${o}.`,
+      (o: string) => `Uso de recursos digitais e audiovisuais para aprofundar ${o}.`,
+    ];
+    const metodologia = objetos.map((o, i) => modelos[i % modelos.length](o));
+    metodologia.push(
+      "Leitura e interpretação de textos, imagens, gráficos e esquemas relacionados aos conteúdos estudados.",
+      "Retomada dos conteúdos e recuperação paralela ao longo do trimestre, conforme as necessidades dos estudantes."
+    );
+    return [
+      { titulo: "Metodologia (montada com os objetos de conhecimento que você marcou)", itens: metodologia },
+      { titulo: "Critérios de avaliação", itens: CRITERIOS_AVALIACAO },
+      { titulo: "Instrumentos de avaliação", itens: INSTRUMENTOS_AVALIACAO },
+    ];
+  }, [trimestres]);
+
+  /** Lista do que ainda falta (só avisa — nunca muda o formato do plano). */
+  function conferir(form: HTMLFormElement): string[] {
+    const fd = new FormData(form);
+    const campo = (nome: string) => String(fd.get(nome) ?? "").trim();
+    const p: string[] = [];
+    if (!campo("escola_id")) p.push("Escola não escolhida (o plano ficará em “Sem escola definida”).");
+    if (!nomeComponente.trim()) p.push("Componente curricular não informado.");
+    if (!campo("turma")) p.push("Turma não informada.");
+    if (!campo("docente")) p.push("Nome do docente não informado.");
+    if (ementa.length === 0) p.push("Ementa vazia.");
+    if (gerais.length === 0) p.push("Nenhuma competência geral marcada.");
+    if (compBncc.length + compCurr.length + compManuais.length === 0) p.push("Nenhuma competência específica marcada.");
+    trimestres.forEach((t, i) => {
+      const n = `${i + 1}º trimestre`;
+      if (t.unidades.length === 0) p.push(`${n}: nenhuma unidade temática.`);
+      if (t.habilidades.length === 0) p.push(`${n}: nenhuma habilidade.`);
+      if (t.objetos.length === 0) p.push(`${n}: nenhum objeto de conhecimento.`);
+    });
+    const livre = campo("texto_livre");
+    if (!livre.includes("<img") && livre.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "") {
+      p.push("O texto livre (item 6 em diante) está vazio.");
+    }
+    return p;
+  }
+
   return (
     <form
+      ref={formRef}
       action={formAction}
       className="space-y-6"
       onSubmit={(e) => {
+        const finalizando = (e.currentTarget.elements.namedItem("status") as HTMLSelectElement | null)?.value === "finalizado";
+        if (finalizando && !ignorarPendencias.current) {
+          const faltas = conferir(e.currentTarget);
+          if (faltas.length > 0) {
+            e.preventDefault();
+            setConferencia(faltas);
+            setPedindoConfirmacao(true);
+            return;
+          }
+        }
+        ignorarPendencias.current = false;
+        setPedindoConfirmacao(false);
         const campo = e.currentTarget.elements.namedItem("texto_livre") as HTMLInputElement | null;
         const total = dadosJson.length + (campo?.value.length ?? 0);
         if (total > LIMITE_ENVIO) {
@@ -529,6 +637,10 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
               </div>
               <div className="space-y-2">
                 <TituloTrimestre nome="Objetos de conhecimento" trimestre={i} />
+                <SugestaoObjetos
+                  sugeridos={objetosSugeridos(t)}
+                  onAdicionar={(lista) => atualizarTrimestre(i, { objetos: [...t.objetos, ...lista.map(opcaoParaItem)] })}
+                />
                 <SeletorItens
                   opcoes={opcoesObjetos}
                   valor={t.objetos}
@@ -553,8 +665,57 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
         titulo="Do item 6 em diante: texto livre"
         descricao="Aqui o plano continua do jeito que você escrever — títulos, avaliação, metodologias, bibliografia, o que quiser."
       >
-        <EditorLivre id="texto_livre_editor" name="texto_livre" valorInicial={textoLivreInicial} referencias={referenciasSugeridas(etapa)} />
+        <EditorLivre id="texto_livre_editor" name="texto_livre" valorInicial={textoLivreInicial} referencias={referenciasSugeridas(etapa)} sugestoes={sugestoesTexto} />
       </SecaoPlano>
+
+      {/* ───────── Conferência ───────── */}
+      <section aria-labelledby="conferencia" className="rounded-2xl border-2 border-primary-300 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="conferencia" className="text-base font-bold text-slate-900">
+            Conferir antes de finalizar
+          </h2>
+          <button
+            type="button"
+            className="btn-azul-suave !border-2 !border-primary-500 !px-4 !py-2 !text-sm"
+            onClick={() => formRef.current && setConferencia(conferir(formRef.current))}
+          >
+            Conferir agora
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-slate-500">A conferência só avisa o que está faltando. Ela não altera nada no plano.</p>
+        {conferencia !== null &&
+          (conferencia.length === 0 ? (
+            <p role="status" className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+              Tudo preenchido. Pode finalizar.
+            </p>
+          ) : (
+            <div role="status" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p className="font-semibold">Ainda falta preencher ({conferencia.length}):</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                {conferencia.map((c) => (
+                  <li key={c}>{c}</li>
+                ))}
+              </ul>
+              {pedindoConfirmacao && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="btn-azul !px-4 !py-2 !text-sm"
+                    onClick={() => {
+                      ignorarPendencias.current = true;
+                      formRef.current?.requestSubmit();
+                    }}
+                  >
+                    Finalizar mesmo assim
+                  </button>
+                  <button type="button" className="btn-azul-suave !border-2 !border-amber-400 !px-4 !py-2 !text-sm" onClick={() => setPedindoConfirmacao(false)}>
+                    Voltar e completar
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+      </section>
 
       <BarraSalvar pendente={pendente} textoBotao={textoBotao} erro={erroLocal ?? estado.erro} />
     </form>

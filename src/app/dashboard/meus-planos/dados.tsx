@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EtapaPlano, PlanoDeEnsino } from "@/lib/database.types";
+import EstrelaFavorito from "./estrela-favorito";
 
 export type TipoPlano = "mensais" | "anuais";
 
@@ -36,6 +37,7 @@ export interface PlanoLista {
   etapa: string;
   status: string;
   escola_id: string | null;
+  favorito?: boolean | null;
   escolas: { nome: string; municipio: string } | { nome: string; municipio: string }[] | null;
 }
 
@@ -57,7 +59,8 @@ export const comparar = (a: string, b: string) =>
 export async function carregarPlanos(supabase: SupabaseClient, tipo: TipoPlano): Promise<PlanoLista[]> {
   const { data } = await supabase
     .from(TIPOS[tipo].tabela)
-    .select("id, titulo, ano_letivo, turma, etapa, status, updated_at, escola_id, escolas(nome, municipio)")
+    .select("id, titulo, ano_letivo, turma, etapa, status, updated_at, escola_id, favorito, escolas(nome, municipio)")
+    .order("favorito", { ascending: false })
     .order("updated_at", { ascending: false });
   return (data ?? []) as unknown as PlanoLista[];
 }
@@ -172,21 +175,22 @@ export function CartaoPasta({
   );
 }
 
-export function CartaoPlano({ plano, base }: { plano: PlanoLista; base: string }) {
+export function CartaoPlano({ plano, base, tipo }: { plano: PlanoLista; base: string; tipo: TipoPlano }) {
   const finalizado = plano.status === "finalizado";
   return (
-    <li>
+    <li className="flex items-stretch gap-2">
+      <EstrelaFavorito tipo={tipo} planoId={plano.id} favorito={!!plano.favorito} />
       <Link
         href={`${base}/${plano.id}`}
-        className="card card-interactive flex items-center justify-between gap-4 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        className="card card-interactive flex min-w-0 flex-1 items-center justify-between gap-4 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
       >
-        <div>
-          <p className="font-medium text-slate-900">{plano.titulo}</p>
+        <div className="min-w-0">
+          <p className="truncate font-medium text-slate-900">{plano.titulo}</p>
           <p className="mt-0.5 text-sm text-slate-500">
             {etapaLabel[plano.etapa as EtapaPlano] ?? plano.etapa} · {plano.ano_letivo}
           </p>
         </div>
-        <span className={`badge ${finalizado ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+        <span className={`badge shrink-0 ${finalizado ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${finalizado ? "bg-green-600" : "bg-amber-600"}`} />
           {statusLabel[plano.status as PlanoDeEnsino["status"]] ?? plano.status}
         </span>

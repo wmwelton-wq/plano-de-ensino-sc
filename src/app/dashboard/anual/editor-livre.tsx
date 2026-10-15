@@ -22,6 +22,8 @@ interface EditorLivreProps {
   valorInicial?: string | null;
   /** Linhas de "Referências oficiais" que o botão "Referências" insere no texto. */
   referencias?: string[];
+  /** Grupos de frases prontas (avaliação, metodologia...) que o botão "Sugestões" insere no texto. */
+  sugestoes?: { titulo: string; itens: string[] }[];
 }
 
 const FONTES = [
@@ -169,7 +171,7 @@ function Sep() {
   return <span className="mx-1 h-6 w-px bg-primary-200" aria-hidden="true" />;
 }
 
-export default function EditorLivre({ id, name, valorInicial, referencias = [] }: EditorLivreProps) {
+export default function EditorLivre({ id, name, valorInicial, referencias = [], sugestoes = [] }: EditorLivreProps) {
   const areaRef = useRef<HTMLDivElement>(null);
   const campoRef = useRef<HTMLInputElement>(null);
   const arquivoRef = useRef<HTMLInputElement>(null);
@@ -182,7 +184,7 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [] }
   const idEstilo = useId();
 
   const [htmlInicial] = useState(() => valorGravadoParaHtml(valorInicial, false));
-  const [painel, setPainel] = useState<null | "cor" | "destaque" | "sombra" | "simbolos" | "formas" | "figuras" | "tabela">(null);
+  const [painel, setPainel] = useState<null | "cor" | "destaque" | "sombra" | "simbolos" | "formas" | "figuras" | "tabela" | "sugestoes">(null);
   const [aba, setAba] = useState(0);
   const [naTabela, setNaTabela] = useState(false);
   const [imagem, setImagem] = useState<HTMLImageElement | null>(null);
@@ -767,6 +769,11 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [] }
     inserirHtml(html);
   }
 
+  function inserirSugestoes(itens: string[]) {
+    if (itens.length === 0) return;
+    inserirHtml(itens.map((t) => `<p style="text-align: justify">${escaparHtml(t)}</p>`).join(""));
+  }
+
   const abrir = (p: typeof painel) => setPainel((atual) => (atual === p ? null : p));
 
   const selectCls = "h-8 rounded-md border border-primary-200 bg-white px-1.5 text-sm text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500";
@@ -954,6 +961,11 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [] }
           <B titulo="Símbolos (matemática, química, setas...)" onClick={() => abrir("simbolos")} ativo={painel === "simbolos"}>Ω Símbolos</B>
           <B titulo="Formas geométricas" onClick={() => abrir("formas")} ativo={painel === "formas"}>◆ Formas</B>
           <B titulo="Figuras (ícones e emojis)" onClick={() => abrir("figuras")} ativo={painel === "figuras"}>☺ Figuras</B>
+          {sugestoes.length > 0 && (
+            <B titulo="Frases prontas de avaliação e metodologia, montadas com o que você marcou" onClick={() => abrir("sugestoes")} ativo={painel === "sugestoes"}>
+              💡 Sugestões
+            </B>
+          )}
           {referencias.length > 0 && (
             <B titulo="Inserir as referências oficiais (BNCC, Currículo Base, portarias...) no ponto do cursor" onClick={inserirReferencias}>
               📚 Referências
@@ -1031,6 +1043,39 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [] }
         )}
         {painel === "figuras" && (
           <div className="rounded-lg border border-primary-200 bg-white p-2">{grade(FIGURAS, inserirTexto, "Figuras")}</div>
+        )}
+        {painel === "sugestoes" && (
+          <div className="max-h-72 space-y-3 overflow-y-auto rounded-lg border border-primary-200 bg-white p-3">
+            <p className="text-xs text-slate-500">
+              São frases prontas, montadas com o que você marcou no plano. Clique numa frase para inserir no ponto do cursor e depois edite
+              como quiser.
+            </p>
+            {sugestoes.map((g) => (
+              <div key={g.titulo}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="text-sm font-bold text-primary-800">{g.titulo}</h4>
+                  <button type="button" onMouseDown={manterSelecao} onClick={() => inserirSugestoes(g.itens)} className="btn-azul-suave !border-2 !border-primary-500 !px-3 !py-1 !text-xs">
+                    Inserir todas
+                  </button>
+                </div>
+                <ul className="mt-1 space-y-1">
+                  {g.itens.map((t) => (
+                    <li key={t}>
+                      <button
+                        type="button"
+                        onMouseDown={manterSelecao}
+                        onClick={() => inserirSugestoes([t])}
+                        className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-left text-sm text-slate-700 hover:border-primary-400 hover:bg-primary-50"
+                      >
+                        <span aria-hidden="true" className="mr-1.5 font-bold text-primary-600">+</span>
+                        {t}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         )}
         {painel === "tabela" && (
           <div className="flex flex-wrap items-end gap-3 rounded-lg border border-primary-200 bg-white p-2">

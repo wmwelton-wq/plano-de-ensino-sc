@@ -1,11 +1,19 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { CartaoPasta, Migalhas, SEM_ESCOLA, TIPOS, agruparPorEscola, carregarPlanos, tipoValido } from "../dados";
+import { CartaoPasta, Migalhas, SEM_ESCOLA, TIPOS, agruparPorEscola, carregarPlanos, tipoValido, type TipoPlano } from "../dados";
 
-export default async function EscolasDoTipoPage({ params }: { params: Promise<{ tipo: string }> }) {
-  const { tipo } = await params;
-  if (!tipoValido(tipo)) notFound();
+export default async function EscolasDoTipoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ tipo: string }>;
+  searchParams: Promise<{ copias?: string; novos?: string }>;
+}) {
+  const { tipo: tipoBruto } = await params;
+  const { copias, novos } = await searchParams;
+  if (!tipoValido(tipoBruto)) notFound();
+  const tipo = tipoBruto as TipoPlano;
 
   const supabase = await createClient();
   const planos = await carregarPlanos(supabase, tipo);
@@ -30,6 +38,14 @@ export default async function EscolasDoTipoPage({ params }: { params: Promise<{ 
           <span aria-hidden="true">+</span> Novo {info.singular}
         </Link>
       </div>
+
+      {(copias || novos) && (
+        <p role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+          {copias
+            ? `${copias} cópia(s) criada(s) como rascunho. Abra a escola e a turma para ajustar cada uma.`
+            : `${novos} plano(s) mensal(is) criado(s) como rascunho. Abra a escola e a turma para completar cada um.`}
+        </p>
+      )}
 
       {escolas.length === 0 ? (
         <div className="card mt-8 border-dashed p-12 text-center">

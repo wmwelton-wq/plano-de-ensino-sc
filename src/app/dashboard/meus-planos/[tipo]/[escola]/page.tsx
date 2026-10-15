@@ -9,7 +9,9 @@ import {
   agruparPorTurma,
   carregarPlanos,
   tipoValido,
+  type TipoPlano,
 } from "../../dados";
+import BaixarVarios from "../../baixar-varios";
 
 export default async function TurmasDaEscolaPage({
   params,
@@ -18,9 +20,10 @@ export default async function TurmasDaEscolaPage({
   params: Promise<{ tipo: string; escola: string }>;
   searchParams: Promise<{ turma?: string }>;
 }) {
-  const { tipo, escola } = await params;
+  const { tipo: tipoBruto, escola } = await params;
   const { turma } = await searchParams;
-  if (!tipoValido(tipo)) notFound();
+  if (!tipoValido(tipoBruto)) notFound();
+  const tipo = tipoBruto as TipoPlano;
 
   const supabase = await createClient();
   const planos = await carregarPlanos(supabase, tipo);
@@ -47,9 +50,16 @@ export default async function TurmasDaEscolaPage({
         <p className="mt-1 text-sm text-slate-500">
           {info.titulo} · {grupo.nome}
         </p>
+        <div className="mt-4">
+          <BaixarVarios
+            planos={t.planos.map((p) => ({ id: p.id, titulo: p.titulo, tipo }))}
+            nomeArquivo={`${info.titulo} - ${grupo.nome} - ${t.nome}`}
+            rotulo="Baixar todos desta turma em um PDF"
+          />
+        </div>
         <ul className="mt-6 space-y-3">
           {t.planos.map((p) => (
-            <CartaoPlano key={p.id} plano={p} base={info.base} />
+            <CartaoPlano key={p.id} plano={p} base={info.base} tipo={tipo} />
           ))}
         </ul>
       </div>
@@ -62,6 +72,13 @@ export default async function TurmasDaEscolaPage({
       <Migalhas itens={[...migalhasBase, { rotulo: grupo.nome }]} />
       <h1 className="text-2xl font-semibold text-slate-900">{grupo.nome}</h1>
       <p className="mt-1 text-sm text-slate-500">{info.titulo} · escolha a turma para ver os planos.</p>
+      <div className="mt-4">
+        <BaixarVarios
+          planos={grupo.planos.map((p) => ({ id: p.id, titulo: p.titulo, tipo }))}
+          nomeArquivo={`${info.titulo} - ${grupo.nome}`}
+          rotulo="Baixar todos desta escola em um PDF"
+        />
+      </div>
       <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {turmas.map((t) => (
           <li key={t.chave}>

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import VoltarLink from "../../planos/voltar-link";
-import PlanoAnualForm from "../plano-anual-form";
+import PlanoAnualComRascunho from "../form-com-rascunho";
 import { criarPlanoAnual } from "../actions";
 
 export default async function NovoPlanoAnualPage() {
@@ -26,7 +26,8 @@ export default async function NovoPlanoAnualPage() {
         do currículo e acrescente o que quiser.
       </p>
       <div className="mt-6">
-        <PlanoAnualForm
+        <PlanoAnualComRascunho
+          chave="anual:novo"
           escolas={escolas ?? []}
           disciplinas={disciplinas ?? []}
           nomeProfessor={(professor as { nome?: string } | null)?.nome ?? ""}
