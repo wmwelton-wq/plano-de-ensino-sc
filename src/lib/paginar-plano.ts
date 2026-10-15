@@ -99,6 +99,33 @@ function copiaDaTabela(orig: Element): HTMLElement {
   return t;
 }
 
+/**
+ * Larguras das colunas da tabela original, em %, medidas no navegador. A continuação de uma tabela na
+ * página seguinte não tem a linha de título (que é quem define as larguras) e, sem isto, as colunas
+ * vazias encolheriam: com estas larguras, cada coluna fica exatamente alinhada com a da 1ª página.
+ */
+function colunasMedidas(orig: Element): HTMLElement | null {
+  const linhas = Array.from((orig as HTMLTableElement).rows ?? []);
+  if (linhas.length === 0) return null;
+  const totalColunas = Math.max(...linhas.map((tr) => Array.from(tr.cells).reduce((a, c) => a + c.colSpan, 0)));
+  // Linha (sem células mescladas) que tem todas as colunas.
+  const modelo = linhas.find((tr) => {
+    const cels = Array.from(tr.cells);
+    return cels.length === totalColunas && cels.every((c) => c.colSpan === 1);
+  });
+  if (!modelo || totalColunas < 2) return null;
+  const larguras = Array.from(modelo.cells).map((c) => c.getBoundingClientRect().width);
+  const soma = larguras.reduce((a, b) => a + b, 0);
+  if (!(soma > 0) || larguras.some((w) => !(w > 0))) return null;
+  const grupo = document.createElement("colgroup");
+  for (const w of larguras) {
+    const col = document.createElement("col");
+    col.style.width = `${((w / soma) * 100).toFixed(3)}%`;
+    grupo.appendChild(col);
+  }
+  return grupo;
+}
+
 /** Clona um nó fixando o tamanho das imagens (o clone ainda não as carregou). */
 function clonar(no: Node): Node {
   const copia = no.cloneNode(true);
@@ -163,7 +190,9 @@ export function paginarPlano(original: HTMLElement, larguraPx: number, alturaUti
   const limite = alturaUtilPx;
   const paginas: HTMLElement[] = [];
   let pagina!: HTMLElement;
-  let tabelaAtual: { orig: Element; tabela: HTMLElement; tbody: HTMLElement } | null = null;
+  let tabelaAtual: { orig: Element; tabela: HTMLElement; tbody: HTMLElement; primeiraDaOrig: boolean } | null = null;
+  /** Tabelas originais que já começaram em alguma página: as próximas partes são "continuações". */
+  const tabelasIniciadas = new Set<Element>();
 
   function criarPagina(): HTMLElement {
     const p = document.createElement("div");
@@ -188,16 +217,27 @@ export function paginarPlano(original: HTMLElement, larguraPx: number, alturaUti
   function garantirTabela(orig: Element): { tbody: HTMLElement; criada: boolean } {
     if (tabelaAtual && tabelaAtual.orig === orig) return { tbody: tabelaAtual.tbody, criada: false };
     const t = copiaDaTabela(orig);
+    // Continuação numa página nova: mantém as colunas com as mesmas larguras da tabela original.
+    if (tabelasIniciadas.has(orig) && !t.querySelector("colgroup")) {
+      const colunas = colunasMedidas(orig);
+      if (colunas) {
+        t.appendChild(colunas);
+        t.style.tableLayout = "fixed";
+      }
+    }
+    const primeiraDaOrig = !tabelasIniciadas.has(orig);
+    tabelasIniciadas.add(orig);
     const tb = document.createElement("tbody");
     t.appendChild(tb);
     pagina.appendChild(t);
     zerarMargemSeForPrimeiro(t);
-    tabelaAtual = { orig, tabela: t, tbody: tb };
+    tabelaAtual = { orig, tabela: t, tbody: tb, primeiraDaOrig };
     return { tbody: tb, criada: true };
   }
 
   function descartarTabelaRecemCriada() {
     if (tabelaAtual) {
+      if (tabelaAtual.primeiraDaOrig) tabelasIniciadas.delete(tabelaAtual.orig); // nada dela ficou na página
       tabelaAtual.tabela.parentNode?.removeChild(tabelaAtual.tabela);
       tabelaAtual = null;
     }
