@@ -18,14 +18,12 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const { data: professor } = await supabase
-    .from("professores")
-    .select("nome")
-    .eq("id", user.id)
-    .single();
-
-  // Painel de uso: só aparece para administradores (a função devolve false para os demais ou se não existir).
-  const { data: ehAdmin } = await supabase.rpc("eh_admin");
+  // As duas consultas do cabeçalho rodam juntas (uma só espera de rede, não duas em fila).
+  // eh_admin devolve false para os demais professores (ou se a função não existir).
+  const [{ data: professor }, { data: ehAdmin }] = await Promise.all([
+    supabase.from("professores").select("nome").eq("id", user.id).single(),
+    supabase.rpc("eh_admin"),
+  ]);
 
   const menus: MenuDoTopo[] = [
     {

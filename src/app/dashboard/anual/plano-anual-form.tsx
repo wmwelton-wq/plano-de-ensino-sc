@@ -237,12 +237,16 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
     ? "Carregando as opções do currículo..."
     : "Não há itens cadastrados para este componente. Digite à mão no quadro abaixo.";
 
-  const dadosJson = JSON.stringify({
-    ementa,
-    competencias_gerais: itensParaGerais(gerais),
-    competencias_especificas: { bncc: compBncc, curriculo: compCurr, manuais: compManuais },
-    trimestres,
-  });
+  const dadosJson = useMemo(
+    () =>
+      JSON.stringify({
+        ementa,
+        competencias_gerais: itensParaGerais(gerais),
+        competencias_especificas: { bncc: compBncc, curriculo: compCurr, manuais: compManuais },
+        trimestres,
+      }),
+    [ementa, gerais, compBncc, compCurr, compManuais, trimestres]
+  );
 
   const textoLivreInicial = plano?.texto_livre ?? TEXTO_LIVRE_INICIAL;
 

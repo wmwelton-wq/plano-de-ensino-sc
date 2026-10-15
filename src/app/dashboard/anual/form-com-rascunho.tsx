@@ -129,7 +129,7 @@ export default function PlanoAnualComRascunho({ chave, limparAoSalvar = [], salv
   const [backup, setBackup] = useState<Backup | null>(null);
   const [restaurado, setRestaurado] = useState<PlanoAnual | undefined>(undefined);
   const [versao, setVersao] = useState(0);
-  const [ultimoSalvo, setUltimoSalvo] = useState<number | null>(null);
+  const aviso = useRef<HTMLParagraphElement>(null);
 
   const atualizadoEm = props.plano?.updated_at ? Date.parse(props.plano.updated_at) : 0;
 
@@ -146,8 +146,12 @@ export default function PlanoAnualComRascunho({ chave, limparAoSalvar = [], salv
 
   useEffect(() => {
     if (backup) return; // enquanto a pergunta está na tela, não sobrescreve o rascunho guardado
-    const id = window.setInterval(() => {
-      const form = raiz.current?.querySelector("form");
+    const dono = raiz.current;
+    if (!dono) return;
+    let espera: number | undefined;
+
+    function guardar() {
+      const form = dono?.querySelector("form");
       if (!form) return;
       const campos = lerCampos(form);
       const json = JSON.stringify(campos);
@@ -159,10 +163,35 @@ export default function PlanoAnualComRascunho({ chave, limparAoSalvar = [], salv
       base.current = json;
       const agora = Date.now();
       gravar(chave, { em: agora, campos });
-      setUltimoSalvo(agora);
-    }, 4000);
-    return () => window.clearInterval(id);
-  }, [backup, chave]);
+      // Atualiza o aviso direto no elemento: não refaz o formulário inteiro a cada gravação.
+      if (aviso.current) {
+        aviso.current.textContent = `Rascunho guardado neste computador às ${new Date(agora).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}. Para guardar no plano, clique em salvar.`;
+        aviso.current.hidden = false;
+      }
+    }
+
+    function agendar() {
+      window.clearTimeout(espera);
+      // Só depois de o professor parar de mexer por alguns segundos, e quando o navegador estiver livre.
+      espera = window.setTimeout(() => {
+        const ocioso = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
+        if (ocioso) ocioso(guardar, { timeout: 3000 });
+        else guardar();
+      }, 4000);
+    }
+
+    const baseline = window.setTimeout(guardar, 1500); // foto do estado inicial
+    dono.addEventListener("input", agendar);
+    dono.addEventListener("change", agendar);
+    dono.addEventListener("click", agendar);
+    return () => {
+      window.clearTimeout(baseline);
+      window.clearTimeout(espera);
+      dono.removeEventListener("input", agendar);
+      dono.removeEventListener("change", agendar);
+      dono.removeEventListener("click", agendar);
+    };
+  }, [backup, chave, versao]);
 
   function restaurar() {
     if (!backup) return;
@@ -195,12 +224,7 @@ export default function PlanoAnualComRascunho({ chave, limparAoSalvar = [], salv
           </div>
         </div>
       )}
-      {ultimoSalvo && (
-        <p className="mb-2 text-right text-xs text-slate-500" aria-live="polite">
-          Rascunho guardado neste computador às {new Date(ultimoSalvo).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}. Para
-          guardar no plano, clique em salvar.
-        </p>
-      )}
+      <p ref={aviso} hidden className="mb-2 text-right text-xs text-slate-500" aria-live="polite" />
       <PlanoAnualForm key={versao} {...props} plano={restaurado ?? props.plano} />
     </div>
   );

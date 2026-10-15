@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { anoCombina, chaveTexto, ROTULO_FONTE, type ItemLista } from "@/lib/plano-anual";
 import { opcaoParaItem, type OpcaoLista } from "@/lib/dados-anuais";
 
@@ -38,6 +38,41 @@ const chip = (ativo: boolean) =>
       ? "border-primary-700 bg-gradient-to-r from-primary-700 via-primary-600 to-sky-500 text-white shadow-md"
       : "border-primary-400 bg-white text-primary-800 shadow-sm hover:bg-primary-50"
   }`;
+
+/** Quantas opções aparecem de cada vez (o resto abre em "Mostrar mais"): deixa cliques e digitação rápidos. */
+const LOTE_VISIVEL = 60;
+
+interface LinhaOpcaoProps {
+  o: OpcaoLista;
+  marcada: boolean;
+  mostrarFonte: boolean;
+  onAlternar: (o: OpcaoLista) => void;
+}
+
+/** Uma opção da lista. Só é redesenhada quando ela mesma muda (marcar uma não refaz as outras). */
+const LinhaOpcao = memo(function LinhaOpcao({ o, marcada, mostrarFonte, onAlternar }: LinhaOpcaoProps) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-primary-50/60">
+      <input
+        type="checkbox"
+        checked={marcada}
+        onChange={() => onAlternar(o)}
+        className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+      />
+      <span className="min-w-0">
+        {o.codigo && <span className="font-semibold text-slate-900">({o.codigo}) </span>}
+        <span className="text-slate-700">{o.texto}</span>
+        {(o.grupo || o.anos.length > 0 || (mostrarFonte && o.fonte)) && (
+          <span className="ml-1 text-[11px] text-slate-400">
+            {[mostrarFonte ? ROTULO_FONTE[o.fonte ?? ""] : null, o.grupo, o.anos.length > 0 && o.anos.length <= 3 ? o.anos.join(", ") : null]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+        )}
+      </span>
+    </label>
+  );
+});
 
 /**
  * Lista com caixinhas de marcar + busca + filtros + um quadro para o professor
@@ -79,6 +114,7 @@ export default function SeletorItens({
     setAno(anoPadrao);
   }, [anoPadrao]);
   const [soMarcadas, setSoMarcadas] = useState(false);
+  const [limite, setLimite] = useState(LOTE_VISIVEL);
   const [textoManual, setTextoManual] = useState("");
   const [codigoManual, setCodigoManual] = useState("");
 
@@ -104,12 +140,20 @@ export default function SeletorItens({
     });
   }, [opcoes, busca, fonte, grupo, ano, anos.length, soMarcadas, marcadas, filtrarPorFonte, filtrarPorGrupo]);
 
+  useEffect(() => {
+    setLimite(LOTE_VISIVEL);
+  }, [busca, fonte, grupo, ano, soMarcadas, opcoes.length]);
+
   const foraDaLista = useMemo(() => valor.filter((v) => !idsOpcoes.has(v.id)), [valor, idsOpcoes]);
 
   function alternar(o: OpcaoLista) {
     if (marcadas.has(o.id)) onChange(valor.filter((v) => v.id !== o.id));
     else onChange([...valor, opcaoParaItem(o)]);
   }
+  // Versão estável (sempre chama a mais recente), para as linhas não serem redesenhadas à toa.
+  const alternarAtual = useRef(alternar);
+  alternarAtual.current = alternar;
+  const alternarEstavel = useCallback((o: OpcaoLista) => alternarAtual.current(o), []);
 
   function marcarVisiveis() {
     const novos = visiveis.filter((o) => !marcadas.has(o.id)).map(opcaoParaItem);
@@ -229,30 +273,18 @@ export default function SeletorItens({
             {visiveis.length === 0 && (
               <p className="px-2 py-3 text-sm text-slate-400">Nada encontrado com esses filtros. Clique de novo num botão marcado para tirar o filtro, ou limpe a busca.</p>
             )}
-            {visiveis.map((o) => (
-              <label
-                key={o.id}
-                className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-primary-50/60"
-              >
-                <input
-                  type="checkbox"
-                  checked={marcadas.has(o.id)}
-                  onChange={() => alternar(o)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                />
-                <span className="min-w-0">
-                  {o.codigo && <span className="font-semibold text-slate-900">({o.codigo}) </span>}
-                  <span className="text-slate-700">{o.texto}</span>
-                  {(o.grupo || o.anos.length > 0 || (filtrarPorFonte && o.fonte)) && (
-                    <span className="ml-1 text-[11px] text-slate-400">
-                      {[filtrarPorFonte ? ROTULO_FONTE[o.fonte ?? ""] : null, o.grupo, o.anos.length > 0 && o.anos.length <= 3 ? o.anos.join(", ") : null]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  )}
-                </span>
-              </label>
+            {visiveis.slice(0, limite).map((o) => (
+              <LinhaOpcao key={o.id} o={o} marcada={marcadas.has(o.id)} mostrarFonte={filtrarPorFonte} onAlternar={alternarEstavel} />
             ))}
+            {visiveis.length > limite && (
+              <button
+                type="button"
+                onClick={() => setLimite((n) => n + LOTE_VISIVEL * 2)}
+                className="mt-1 w-full rounded-lg border border-primary-200 bg-primary-50/60 px-3 py-2 text-sm font-semibold text-primary-800 hover:bg-primary-100"
+              >
+                Mostrar mais ({visiveis.length - limite} restantes) — ou use a busca acima
+              </button>
+            )}
           </div>
         </div>
       )}
