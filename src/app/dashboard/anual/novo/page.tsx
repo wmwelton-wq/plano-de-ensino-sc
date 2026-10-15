@@ -19,7 +19,7 @@ export default async function NovoPlanoAnualPage() {
 
   return (
     <div>
-      <VoltarLink href="/dashboard" rotulo="Voltar aos meus planos" />
+      <VoltarLink href="/dashboard/meus-planos" rotulo="Voltar aos meus planos" />
       <h1 className="text-2xl font-semibold text-slate-900">Novo plano de ensino anual</h1>
       <p className="mt-2 text-sm text-slate-600">
         Feito uma vez por ano, o plano anual reúne ementa, competências e o conteúdo dos três trimestres. Marque as opções

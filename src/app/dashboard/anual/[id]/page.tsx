@@ -34,7 +34,7 @@ export default async function EditarPlanoAnualPage({
 
   return (
     <div>
-      <VoltarLink href="/dashboard" rotulo="Voltar aos meus planos" />
+      <VoltarLink href="/dashboard/meus-planos" rotulo="Voltar aos meus planos" />
       <div className="mt-2 overflow-hidden rounded-2xl border border-primary-200/70 bg-gradient-to-r from-primary-800 via-primary-700 to-sky-600 p-5 text-white shadow-glow">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>

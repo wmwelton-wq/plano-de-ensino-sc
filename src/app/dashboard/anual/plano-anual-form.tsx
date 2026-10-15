@@ -80,6 +80,20 @@ function itensParaGerais(itens: ItemLista[]): { numeros: number[]; manuais: stri
   return { numeros: numeros.sort((a, b) => a - b), manuais };
 }
 
+/** Título de cada bloco do trimestre: botão azul com o nome do que se preenche + etiqueta vermelha do trimestre. */
+function TituloTrimestre({ nome, trimestre }: { nome: string; trimestre: number }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="inline-flex items-center rounded-xl bg-gradient-to-r from-primary-700 to-sky-500 px-4 py-2 text-sm font-extrabold text-white shadow-md">
+        {nome}
+      </span>
+      <span className="inline-flex items-center rounded-xl bg-red-600 px-3 py-2 text-sm font-extrabold text-white shadow-md">
+        {trimestre + 1}º trimestre
+      </span>
+    </div>
+  );
+}
+
 export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, plano, action, textoBotao }: PlanoAnualFormProps) {
   const [estado, formAction, pendente] = useActionState(action, {});
   const [erroLocal, setErroLocal] = useState<string | null>(null);
@@ -130,6 +144,13 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
 
   // ── Dados oficiais do componente escolhido (carregados no navegador) ──
   const [dados, setDados] = useState<DadosComponente>(DADOS_VAZIOS);
+  // O "objeto de conhecimento" do plano é o que o Currículo chama de "Conteúdo".
+  // (Se o componente não tiver "Conteúdo", mostra todos para não ficar vazio.)
+  const opcoesObjetos = useMemo(() => {
+    const conteudos = dados.objetos.filter((o) => o.grupo === "Conteúdo");
+    const base = conteudos.length > 0 ? conteudos : dados.objetos;
+    return base.map((o) => (o.grupo === "Conteúdo" ? { ...o, grupo: "Objeto de conhecimento" } : o));
+  }, [dados.objetos]);
   const [carregando, setCarregando] = useState(false);
   const [erroDados, setErroDados] = useState<string | null>(null);
 
@@ -159,7 +180,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
 
   const competenciasBncc = useMemo(() => dados.competencias.filter((c) => c.fonte === "bncc"), [dados]);
   const competenciasCurriculo = useMemo(() => dados.competencias.filter((c) => c.fonte === "curriculo_catarinense"), [dados]);
-  const ementaOpcoes = dados.objetos;
+  const ementaOpcoes = opcoesObjetos;
 
   const semComponenteOficial = !disciplina;
   const vazioPadrao = semComponenteOficial
@@ -388,8 +409,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
           onChange={setEmenta}
           anos={dados.anos}
           anoDaTurma={anoDaTurma}
-          filtrarPorGrupo
-          ajuda="Sugestões tiradas dos objetos de conhecimento e conteúdos do currículo (BNCC e Currículo Catarinense) deste componente."
+          ajuda="Sugestões tiradas dos objetos de conhecimento do currículo deste componente."
           vazio={vazioPadrao}
           rotuloManual="Acrescentar temas à ementa"
           placeholderManual="Ex.: Introdução à Química (História da Química)"
@@ -464,19 +484,20 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
         id="passo-5"
         numero={5}
         titulo="Componente curricular"
-        descricao="Para cada trimestre: unidades temáticas, habilidades e objetos de conhecimento."
+        descricao="Preencha cada trimestre: o botão azul diz o que está sendo preenchido e a etiqueta vermelha, em qual trimestre."
       >
         {trimestres.map((t, i) => (
-          <details key={i} open={i === 0} className="rounded-2xl border border-primary-200 bg-white shadow-sm">
-            <summary className="cursor-pointer select-none rounded-2xl bg-primary-50 px-4 py-3 text-sm font-bold text-primary-800">
+          <details key={i} open={i === 0} className="rounded-2xl border-2 border-red-300 bg-white shadow-sm">
+            <summary className="cursor-pointer select-none rounded-2xl border-l-8 border-red-600 bg-red-50 px-4 py-3 text-base font-extrabold text-red-700">
               {TRIMESTRES_ROTULOS[i]}{" "}
-              <span className="font-normal text-slate-500">
+              <span className="text-sm font-semibold text-red-900/70">
                 ({t.habilidades.length} habilidade(s) · {t.objetos.length} objeto(s) · {t.unidades.length} unidade(s))
               </span>
             </summary>
-            <div className="space-y-6 p-4">
+            <div className="space-y-7 p-4">
               <div className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-800">Unidades temáticas (unidade do livro e/ou outras fontes)</h3>
+                <TituloTrimestre nome="Unidades temáticas" trimestre={i} />
+                <p className="text-xs text-slate-500">Unidade do livro e/ou de outras fontes.</p>
                 <SeletorItens
                   opcoes={dados.unidades}
                   valor={t.unidades}
@@ -491,7 +512,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
                 />
               </div>
               <div className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-800">Habilidades</h3>
+                <TituloTrimestre nome="Habilidades" trimestre={i} />
                 <SeletorItens
                   opcoes={dados.habilidades}
                   valor={t.habilidades}
@@ -507,14 +528,13 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
                 />
               </div>
               <div className="space-y-2">
-                <h3 className="text-sm font-bold text-slate-800">Objeto do conhecimento</h3>
+                <TituloTrimestre nome="Objetos de conhecimento" trimestre={i} />
                 <SeletorItens
-                  opcoes={dados.objetos}
+                  opcoes={opcoesObjetos}
                   valor={t.objetos}
                   onChange={(v) => atualizarTrimestre(i, { objetos: v })}
                   anos={dados.anos}
                   anoDaTurma={anoDaTurma}
-                  filtrarPorGrupo
                   vazio={vazioPadrao}
                   rotuloManual="Acrescentar objeto do conhecimento"
                   placeholderManual="Ex.: Ligações químicas"

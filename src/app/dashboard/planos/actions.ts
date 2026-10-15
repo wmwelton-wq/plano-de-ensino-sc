@@ -312,7 +312,7 @@ export async function excluirPlano(planoId: string) {
   const supabase = await createClient();
   await supabase.from("planos_de_ensino").delete().eq("id", planoId);
   revalidatePath("/dashboard");
-  redirect("/dashboard");
+  redirect("/dashboard/meus-planos");
 }
 
 /**
@@ -459,5 +459,5 @@ export async function replicarPlano(
   if (formData.get("abrir_edicao") === "on" && criados.length > 0) {
     redirect(`/dashboard/planos/${criados[0]}`);
   }
-  redirect("/dashboard");
+  redirect("/dashboard/meus-planos");
 }

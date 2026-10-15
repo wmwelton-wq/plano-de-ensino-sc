@@ -67,11 +67,17 @@ export default function SeletorItens({
   // null = sem filtro (mostra tudo). Clicar de novo no botão marcado tira o filtro.
   const [fonte, setFonte] = useState<string | null>(null);
   const [grupo, setGrupo] = useState<string | null>(null);
-  const [ano, setAno] = useState<string | null>(anoDaTurma ? "turma" : null);
+  // O botão de ano/série que corresponde à turma já começa marcado.
+  const anoPadrao = useMemo(() => {
+    if (anoDaTurma == null) return null;
+    const candidatos = anos.filter((a) => anoCombina(a, anoDaTurma));
+    return candidatos.find((a) => (a.match(/\d{1,2}/g) ?? []).length === 1) ?? null;
+  }, [anos, anoDaTurma]);
+  const [ano, setAno] = useState<string | null>(anoPadrao);
   // Quando o professor escolhe/troca a série da turma, o filtro acompanha.
   useEffect(() => {
-    setAno(anoDaTurma ? "turma" : null);
-  }, [anoDaTurma]);
+    setAno(anoPadrao);
+  }, [anoPadrao]);
   const [soMarcadas, setSoMarcadas] = useState(false);
   const [textoManual, setTextoManual] = useState("");
   const [codigoManual, setCodigoManual] = useState("");
@@ -89,16 +95,14 @@ export default function SeletorItens({
       if (filtrarPorFonte && fonte !== null && o.fonte !== fonte) return false;
       if (filtrarPorGrupo && grupo !== null && o.grupo !== grupo) return false;
       if (anos.length > 0 && ano !== null && o.anos.length > 0) {
-        if (ano === "turma") {
-          if (anoDaTurma != null && !o.anos.some((a) => anoCombina(a, anoDaTurma))) return false;
-        } else if (!o.anos.includes(ano)) {
-          return false;
-        }
+        const n = Number((ano.match(/\d{1,2}/) ?? [])[0]);
+        const combina = Number.isFinite(n) ? o.anos.some((a) => anoCombina(a, n)) : o.anos.includes(ano);
+        if (!combina) return false;
       }
       if (termo && !chaveTexto(`${o.codigo ?? ""} ${o.texto}`).includes(termo)) return false;
       return true;
     });
-  }, [opcoes, busca, fonte, grupo, ano, anos.length, anoDaTurma, soMarcadas, marcadas, filtrarPorFonte, filtrarPorGrupo]);
+  }, [opcoes, busca, fonte, grupo, ano, anos.length, soMarcadas, marcadas, filtrarPorFonte, filtrarPorGrupo]);
 
   const foraDaLista = useMemo(() => valor.filter((v) => !idsOpcoes.has(v.id)), [valor, idsOpcoes]);
 
@@ -192,11 +196,6 @@ export default function SeletorItens({
                 {anos.length > 0 && opcoes.some((o) => o.anos.length > 0) && (
                   <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por ano">
                     <span className="text-sm font-bold text-slate-700">Ano/série:</span>
-                    {anoDaTurma != null && (
-                      <button type="button" className={chip(ano === "turma")} onClick={() => setAno(ano === "turma" ? null : "turma")}>
-                        Da minha turma ({anoDaTurma}º)
-                      </button>
-                    )}
                     {anos.map((a) => (
                       <button key={a} type="button" className={chip(ano === a)} onClick={() => setAno(ano === a ? null : a)}>
                         {a}

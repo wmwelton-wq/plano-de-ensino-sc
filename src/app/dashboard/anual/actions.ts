@@ -131,5 +131,5 @@ export async function excluirPlanoAnual(planoId: string) {
   const supabase = await createClient();
   await supabase.from("planos_anuais").delete().eq("id", planoId);
   revalidatePath("/dashboard");
-  redirect("/dashboard");
+  redirect("/dashboard/meus-planos");
 }

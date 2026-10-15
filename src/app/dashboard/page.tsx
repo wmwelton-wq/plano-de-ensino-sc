@@ -1,150 +1,55 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { PlanoDeEnsino, EtapaPlano } from "@/lib/database.types";
 
-const statusLabel: Record<PlanoDeEnsino["status"], string> = {
-  rascunho: "Rascunho",
-  finalizado: "Finalizado",
-};
-
-const etapaLabel: Record<EtapaPlano, string> = {
-  educacao_infantil: "Educação Infantil",
-  fundamental_anos_iniciais: "Fundamental — Anos Iniciais",
-  fundamental_anos_finais: "Fundamental — Anos Finais",
-  ensino_medio: "Ensino Médio / Técnico",
-};
-
-interface PlanoLista {
-  id: string;
+interface Atalho {
+  href: string;
+  icone: string;
   titulo: string;
-  ano_letivo: number;
-  turma: string | null;
-  etapa: string;
-  status: string;
-  escolas: { nome: string; municipio: string } | { nome: string; municipio: string }[] | null;
+  texto: string;
+  destaque?: boolean;
 }
 
-function nomeDaEscola(plano: PlanoLista): string {
-  const e = Array.isArray(plano.escolas) ? plano.escolas[0] : plano.escolas;
-  return e?.nome ?? "Sem escola definida";
-}
-
-const comparar = (a: string, b: string) => a.localeCompare(b, "pt-BR", { numeric: true, sensitivity: "base" });
-
-/** Agrupa os planos por escola e, dentro dela, por turma (ambos em ordem alfabética/numérica). */
-function agruparPlanos(planos: PlanoLista[]) {
-  const porEscola = new Map<string, Map<string, PlanoLista[]>>();
-  for (const plano of planos) {
-    const escola = nomeDaEscola(plano);
-    const turma = plano.turma?.trim() || "Sem turma definida";
-    const turmas = porEscola.get(escola) ?? new Map<string, PlanoLista[]>();
-    turmas.set(turma, [...(turmas.get(turma) ?? []), plano]);
-    porEscola.set(escola, turmas);
-  }
-  // "Sem ..." vai para o fim.
-  const ultimo = (nome: string) => (nome.startsWith("Sem ") ? 1 : 0);
-  return Array.from(porEscola.entries())
-    .sort(([a], [b]) => ultimo(a) - ultimo(b) || comparar(a, b))
-    .map(([escola, turmas]) => ({
-      escola,
-      turmas: Array.from(turmas.entries())
-        .sort(([a], [b]) => ultimo(a) - ultimo(b) || comparar(a, b))
-        .map(([turma, itens]) => ({ turma, itens })),
-    }));
-}
-
-function ListaPlanos({ planos, base }: { planos: PlanoLista[]; base: string }) {
+function Cartao({ href, icone, titulo, texto, destaque }: Atalho) {
   return (
-    <div className="mt-4 space-y-6">
-      {agruparPlanos(planos).map(({ escola, turmas }) => (
-        <section key={escola}>
-          <h3 className="text-lg font-bold text-slate-900">{escola}</h3>
-          <div className="mt-2 space-y-3">
-            {turmas.map(({ turma, itens }) => (
-              <details key={turma} open className="rounded-xl border border-slate-200 bg-white/60 p-3">
-                <summary className="cursor-pointer text-sm font-bold text-slate-700">
-                  {turma} <span className="font-normal text-slate-400">({itens.length})</span>
-                </summary>
-                <ul className="mt-3 space-y-3">
-                  {itens.map((plano) => (
-                    <li key={plano.id}>
-                      <Link
-                        href={`${base}/${plano.id}`}
-                        className="card card-interactive flex items-center justify-between gap-4 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                      >
-                        <div>
-                          <p className="font-medium text-slate-900">{plano.titulo}</p>
-                          <p className="mt-0.5 text-sm text-slate-500">
-                            {etapaLabel[plano.etapa as EtapaPlano] ?? plano.etapa} · {plano.ano_letivo}
-                          </p>
-                        </div>
-                        <span
-                          className={`badge ${
-                            plano.status === "finalizado" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                          }`}
-                        >
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${
-                              plano.status === "finalizado" ? "bg-green-600" : "bg-amber-600"
-                            }`}
-                          />
-                          {statusLabel[plano.status as PlanoDeEnsino["status"]] ?? plano.status}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
+    <Link
+      href={href}
+      className={`card card-interactive flex items-start gap-4 p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+        destaque ? "border-2 border-primary-400 bg-primary-50/50" : ""
+      }`}
+    >
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-2xl" aria-hidden="true">
+        {icone}
+      </span>
+      <span>
+        <span className="block text-lg font-bold text-slate-900">{titulo}</span>
+        <span className="mt-0.5 block text-sm text-slate-500">{texto}</span>
+      </span>
+    </Link>
   );
 }
 
-export default async function DashboardPage() {
+export default async function InicioPage() {
   const supabase = await createClient();
 
-  const { data: planos } = await supabase
-    .from("planos_de_ensino")
-    .select("id, titulo, ano_letivo, turma, etapa, status, updated_at, escola_id, escolas(nome, municipio)")
-    .order("updated_at", { ascending: false });
+  const [{ data: planos }, { data: planosAnuais }, { data: escolas }] = await Promise.all([
+    supabase.from("planos_de_ensino").select("id, status"),
+    supabase.from("planos_anuais").select("id, status"),
+    supabase.from("escolas").select("id"),
+  ]);
 
-  const { data: planosAnuais } = await supabase
-    .from("planos_anuais")
-    .select("id, titulo, ano_letivo, turma, etapa, status, updated_at, escola_id, escolas(nome, municipio)")
-    .order("updated_at", { ascending: false });
-
-  const totalMensais = planos?.length ?? 0;
-  const totalAnuais = planosAnuais?.length ?? 0;
-  const total = totalMensais + totalAnuais;
-  const finalizados =
-    (planos?.filter((p) => p.status === "finalizado").length ?? 0) +
-    (planosAnuais?.filter((p: { status: string }) => p.status === "finalizado").length ?? 0);
-  const rascunhos = total - finalizados;
+  const todos = [...(planos ?? []), ...(planosAnuais ?? [])] as { status: string }[];
+  const total = todos.length;
+  const finalizados = todos.filter((p) => p.status === "finalizado").length;
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Meus planos de ensino</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Organize, edite e exporte os planos das suas disciplinas e cursos técnicos.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/dashboard/planos/novo" className="btn-azul">
-            <span aria-hidden="true">+</span> Plano mensal
-          </Link>
-          <Link href="/dashboard/anual/novo" className="btn-azul">
-            <span aria-hidden="true">+</span> Plano anual
-          </Link>
-        </div>
-      </div>
+      <h1 className="text-2xl font-semibold text-slate-900">Início</h1>
+      <p className="mt-1 text-sm text-slate-500">
+        Tudo o que você precisa está aqui. Você também pode usar o menu no topo da página.
+      </p>
 
       {total > 0 && (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-4">
           <div className="card p-5">
             <p className="text-sm text-slate-500">Total de planos</p>
             <p className="mt-1 text-2xl font-semibold text-slate-900">{total}</p>
@@ -155,42 +60,29 @@ export default async function DashboardPage() {
           </div>
           <div className="card p-5">
             <p className="text-sm text-slate-500">Em rascunho</p>
-            <p className="mt-1 text-2xl font-semibold text-amber-700">{rascunhos}</p>
+            <p className="mt-1 text-2xl font-semibold text-amber-700">{total - finalizados}</p>
+          </div>
+          <div className="card p-5">
+            <p className="text-sm text-slate-500">Escolas cadastradas</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">{escolas?.length ?? 0}</p>
           </div>
         </div>
       )}
 
-      {total === 0 ? (
-        <div className="card mt-8 border-dashed p-12 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-xl">
-            📘
-          </div>
-          <p className="mt-4 text-slate-600">Você ainda não criou nenhum plano de ensino.</p>
-          <div className="mt-4 flex flex-wrap justify-center gap-3">
-            <Link href="/dashboard/planos/novo" className="btn-azul">
-              Criar plano mensal
-            </Link>
-            <Link href="/dashboard/anual/novo" className="btn-azul">
-              Criar plano anual
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <>
-          {totalAnuais > 0 && (
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold text-slate-900">Planos anuais</h2>
-              <ListaPlanos planos={planosAnuais as unknown as PlanoLista[]} base="/dashboard/anual" />
-            </div>
-          )}
-          {totalMensais > 0 && (
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold text-slate-900">Planos mensais</h2>
-              <ListaPlanos planos={planos as unknown as PlanoLista[]} base="/dashboard/planos" />
-            </div>
-          )}
-        </>
-      )}
+      <h2 className="mt-8 text-lg font-bold text-slate-900">Planos</h2>
+      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Cartao href="/dashboard/meus-planos" icone="📚" titulo="Meus planos" texto="Veja todos os planos, organizados por escola e turma." destaque />
+        <Cartao href="/dashboard/meus-planos/anuais" icone="📅" titulo="Planos anuais" texto={`${planosAnuais?.length ?? 0} plano(s) — por escola e turma.`} />
+        <Cartao href="/dashboard/meus-planos/mensais" icone="🗓️" titulo="Planos mensais" texto={`${planos?.length ?? 0} plano(s) — por escola e turma.`} />
+        <Cartao href="/dashboard/anual/novo" icone="➕" titulo="Cadastrar plano anual" texto="Comece um plano anual novo." />
+        <Cartao href="/dashboard/planos/novo" icone="➕" titulo="Cadastrar plano mensal" texto="Comece um plano mensal novo." />
+      </div>
+
+      <h2 className="mt-8 text-lg font-bold text-slate-900">Escolas</h2>
+      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Cartao href="/dashboard/escolas" icone="🏫" titulo="Minhas escolas" texto="Veja e edite as escolas cadastradas." />
+        <Cartao href="/dashboard/escolas/nova" icone="➕" titulo="Cadastrar escola" texto="Cadastre o nome, o município e a logo." />
+      </div>
     </div>
   );
 }
