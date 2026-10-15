@@ -30,6 +30,7 @@ import {
   type PlanoAnual,
   type TrimestreAnual,
 } from "@/lib/plano-anual";
+import { useAvisoTemporario } from "../planos/linhas-do-editor";
 import SeletorItens from "./seletor-itens";
 import { CRITERIOS_AVALIACAO, INSTRUMENTOS_AVALIACAO } from "../planos/sugestoes-avaliacao";
 import EditorLivre from "./editor-livre";
@@ -96,32 +97,73 @@ function TituloTrimestre({ nome, trimestre }: { nome: string; trimestre: number 
   );
 }
 
-/** "Você marcou estas habilidades; estes objetos de conhecimento estão ligados a elas no currículo." */
-function SugestaoObjetos({ sugeridos, onAdicionar }: { sugeridos: OpcaoLista[]; onAdicionar: (lista: OpcaoLista[]) => void }) {
+/** "Você marcou estas habilidades; estes objetos de conhecimento estão ligados a elas no currículo." Tudo por caixinha. */
+function SugestaoObjetos({
+  sugeridos,
+  marcados,
+  onAlternar,
+  onTodos,
+}: {
+  sugeridos: OpcaoLista[];
+  marcados: Set<string>;
+  onAlternar: (o: OpcaoLista, marcar: boolean) => void;
+  onTodos: (lista: OpcaoLista[], marcar: boolean) => void;
+}) {
+  const { aviso, mostrar } = useAvisoTemporario();
   if (sugeridos.length === 0) return null;
+  const qtdMarcados = sugeridos.filter((o) => marcados.has(o.id)).length;
   return (
     <div className="rounded-xl border-2 border-sky-300 bg-sky-50 p-3">
       <p className="text-sm font-bold text-sky-900">
         Sugestão: {sugeridos.length} objeto(s) de conhecimento ligado(s) às habilidades que você marcou
       </p>
-      <ul className="mt-2 flex flex-wrap gap-2">
-        {sugeridos.slice(0, 12).map((o) => (
-          <li key={o.id}>
-            <button
-              type="button"
-              onClick={() => onAdicionar([o])}
-              title="Adicionar este objeto de conhecimento"
-              className="rounded-lg border border-sky-400 bg-white px-3 py-1.5 text-left text-sm font-semibold text-sky-900 shadow-sm hover:bg-sky-100"
-            >
-              + {o.texto}
-            </button>
-          </li>
-        ))}
+      <p className="text-xs text-sky-800">Marque a caixinha para colocar no plano (desmarque para tirar). Os marcados aparecem também na lista abaixo.</p>
+      <ul className="mt-2 max-h-52 space-y-0.5 overflow-y-auto rounded-lg bg-white/70 p-1.5">
+        {sugeridos.map((o) => {
+          const marcado = marcados.has(o.id);
+          return (
+            <li key={o.id}>
+              <label className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 text-sm text-sky-950 hover:bg-sky-100">
+                <input
+                  type="checkbox"
+                  checked={marcado}
+                  onChange={() => {
+                    onAlternar(o, !marcado);
+                    mostrar(marcado ? "Objeto retirado do plano." : "Objeto adicionado ao plano — veja na lista logo abaixo.");
+                  }}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span>{o.texto}</span>
+              </label>
+            </li>
+          );
+        })}
       </ul>
-      {sugeridos.length > 12 && <p className="mt-1 text-xs text-sky-800">Mostrando 12 de {sugeridos.length}. Use &quot;Adicionar todos&quot; ou a lista abaixo.</p>}
-      <button type="button" onClick={() => onAdicionar(sugeridos)} className="btn-azul-suave mt-3 !border-2 !border-sky-500 !px-4 !py-2 !text-sm">
-        Adicionar todos ({sugeridos.length})
-      </button>
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-sky-900">
+          <input
+            type="checkbox"
+            checked={qtdMarcados === sugeridos.length}
+            ref={(el) => {
+              if (el) el.indeterminate = qtdMarcados > 0 && qtdMarcados < sugeridos.length;
+            }}
+            onChange={() => {
+              const marcar = qtdMarcados !== sugeridos.length;
+              onTodos(sugeridos, marcar);
+              mostrar(marcar ? "Todos os objetos sugeridos foram adicionados — veja na lista logo abaixo." : "Objetos sugeridos retirados do plano.");
+            }}
+            className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+          />
+          Marcar todos ({qtdMarcados}/{sugeridos.length})
+        </label>
+        <p
+          role="status"
+          aria-live="polite"
+          className={`rounded-md px-2 py-0.5 text-xs font-semibold transition ${aviso ? "bg-emerald-100 text-emerald-800" : "hidden"}`}
+        >
+          {aviso ? `✓ ${aviso}` : ""}
+        </p>
+      </div>
     </div>
   );
 }
@@ -187,7 +229,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
     const base = conteudos.length > 0 ? conteudos : dados.objetos;
     return base.map((o) => (o.grupo === "Conteúdo" ? { ...o, grupo: "Objeto de conhecimento" } : o));
   }, [dados.objetos]);
-  /** Objetos de conhecimento ligados às habilidades marcadas no trimestre e que ainda não estão marcados. */
+  /** Objetos de conhecimento ligados às habilidades marcadas no trimestre (marcados ou não). */
   function objetosSugeridos(t: TrimestreAnual): OpcaoLista[] {
     const ids = new Set<string>();
     for (const h of t.habilidades) {
@@ -195,8 +237,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
       for (const r of op?.relacionados ?? []) ids.add(r);
     }
     if (ids.size === 0) return [];
-    const marcados = new Set(t.objetos.map((o) => o.id));
-    return opcoesObjetos.filter((o) => ids.has(o.id) && !marcados.has(o.id));
+    return opcoesObjetos.filter((o) => ids.has(o.id));
   }
 
   const [carregando, setCarregando] = useState(false);
@@ -643,7 +684,19 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
                 <TituloTrimestre nome="Objetos de conhecimento" trimestre={i} />
                 <SugestaoObjetos
                   sugeridos={objetosSugeridos(t)}
-                  onAdicionar={(lista) => atualizarTrimestre(i, { objetos: [...t.objetos, ...lista.map(opcaoParaItem)] })}
+                  marcados={new Set(t.objetos.map((o) => o.id))}
+                  onAlternar={(o, marcar) =>
+                    atualizarTrimestre(i, { objetos: marcar ? [...t.objetos, opcaoParaItem(o)] : t.objetos.filter((x) => x.id !== o.id) })
+                  }
+                  onTodos={(lista, marcar) => {
+                    const ids = new Set(lista.map((o) => o.id));
+                    const jaTem = new Set(t.objetos.map((o) => o.id));
+                    atualizarTrimestre(i, {
+                      objetos: marcar
+                        ? [...t.objetos, ...lista.filter((o) => !jaTem.has(o.id)).map(opcaoParaItem)]
+                        : t.objetos.filter((x) => !ids.has(x.id)),
+                    });
+                  }}
                 />
                 <SeletorItens
                   opcoes={opcoesObjetos}

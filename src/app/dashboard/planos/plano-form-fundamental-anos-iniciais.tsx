@@ -11,6 +11,7 @@ import CurriculoDigitalCampo from "./curriculo-digital-campo";
 import MetodologiaIA from "./metodologia-ia";
 import BarraSalvar from "./barra-salvar";
 import ReferenciasCampo from "./referencias-campo";
+import { referenciasOficiais } from "@/lib/referencias-oficiais";
 import TurmaSelector, { separarTurma } from "./turma-selector";
 import EditorTextoRico, { type EditorTextoRicoHandle } from "./editor-texto-rico";
 import SugestoesPanel from "./sugestoes-panel";
@@ -122,7 +123,7 @@ export default function PlanoFormFundamentalAnosIniciais({
       </label>
       <p className="text-xs text-slate-500">
         Conteúdos, conceitos e princípios do Currículo Base do Território Catarinense (CBTC). O que
-        você adicionar pelo botão azul aparece aqui; você também pode escrever livremente.
+        você marcar nas caixinhas das sugestões aparece aqui; você também pode escrever livremente.
       </p>
       <EditorTextoRico
         id="conteudos_programaticos"
@@ -304,7 +305,7 @@ export default function PlanoFormFundamentalAnosIniciais({
       <ObjetosEHabilidades
         habilidades={habilidadesCurriculo}
         selecionadasIniciais={habilidadesSelecionadasIds}
-        onAdicionarConteudos={(linhas) => refConteudos.current?.anexar(linhas, "paragrafos")}
+        editorRef={refConteudos}
         nomesDisciplinas={nomesDisciplinas}
         anoSugerido={anoSugerido}
         editorConteudos={campoConteudos}
@@ -388,7 +389,7 @@ export default function PlanoFormFundamentalAnosIniciais({
           <SugestoesPanel
             rotulo="instrumentos"
             itens={INSTRUMENTOS_AVALIACAO}
-            onAdicionar={(item) => refInstrumentos.current?.anexar([item], "lista")}
+            editorRef={refInstrumentos}
           />
         </div>
 
@@ -410,7 +411,7 @@ export default function PlanoFormFundamentalAnosIniciais({
           <SugestoesPanel
             rotulo="critérios"
             itens={CRITERIOS_AVALIACAO}
-            onAdicionar={(item) => refAvaliacao.current?.anexar([item], "lista")}
+            editorRef={refAvaliacao}
           />
         </div>
       </SecaoPlano>
@@ -429,9 +430,9 @@ export default function PlanoFormFundamentalAnosIniciais({
           <p className="text-xs text-slate-500">
             A referência oficial (Currículo Base do Território Catarinense / BNCC
             {usarCurriculoDigital ? " e Currículo de Educação Digital" : ""}) já entra
-            automaticamente — use este campo para as demais referências, uma por linha.
+            automaticamente. Para ver e editar essas fontes aqui, clique em “Adicionar referências sugeridas”; use o quadro também para as demais referências, uma por linha.
           </p>
-          <ReferenciasCampo valorInicial={plano?.referencias} rows={4} />
+          <ReferenciasCampo valorInicial={plano?.referencias} rows={4} sugeridas={referenciasOficiais("fundamental_anos_iniciais", usarCurriculoDigital)} />
         </div>
 
         <div>

@@ -1,15 +1,17 @@
 "use client";
 
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode, type RefObject } from "react";
 import type { HabilidadeCurricular } from "@/lib/database.types";
 import SecaoPlano from "./secao-plano";
+import type { EditorTextoRicoHandle } from "./editor-texto-rico";
+import { useAvisoTemporario, useLinhasDoEditor } from "./linhas-do-editor";
 
 interface ObjetosEHabilidadesProps {
   /** Habilidades (de todas as fontes) da disciplina escolhida, exceto as de educação digital. */
   habilidades: HabilidadeCurricular[];
   selecionadasIniciais: string[];
-  /** Chamado ao clicar em "Adicionar ao plano": recebe as linhas a acrescentar no campo de conteúdos. */
-  onAdicionarConteudos: (linhas: string[]) => void;
+  /** Campo de texto dos conteúdos: marcar uma caixinha escreve a linha nele e desmarcar a tira. */
+  editorRef: RefObject<EditorTextoRicoHandle | null>;
   vazio: string;
   /** Nomes dos componentes (usado quando o plano reúne mais de um componente curricular). */
   nomesDisciplinas?: Record<string, string>;
@@ -72,15 +74,15 @@ function semDuplicatas(itens: string[]): string[] {
 
 /**
  * Duas etapas do plano que compartilham o mesmo currículo/ano:
- *  1) Objetos de conhecimento e conteúdos — botão azul que abre as sugestões e,
- *     logo abaixo, o campo de texto onde o objeto/conteúdo entra no plano;
+ *  1) Objetos de conhecimento e conteúdos — lista com caixinhas: marcar coloca o objeto
+ *     (e seus conteúdos) no campo de texto logo abaixo; desmarcar tira;
  *  2) Selecionar habilidades — lista por objeto de conhecimento, com as
  *     habilidades marcadas sempre visíveis.
  */
 export default function ObjetosEHabilidades({
   habilidades,
   selecionadasIniciais,
-  onAdicionarConteudos,
+  editorRef,
   vazio,
   nomesDisciplinas,
   anoSugerido = null,
@@ -94,6 +96,8 @@ export default function ObjetosEHabilidades({
   const idAno = useId();
   const idBuscaObj = useId();
   const idBuscaHab = useId();
+  const texto = useLinhasDoEditor(editorRef);
+  const { aviso, mostrar } = useAvisoTemporario();
 
   const porId = useMemo(() => new Map(habilidades.map((h) => [h.id, h])), [habilidades]);
 
@@ -281,7 +285,7 @@ export default function ObjetosEHabilidades({
         id={idObjetos}
         numero={numeroObjetos}
         titulo="Objetos de conhecimento e conteúdos"
-        descricao="Use as sugestões do currículo ou escreva livremente no campo abaixo."
+        descricao="Marque as caixinhas das sugestões do currículo ou escreva livremente no campo abaixo."
       >
         {vazioLista ? (
           <p className="rounded-xl border border-dashed border-primary-200 bg-white px-3 py-4 text-sm text-slate-500">
@@ -298,12 +302,21 @@ export default function ObjetosEHabilidades({
               <span aria-hidden="true">{painelObjetos ? "▲" : "＋"}</span>
               {painelObjetos
                 ? "Fechar sugestões de objetos e conteúdos"
-                : "Clique aqui para adicionar objetos e conteúdos sugeridos"}
+                : "Clique aqui para escolher objetos e conteúdos sugeridos"}
             </button>
 
             {painelObjetos && (
               <div className="space-y-3 rounded-xl border border-primary-200 bg-white p-4 shadow-sm">
                 {filtros}
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className={`min-h-[2.25rem] rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                    aviso ? "border border-emerald-200 bg-emerald-50 text-emerald-800" : "text-transparent"
+                  }`}
+                >
+                  {aviso ? `✓ ${aviso}` : "."}
+                </p>
                 {objetos.length === 0 ? (
                   semObjetos
                 ) : (
@@ -314,8 +327,8 @@ export default function ObjetosEHabilidades({
                       </p>
                       <p className="text-xs text-slate-500">
                         {ehBncc
-                          ? "Clique em um objeto e use o botão azul para colocá-lo no plano. A BNCC não traz lista de conteúdos: escreva-os no campo abaixo."
-                          : "Clique em um objeto para ver os conteúdos sugeridos e use o botão azul para colocá-los no plano."}
+                          ? "Marque a caixinha do objeto para colocá-lo no plano (desmarque para tirar). A BNCC não traz lista de conteúdos: escreva-os no campo abaixo."
+                          : "Marque a caixinha do objeto para colocá-lo no plano com todos os conteúdos sugeridos. Abra “Conteúdos” para marcar só alguns. Desmarcar tira do plano."}
                       </p>
                       <label htmlFor={idBuscaObj} className="sr-only">
                         Buscar objeto de conhecimento
@@ -335,57 +348,91 @@ export default function ObjetosEHabilidades({
                       )}
                       {objetosFiltradosObj.map(({ chave, objeto, disciplina, itens }) => {
                         const aberto = objetoAtivoObj === chave;
-                        const conteudos = semDuplicatas(itens.flatMap((h) => itensDeConteudo(h.conteudos)));
+                        const conteudos = ehBncc ? [] : semDuplicatas(itens.flatMap((h) => itensDeConteudo(h.conteudos)));
+                        const linhaObjeto = ehBncc ? objeto : nomeDoObjeto(objeto);
+                        const objetoMarcado = texto.tem(linhaObjeto);
+                        const conteudosMarcados = conteudos.filter((c) => texto.tem(c)).length;
+                        const parcial = conteudos.length > 0 && !objetoMarcado ? conteudosMarcados > 0 : objetoMarcado && conteudosMarcados < conteudos.length;
+                        const semCaixa = objeto === GRUPO_BNCC;
+
+                        function alternarObjeto() {
+                          if (objetoMarcado || conteudosMarcados > 0) {
+                            texto.desmarcar([linhaObjeto, ...conteudos]);
+                            mostrar("Retirado do plano.");
+                          } else {
+                            texto.marcar([linhaObjeto, ...conteudos], "paragrafos");
+                            mostrar(
+                              conteudos.length > 0
+                                ? "Objeto e conteúdos adicionados ao plano, no campo logo abaixo."
+                                : "Objeto adicionado ao plano, no campo logo abaixo."
+                            );
+                          }
+                        }
+                        function alternarConteudo(c: string) {
+                          if (texto.tem(c)) {
+                            texto.desmarcar([c]);
+                            mostrar("Conteúdo retirado do plano.");
+                          } else {
+                            texto.marcar(objetoMarcado ? [c] : [linhaObjeto, c], "paragrafos");
+                            mostrar("Conteúdo adicionado ao plano, no campo logo abaixo.");
+                          }
+                        }
+
                         return (
                           <li key={chave}>
-                            <button
-                              type="button"
-                              aria-expanded={aberto}
-                              onClick={() => setObjetoAtivoObj(aberto ? null : chave)}
-                              className={`flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left text-sm hover:bg-primary-50/50 ${
-                                aberto ? "bg-primary-50/70" : ""
-                              }`}
-                            >
-                              <span className="text-slate-800">
+                            <div className={`flex items-start gap-2 px-3 py-2.5 text-sm ${aberto ? "bg-primary-50/70" : ""}`}>
+                              {semCaixa ? (
+                                <span className="w-4 shrink-0" aria-hidden="true" />
+                              ) : (
+                                <input
+                                  id={`${idBuscaObj}-obj-${chave}`}
+                                  type="checkbox"
+                                  checked={objetoMarcado}
+                                  ref={(el) => {
+                                    if (el) el.indeterminate = parcial;
+                                  }}
+                                  onChange={alternarObjeto}
+                                  aria-label={`Colocar no plano: ${linhaObjeto}`}
+                                  className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                                />
+                              )}
+                              <label htmlFor={`${idBuscaObj}-obj-${chave}`} className="min-w-0 flex-1 cursor-pointer text-slate-800">
                                 {disciplina && <strong>{disciplina} — </strong>}
                                 {objeto}
-                              </span>
-                              <span className="shrink-0 text-xs font-semibold text-primary-600">{aberto ? "▲" : "▼"}</span>
-                            </button>
-                            {aberto && (
-                              <div className="space-y-2 bg-primary-50/40 px-3 pb-3 pt-1">
-                                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                  Conteúdos sugeridos
-                                </p>
-                                {ehBncc ? (
-                                  <p className="text-sm text-slate-500">
-                                    A BNCC não traz conteúdos para o objeto. Você pode acrescentá-lo ao plano e
-                                    detalhar os conteúdos no campo abaixo.
-                                  </p>
-                                ) : conteudos.length > 0 ? (
-                                  <ul className="list-disc space-y-0.5 pl-5 text-sm text-slate-600">
-                                    {conteudos.map((c) => (
-                                      <li key={c}>{c}</li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="text-sm text-slate-500">
-                                    Este objeto não traz conteúdos sugeridos no currículo.
-                                  </p>
-                                )}
+                              </label>
+                              {conteudos.length > 0 && (
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    onAdicionarConteudos([ehBncc ? objeto : nomeDoObjeto(objeto), ...conteudos])
-                                  }
-                                  className="btn-azul !px-4 !py-2 !text-xs"
+                                  aria-expanded={aberto}
+                                  onClick={() => setObjetoAtivoObj(aberto ? null : chave)}
+                                  className="shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold text-primary-700 hover:bg-primary-100"
                                 >
-                                  <span aria-hidden="true">＋</span>
-                                  {conteudos.length > 0
-                                    ? "Adicionar objeto e conteúdos ao plano"
-                                    : "Adicionar objeto ao plano"}
+                                  {conteudosMarcados > 0 ? `${conteudosMarcados}/${conteudos.length} · ` : ""}
+                                  Conteúdos ({conteudos.length}) {aberto ? "▲" : "▼"}
                                 </button>
+                              )}
+                            </div>
+                            {aberto && conteudos.length > 0 && (
+                              <div className="space-y-0.5 bg-primary-50/40 px-3 pb-3 pt-1 pl-9">
+                                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Conteúdos sugeridos</p>
+                                {conteudos.map((c) => (
+                                  <label
+                                    key={c}
+                                    className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-sm text-slate-700 hover:bg-white"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={texto.tem(c)}
+                                      onChange={() => alternarConteudo(c)}
+                                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                                    />
+                                    <span>{c}</span>
+                                  </label>
+                                ))}
                               </div>
+                            )}
+                            {aberto && conteudos.length === 0 && !ehBncc && (
+                              <p className="bg-primary-50/40 px-3 pb-3 pl-9 text-sm text-slate-500">Este objeto não traz conteúdos sugeridos no currículo.</p>
                             )}
                           </li>
                         );

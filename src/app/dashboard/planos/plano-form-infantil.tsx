@@ -11,6 +11,7 @@ import MetodologiaIA from "./metodologia-ia";
 import BarraSalvar from "./barra-salvar";
 import OpcoesLogo from "./opcoes-logo";
 import ReferenciasCampo from "./referencias-campo";
+import { referenciasOficiais } from "@/lib/referencias-oficiais";
 import EditorTextoRico, { type EditorTextoRicoHandle } from "./editor-texto-rico";
 import SugestoesPanel from "./sugestoes-panel";
 import { CRITERIOS_INFANTIL, INSTRUMENTOS_INFANTIL } from "./sugestoes-avaliacao";
@@ -288,7 +289,7 @@ export default function PlanoFormInfantil({
           <SugestoesPanel
             rotulo="critérios"
             itens={CRITERIOS_INFANTIL}
-            onAdicionar={(item) => refAvaliacao.current?.anexar([item], "lista")}
+            editorRef={refAvaliacao}
           />
         </div>
 
@@ -310,7 +311,7 @@ export default function PlanoFormInfantil({
           <SugestoesPanel
             rotulo="instrumentos"
             itens={INSTRUMENTOS_INFANTIL}
-            onAdicionar={(item) => refInstrumentos.current?.anexar([item], "lista")}
+            editorRef={refInstrumentos}
           />
         </div>
       </SecaoPlano>
@@ -328,9 +329,9 @@ export default function PlanoFormInfantil({
           </label>
           <p className="text-xs text-slate-500">
             As fontes oficiais (BNCC e Currículo Base SC) já entram automaticamente nas Referências
-            do plano gerado. Use este campo só para referências adicionais, uma por linha.
+            do plano gerado. Para ver e editar essas fontes aqui, clique em “Adicionar referências sugeridas”; use o quadro também para referências adicionais, uma por linha.
           </p>
-          <ReferenciasCampo valorInicial={plano?.referencias} rows={4} />
+          <ReferenciasCampo valorInicial={plano?.referencias} rows={4} sugeridas={referenciasOficiais("educacao_infantil", false)} />
         </div>
 
         <div>

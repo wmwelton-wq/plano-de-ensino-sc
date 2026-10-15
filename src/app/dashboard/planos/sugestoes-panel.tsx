@@ -1,16 +1,21 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, type RefObject } from "react";
 import { ordenarAlfabeticamente } from "./sugestoes-avaliacao";
+import type { EditorTextoRicoHandle } from "./editor-texto-rico";
+import { useAvisoTemporario, useLinhasDoEditor } from "./linhas-do-editor";
 
 interface SugestoesPanelProps {
   rotulo: string;
   itens: string[];
-  onAdicionar: (item: string) => void;
+  /** Campo de texto que recebe os itens marcados (e perde os desmarcados). */
+  editorRef: RefObject<EditorTextoRicoHandle | null>;
 }
 
-/** Lista recolhível de sugestões em ordem alfabética; cada clique acrescenta o item ao campo. */
-export default function SugestoesPanel({ rotulo, itens, onAdicionar }: SugestoesPanelProps) {
+/** Lista recolhível de sugestões em ordem alfabética, com caixinhas: marcar põe o item no campo; desmarcar tira. */
+export default function SugestoesPanel({ rotulo, itens, editorRef }: SugestoesPanelProps) {
+  const texto = useLinhasDoEditor(editorRef);
+  const { aviso, mostrar } = useAvisoTemporario();
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
   const idBusca = useId();
@@ -32,7 +37,7 @@ export default function SugestoesPanel({ rotulo, itens, onAdicionar }: Sugestoes
         <span aria-hidden="true">{aberto ? "▲" : "▼"}</span>
         {aberto
           ? `Ocultar sugestões de ${rotulo}`
-          : `Clique aqui para ver sugestões de ${rotulo} (${ordenados.length})`}
+          : `Clique aqui para escolher sugestões de ${rotulo} (${ordenados.length})`}
       </button>
 
       {aberto && (
@@ -52,23 +57,40 @@ export default function SugestoesPanel({ rotulo, itens, onAdicionar }: Sugestoes
             {filtrados.length === 0 && (
               <li className="px-3 py-2 text-sm text-slate-400">Nenhuma sugestão encontrada.</li>
             )}
-            {filtrados.map((item) => (
-              <li key={item}>
-                <button
-                  type="button"
-                  onClick={() => onAdicionar(item)}
-                  className="flex w-full items-start gap-2 px-3 py-1.5 text-left text-sm text-slate-700 hover:bg-primary-50"
-                >
-                  <span aria-hidden="true" className="font-bold text-primary-600">
-                    +
-                  </span>
-                  <span>{item}</span>
-                </button>
-              </li>
-            ))}
+            {filtrados.map((item) => {
+              const marcado = texto.tem(item);
+              return (
+                <li key={item}>
+                  <label className="flex cursor-pointer items-start gap-2 px-3 py-1.5 text-sm text-slate-700 hover:bg-primary-50">
+                    <input
+                      type="checkbox"
+                      checked={marcado}
+                      onChange={() => {
+                        if (marcado) {
+                          texto.desmarcar([item]);
+                          mostrar("Retirado do campo acima.");
+                        } else {
+                          texto.marcar([item], "lista");
+                          mostrar("Adicionado ao campo acima.");
+                        }
+                      }}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span>{item}</span>
+                  </label>
+                </li>
+              );
+            })}
           </ul>
           <p className="border-t border-slate-200 px-3 py-1.5 text-xs text-slate-400">
-            Clique para adicionar ao campo. Você também pode escrever livremente acima.
+            Marque a caixinha para colocar no campo (desmarque para tirar). Você também pode escrever livremente acima.
+          </p>
+          <p
+            role="status"
+            aria-live="polite"
+            className={`px-3 py-1.5 text-xs font-semibold transition ${aviso ? "bg-emerald-50 text-emerald-800" : "text-transparent"}`}
+          >
+            {aviso ? `✓ ${aviso}` : "."}
           </p>
         </div>
       )}

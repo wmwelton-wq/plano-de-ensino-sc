@@ -7,6 +7,7 @@ import ImpressaoPaginada from "./impressao-paginada";
 import { ESTILO_TEXTO_PLANO } from "@/lib/estilo-plano";
 import { ehHtml, sanitizarHtml } from "@/lib/texto-rico";
 import type { HabilidadeManual } from "@/lib/database.types";
+import { lerReferenciasGravadas, referenciasOficiais } from "@/lib/referencias-oficiais";
 
 function linhas(texto: string | null): string[] {
   if (!texto) return [];
@@ -16,24 +17,10 @@ function linhas(texto: string | null): string[] {
     .filter((l) => l.length > 0);
 }
 
-function referenciasOficiais(etapa: string, usarCurriculoDigital: boolean): string[] {
-  const ehFundamentalOuInfantil =
-    etapa === "educacao_infantil" ||
-    etapa === "fundamental_anos_iniciais" ||
-    etapa === "fundamental_anos_finais";
-
-  const refs = [
-    "BRASIL. Ministério da Educação. Base Nacional Comum Curricular (BNCC). Brasília: MEC, 2018.",
-    ehFundamentalOuInfantil
-      ? "SANTA CATARINA. Secretaria de Estado da Educação. Currículo Base da Educação Infantil e do Ensino Fundamental do Território Catarinense. Florianópolis: SED/SC, 2019."
-      : "SANTA CATARINA. Secretaria de Estado da Educação. Currículo Catarinense. Florianópolis: SED/SC, 2019.",
-  ];
-  if (usarCurriculoDigital) {
-    refs.push(
-      "SANTA CATARINA. Secretaria de Estado da Educação. Currículo de Educação Digital de Santa Catarina. Florianópolis: SED/SC."
-    );
-  }
-  return refs;
+/** Referências do plano: oficiais (modo automático) + as do quadro. No modo completo, só o que está no quadro. */
+function referenciasDoPlano(etapa: string, usarCurriculoDigital: boolean, gravado: string | null): string[] {
+  const { completo, texto } = lerReferenciasGravadas(gravado);
+  return completo ? linhas(texto) : [...referenciasOficiais(etapa, usarCurriculoDigital), ...linhas(texto)];
 }
 
 function formatarData(data: string | null): string {
@@ -336,11 +323,8 @@ export default async function VisualizarPlanoPage({
                 </Linha>
                 <Linha rotulo="Referências:">
                   <div className="space-y-2">
-                    {referenciasOficiais(plano.etapa, plano.usar_curriculo_digital).map((r, i) => (
-                      <p key={`oficial-${i}`}>{r}</p>
-                    ))}
-                    {linhas(plano.referencias).map((r, i) => (
-                      <p key={`complementar-${i}`}>{r}</p>
+                    {referenciasDoPlano(plano.etapa, plano.usar_curriculo_digital, plano.referencias).map((r, i) => (
+                      <p key={`referencia-${i}`}>{r}</p>
                     ))}
                   </div>
                 </Linha>
@@ -440,11 +424,8 @@ export default async function VisualizarPlanoPage({
               </Linha>
               <Linha rotulo="Referências">
                 <div className="space-y-2">
-                  {referenciasOficiais(plano.etapa, plano.usar_curriculo_digital).map((r, i) => (
-                    <p key={`oficial-${i}`}>{r}</p>
-                  ))}
-                  {linhas(plano.referencias).map((r, i) => (
-                    <p key={`complementar-${i}`}>{r}</p>
+                  {referenciasDoPlano(plano.etapa, plano.usar_curriculo_digital, plano.referencias).map((r, i) => (
+                    <p key={`referencia-${i}`}>{r}</p>
                   ))}
                 </div>
               </Linha>

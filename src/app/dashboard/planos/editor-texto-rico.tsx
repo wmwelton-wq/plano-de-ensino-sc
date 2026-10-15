@@ -7,6 +7,21 @@ import { MARCADOR_HTML, sanitizarHtml, valorGravadoParaHtml } from "@/lib/texto-
 export interface EditorTextoRicoHandle {
   /** Acrescenta itens ao final: como lista com marcadores ("lista") ou como parágrafos ("paragrafos"). */
   anexar: (itens: string[], formato: "lista" | "paragrafos") => void;
+  /** Tira do texto as linhas (parágrafos ou itens de lista) que forem exatamente iguais aos itens. */
+  remover: (itens: string[]) => void;
+  /** Linhas atuais do texto, já normalizadas (minúsculas, sem marcadores) — para marcar caixinhas. */
+  linhas: () => string[];
+  /** Avisa sempre que o texto mudar. Devolve a função que cancela o aviso. */
+  observar: (aoMudar: (linhas: string[]) => void) => () => void;
+}
+
+/** Forma comparável de uma linha: sem marcadores, sem espaços extras, minúscula. */
+export function normalizarLinha(t: string): string {
+  return t
+    .replace(/^[\s•\-–*]+/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 interface EditorTextoRicoProps {
@@ -79,9 +94,28 @@ export default function EditorTextoRico({
   const [htmlInicial] = useState(() => valorGravadoParaHtml(valorInicial, textoAntigoComoLista));
   const [valorCampo, setValorCampo] = useState(() => (htmlInicial ? MARCADOR_HTML + htmlInicial : ""));
 
+  const ouvintes = useRef(new Set<(linhas: string[]) => void>());
+
+  const linhasAtuais = useCallback((): string[] => {
+    const area = areaRef.current;
+    if (!area) return [];
+    return (area.innerText || area.textContent || "")
+      .split("\n")
+      .map(normalizarLinha)
+      .filter((l) => l.length > 0);
+  }, []);
+
+  const avisar = useCallback(() => {
+    if (ouvintes.current.size === 0) return;
+    const linhas = linhasAtuais();
+    ouvintes.current.forEach((f) => f(linhas));
+  }, [linhasAtuais]);
+
   const sincronizar = useCallback(() => {
     const area = areaRef.current;
     if (!area) return;
+    // Depois de atualizar o valor do campo, quem observa o texto (as caixinhas) é avisado.
+    queueMicrotask(avisar);
     const temTexto = (area.textContent ?? "").trim().length > 0 || area.querySelector("li") !== null;
     if (!temTexto) {
       setValorCampo("");
@@ -131,9 +165,9 @@ export default function EditorTextoRico({
       anexar(itens, formato) {
         const area = areaRef.current;
         if (!area || itens.length === 0) return;
-        // Evita repetir itens que já estão no texto.
-        const jaExiste = (area.textContent ?? "").toLowerCase();
-        const novos = itens.filter((i) => !jaExiste.includes(i.trim().toLowerCase()));
+        // Evita repetir linhas que já estão no texto.
+        const existentes = new Set(linhasAtuais());
+        const novos = itens.filter((i) => !existentes.has(normalizarLinha(i)));
         if (novos.length === 0) return;
 
         if (formato === "lista") {
@@ -153,8 +187,31 @@ export default function EditorTextoRico({
         }
         sincronizar();
       },
+      remover(itens) {
+        const area = areaRef.current;
+        if (!area || itens.length === 0) return;
+        const alvo = new Set(itens.map(normalizarLinha));
+        let mudou = false;
+        area.querySelectorAll("p, li, div").forEach((el) => {
+          if (el.querySelector("p, li, div")) return; // só blocos "folha"
+          if (!alvo.has(normalizarLinha(el.textContent ?? ""))) return;
+          const pai = el.parentElement;
+          el.remove();
+          mudou = true;
+          if (pai && pai !== area && pai.tagName === "UL" && pai.children.length === 0) pai.remove();
+        });
+        if (mudou) sincronizar();
+      },
+      linhas: linhasAtuais,
+      observar(aoMudar) {
+        ouvintes.current.add(aoMudar);
+        aoMudar(linhasAtuais());
+        return () => {
+          ouvintes.current.delete(aoMudar);
+        };
+      },
     }),
-    [sincronizar]
+    [sincronizar, linhasAtuais]
   );
 
   // Os botões não podem tirar o foco/seleção da área de escrita.

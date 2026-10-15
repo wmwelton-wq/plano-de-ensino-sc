@@ -21,6 +21,7 @@ import MetodologiaIA from "./metodologia-ia";
 import BarraSalvar from "./barra-salvar";
 import OpcoesLogo from "./opcoes-logo";
 import ReferenciasCampo from "./referencias-campo";
+import { referenciasOficiais } from "@/lib/referencias-oficiais";
 import TurmaSelector, { separarTurma } from "./turma-selector";
 import ObjetosEHabilidades from "./objeto-conhecimento-picker";
 import ObjetoMedioPicker from "./objeto-medio-picker";
@@ -103,10 +104,6 @@ export default function PlanoForm({
   const avaliacaoRef = useRef<EditorTextoRicoHandle>(null);
   const instrumentosRef = useRef<EditorTextoRicoHandle>(null);
 
-  function adicionarConteudos(novasLinhas: string[]) {
-    conteudosRef.current?.anexar(novasLinhas, "paragrafos");
-  }
-
   const disciplinaSelecionada = useMemo(
     () => disciplinas.find((d) => d.id === vinculoId),
     [disciplinas, vinculoId]
@@ -170,7 +167,7 @@ export default function PlanoForm({
         Objeto(s) de conhecimento em estudo/conteúdos
       </label>
       <p className="text-xs text-slate-500">
-        O que você adicionar pelo botão azul aparece aqui. Você também pode escrever livremente.
+        O que você marcar nas caixinhas das sugestões aparece aqui. Você também pode escrever livremente.
       </p>
       <EditorTextoRico
         id="conteudos_programaticos"
@@ -365,7 +362,7 @@ export default function PlanoForm({
           key={vinculoId ?? "sem-disciplina"}
           habilidades={habilidadesCurriculo}
           selecionadasIniciais={habilidadesSelecionadasIds}
-          onAdicionarConteudos={adicionarConteudos}
+          editorRef={conteudosRef}
           anoSugerido={anoSugerido}
           editorConteudos={campoConteudos}
           numeroObjetos={3}
@@ -384,14 +381,14 @@ export default function PlanoForm({
             id="passo-3"
             numero={3}
             titulo="Objetos de conhecimento e conteúdos"
-            descricao="Use as sugestões do currículo ou escreva livremente no campo abaixo."
+            descricao="Marque as caixinhas das sugestões do currículo ou escreva livremente no campo abaixo."
           >
             {etapa === "ensino_medio" && (
               <ObjetoMedioPicker
                 key={vinculoId ?? "sem-disciplina"}
                 objetos={objetosDaDisciplina}
                 serieSugerida={anoSugerido}
-                onAdicionarConteudos={adicionarConteudos}
+                editorRef={conteudosRef}
                 vazio={
                   vinculoTipo === "curso"
                     ? "Cursos técnicos não têm lista de objetos de conhecimento; escreva os conteúdos no campo abaixo."
@@ -491,7 +488,7 @@ export default function PlanoForm({
           <SugestoesPanel
             rotulo="critérios"
             itens={CRITERIOS_AVALIACAO}
-            onAdicionar={(item) => avaliacaoRef.current?.anexar([item], "lista")}
+            editorRef={avaliacaoRef}
           />
         </div>
 
@@ -510,7 +507,7 @@ export default function PlanoForm({
           <SugestoesPanel
             rotulo="instrumentos"
             itens={INSTRUMENTOS_AVALIACAO}
-            onAdicionar={(item) => instrumentosRef.current?.anexar([item], "lista")}
+            editorRef={instrumentosRef}
           />
         </div>
       </SecaoPlano>
@@ -528,10 +525,10 @@ export default function PlanoForm({
           </label>
           <p className="text-xs text-slate-500">
             As fontes oficiais (BNCC, Currículo Catarinense{usarCurriculoDigital ? " e Currículo de Educação Digital" : ""}) já entram
-            automaticamente nas Referências do plano gerado — você não precisa digitá-las. Use este
-            campo apenas para referências adicionais (livros, artigos etc.), uma por linha.
+            automaticamente nas Referências do plano gerado. Se quiser ver e editar essas fontes aqui, clique em
+            “Adicionar referências sugeridas”. Use o quadro também para referências adicionais (livros, artigos etc.), uma por linha.
           </p>
-          <ReferenciasCampo valorInicial={plano?.referencias} rows={5} />
+          <ReferenciasCampo valorInicial={plano?.referencias} rows={5} sugeridas={referenciasOficiais(etapa, usarCurriculoDigital)} />
         </div>
 
         <div>
