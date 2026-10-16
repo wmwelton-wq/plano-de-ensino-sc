@@ -67,6 +67,7 @@ function lerFormulario(formData: FormData): { erro: string } | { valores: Record
   const higienizar = (trimestres: TrimestreAnual[]) =>
     trimestres.forEach((t) => {
       t.complemento = prepararCampoParaSalvar(t.complemento) ?? "";
+      t.projeto = prepararCampoParaSalvar(t.projeto) ?? "";
     });
   higienizar(dados.trimestres);
 

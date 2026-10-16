@@ -10,6 +10,8 @@ export interface PassoFluxo {
   feito: boolean;
   /** Cor do passo (cada tipo de passo tem a sua). */
   tom: TomSecao;
+  /** Passo que pode ficar em branco (não conta para "completo" e aparece com a etiqueta "opcional"). */
+  opcional?: boolean;
 }
 
 export interface GrupoFluxo {
@@ -32,8 +34,9 @@ export default function FluxoPassos({ grupos, atual, aoIr }: { grupos: GrupoFlux
       <ol className="flex gap-1.5 overflow-x-auto pb-0.5">
         {grupos.map((g) => {
           const ativo = g.id === grupoAtual.id;
-          const feitos = g.passos.filter((p) => p.feito).length;
-          const completo = feitos === g.passos.length;
+          const obrigatorios = g.passos.filter((p) => !p.opcional);
+          const feitos = obrigatorios.filter((p) => p.feito).length;
+          const completo = feitos === obrigatorios.length;
           return (
             <li key={g.id} className="shrink-0" data-tom={g.tom}>
               <button
@@ -47,9 +50,9 @@ export default function FluxoPassos({ grupos, atual, aoIr }: { grupos: GrupoFlux
               >
                 <Icone nome={completo && !ativo ? "check" : g.icone} className="h-4 w-4" />
                 <span className="max-w-[11rem] truncate">{g.rotulo}</span>
-                {g.passos.length > 1 && (
+                {obrigatorios.length > 1 && (
                   <span className={`rounded-full px-1.5 text-xs font-bold ${ativo ? "bg-white/25" : "bg-slate-100 text-slate-600"}`}>
-                    {feitos}/{g.passos.length}
+                    {feitos}/{obrigatorios.length}
                   </span>
                 )}
               </button>
@@ -80,6 +83,7 @@ export default function FluxoPassos({ grupos, atual, aoIr }: { grupos: GrupoFlux
                     {p.feito ? <Icone nome="check" className="h-3 w-3" espessura={3} /> : i + 1}
                   </span>
                   {p.rotulo}
+                  {p.opcional && !ativo && <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500">opcional</span>}
                 </button>
               </li>
             );

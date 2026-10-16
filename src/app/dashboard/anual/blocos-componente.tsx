@@ -17,6 +17,8 @@ export interface ListasComp {
   compBncc: ItemLista[];
   compCurr: ItemLista[];
   compManuais: ItemLista[];
+  /** Currículo de Educação Digital (opcional): só aparece no plano se o professor marcar algo. */
+  compDigital: ItemLista[];
   trimestres: TrimestreAnual[];
 }
 
@@ -27,6 +29,7 @@ export function listasVazias(): ListasComp {
     compBncc: [],
     compCurr: [],
     compManuais: [],
+    compDigital: [],
     trimestres: [0, 1, 2].map(() => trimestreVazio()),
   };
 }
@@ -204,6 +207,25 @@ export function BlocoEspecificas({ info, valor, atualizar, vazioPadrao }: Omit<B
         />
       </div>
     </>
+  );
+}
+
+/** Passo opcional "Currículo de Educação Digital" de um componente. */
+export function BlocoDigital({ info, valor, atualizar, anoDaTurma }: Omit<BlocoProps, "vazioPadrao"> & { vazioPadrao?: string }) {
+  const opcoes = info.dados.habilidades.filter((h) => h.fonte === "curriculo_educacao_digital");
+  return (
+    <SeletorItens
+      opcoes={opcoes}
+      valor={valor.compDigital}
+      onChange={(v) => atualizar(() => ({ compDigital: v }))}
+      anos={info.dados.anos}
+      anoDaTurma={anoDaTurma}
+      vazio="Não há itens do Currículo de Educação Digital cadastrados para este componente. Se quiser, digite à mão no quadro abaixo."
+      rotuloManual="Acrescentar item do Currículo de Educação Digital"
+      placeholderManual="Descrição"
+      manualComCodigo
+      alturaRem={22}
+    />
   );
 }
 

@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import logoGoverno from "@/assets/logo-governo-sc.png";
 import { ehHtml, sanitizarHtml } from "@/lib/texto-rico";
 import { lerSecoes, ordenarComponentes } from "@/lib/secoes-componentes";
 
@@ -80,19 +81,18 @@ export default function PlanoAnosIniciais({ dados }: { dados: DadosPlanoAnosInic
       : formatarData(dados.dataInicio || dados.dataFim);
   const escola = dados.escola;
   const linhaEscola = escola ? `${escola.nome} – ${escola.municipio} – SC` : "_______________";
-  const temLogos = dados.mostrarBrasaoEstado || dados.mostrarLogoEscola;
 
   return (
     <>
       <h1 className="mb-3 text-center text-base font-bold">Plano de aula</h1>
 
       <div className="mb-4 flex items-start gap-4">
-        {temLogos && (
+        {dados.mostrarBrasaoEstado && (
           <div className="flex h-24 w-40 shrink-0 items-center justify-center">
             {dados.mostrarBrasaoEstado && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src="/logo-governo-sc.png"
+                src={logoGoverno.src}
                 alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
                 className="max-h-24 max-w-full object-contain"
               />
@@ -117,7 +117,7 @@ export default function PlanoAnosIniciais({ dados }: { dados: DadosPlanoAnosInic
           </p>
           <p className="font-bold">Anos iniciais</p>
         </div>
-        {temLogos && (
+        {dados.mostrarLogoEscola && escola?.logo_url && (
           <div className="flex h-24 w-40 shrink-0 items-center justify-center">
             {dados.mostrarLogoEscola && escola?.logo_url && (
               // eslint-disable-next-line @next/next/no-img-element

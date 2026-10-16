@@ -29,6 +29,8 @@ interface EditorLivreProps {
   onSincronizar?: (valor: string) => void;
   /** Altura mínima da área de escrita (px). */
   alturaMinima?: number;
+  /** Texto de ajuda que aparece quando o campo está vazio. */
+  placeholder?: string;
 }
 
 const FONTES = [
@@ -176,7 +178,7 @@ function Sep() {
   return <span className="mx-1 h-6 w-px bg-primary-200" aria-hidden="true" />;
 }
 
-export default function EditorLivre({ id, name, valorInicial, referencias = [], sugestoes = [], onSincronizar, alturaMinima }: EditorLivreProps) {
+export default function EditorLivre({ id, name, valorInicial, referencias = [], sugestoes = [], onSincronizar, alturaMinima, placeholder }: EditorLivreProps) {
   const areaRef = useRef<HTMLDivElement>(null);
   const campoRef = useRef<HTMLInputElement>(null);
   const arquivoRef = useRef<HTMLInputElement>(null);
@@ -1201,7 +1203,7 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [], 
         role="textbox"
         aria-multiline="true"
         aria-label="Texto livre do plano"
-        data-placeholder="Escreva aqui o restante do plano (relação com outras áreas, avaliação, metodologias, bibliografia...)."
+        data-placeholder={placeholder ?? "Escreva aqui o restante do plano (relação com outras áreas, avaliação, metodologias, bibliografia...)."}
         onInput={agendarSincronizacao}
         onBlur={() => {
           setImagem(null);

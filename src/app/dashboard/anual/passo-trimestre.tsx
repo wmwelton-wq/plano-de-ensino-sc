@@ -27,6 +27,10 @@ interface Props {
   vazioPadrao: string;
   /** Identifica o editor da caixa livre (único por componente e trimestre). */
   chaveEditor: string;
+  /** Referências bibliográficas que o botão do editor insere (oficiais + livros da disciplina). */
+  referencias: string[];
+  /** Frases prontas de metodologia e avaliação do editor. */
+  sugestoes: { titulo: string; itens: string[] }[];
 }
 
 /** Quais itens (unidades/objetos) já estão em OUTROS trimestres do mesmo componente. */
@@ -45,7 +49,13 @@ function repetidosEm(trimestres: TrimestreAnual[], indice: number, campo: "unida
   return mapa;
 }
 
-export default function PassoTrimestre({ info, valor, atualizar, indice, anoDaTurma, vazioPadrao, chaveEditor }: Props) {
+/** O projeto tem algum texto (o editor guarda HTML, mesmo vazio)? */
+function projetoPreenchido(v: string): boolean {
+  const limpo = (v ?? "").replace(/<!--rt-->/g, "");
+  return /<(img|table|li)[\s>]/i.test(limpo) || limpo.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() !== "";
+}
+
+export default function PassoTrimestre({ info, valor, atualizar, indice, anoDaTurma, vazioPadrao, chaveEditor, referencias, sugestoes }: Props) {
   const t = valor.trimestres[indice];
   const [aba, setAba] = useState<Aba>("unidades");
 
@@ -79,7 +89,7 @@ export default function PassoTrimestre({ info, valor, atualizar, indice, anoDaTu
     { id: "criterios", rotulo: "Critérios de avaliação", icone: "criterios", qtd: t.criterios.length },
     { id: "metodologia", rotulo: "Metodologia", icone: "bussola", qtd: t.metodologia.length },
     { id: "conteudos", rotulo: "Conteúdos a estudar", icone: "camadas", qtd: t.conteudosAtivo ? t.conteudos.length : null, opcional: true },
-    { id: "projeto", rotulo: "Projeto", icone: "frasco", qtd: t.projetoAtivo ? (t.projeto.trim() ? 1 : 0) : null, opcional: true },
+    { id: "projeto", rotulo: "Projeto", icone: "frasco", qtd: t.projetoAtivo ? (projetoPreenchido(t.projeto) ? 1 : 0) : null, opcional: true },
     { id: "livre", rotulo: "Caixa livre", icone: "lapis", qtd: null, opcional: true },
   ];
   const posicao = abas.findIndex((a) => a.id === aba);
@@ -144,7 +154,7 @@ export default function PassoTrimestre({ info, valor, atualizar, indice, anoDaTu
 
         {aba === "habilidades" && (
           <SeletorItens
-            opcoes={info.dados.habilidades}
+            opcoes={info.dados.habilidades.filter((h) => h.fonte !== "curriculo_educacao_digital")}
             valor={t.habilidades}
             onChange={(v) => mudar(() => ({ habilidades: v }))}
             anos={info.dados.anos}
@@ -273,18 +283,19 @@ export default function PassoTrimestre({ info, valor, atualizar, indice, anoDaTu
               </span>
             </label>
             {t.projetoAtivo && (
-              <div>
-                <label htmlFor={`projeto-${chaveEditor}`} className="field-label">
-                  Projeto do {TRIMESTRES_ROTULOS[indice].toLowerCase()}
-                </label>
-                <textarea
+              <div className="space-y-2">
+                <p className="text-sm text-slate-600">
+                  Nome do projeto, objetivo, como será desenvolvido, produto final... Use a barra de ferramentas como em qualquer editor de texto.
+                </p>
+                <EditorLivre
                   id={`projeto-${chaveEditor}`}
-                  value={t.projeto}
-                  onChange={(e) => mudar(() => ({ projeto: e.target.value }))}
-                  rows={7}
-                  maxLength={8000}
-                  placeholder="Nome do projeto, objetivo, como será desenvolvido, produto final..."
-                  className="input-field"
+                  name={`projeto_${chaveEditor}`}
+                  valorInicial={t.projeto}
+                  alturaMinima={220}
+                  placeholder="Escreva aqui o projeto deste trimestre (nome, objetivo, desenvolvimento, produto final...)."
+                  referencias={referencias}
+                  sugestoes={sugestoes}
+                  onSincronizar={(v) => mudar(() => ({ projeto: v }))}
                 />
               </div>
             )}
@@ -301,6 +312,8 @@ export default function PassoTrimestre({ info, valor, atualizar, indice, anoDaTu
               name={`complemento_${chaveEditor}`}
               valorInicial={t.complemento}
               alturaMinima={220}
+              referencias={referencias}
+              sugestoes={sugestoes}
               onSincronizar={(v) => mudar(() => ({ complemento: v }))}
             />
           </>

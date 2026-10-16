@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import logoGoverno from "@/assets/logo-governo-sc.png";
 import BarraAcoesPlano from "./barra-acoes-plano";
 import AutoAcao from "./auto-acao";
 import PlanoAnosIniciais from "./plano-anos-iniciais";
@@ -133,7 +134,6 @@ export default async function VisualizarPlanoPage({
   // branco para o professor colar o brasão depois).
   const mostrarBrasaoEstado = plano.incluir_logo_estado !== false;
   const mostrarLogoEscola = plano.incluir_logo_escola !== false;
-  const temLogos = mostrarBrasaoEstado || mostrarLogoEscola;
   const rotuloTurma =
     plano.etapa === "ensino_medio" ? "Série/ano:" : ehInfantil ? "Turma/grupo:" : "Ano/turma:";
 
@@ -187,12 +187,12 @@ export default async function VisualizarPlanoPage({
           {/* Cabeçalho */}
         {ehAnosIniciais ? (
           <div className="mb-4 flex items-start gap-3">
-            {temLogos && (
+            {mostrarBrasaoEstado && (
               <div className="flex h-20 w-32 shrink-0 items-center justify-center">
                 {mostrarBrasaoEstado && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src="/logo-governo-sc.png"
+                    src={logoGoverno.src}
                     alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
                     className="max-h-20 max-w-full object-contain"
                   />
@@ -205,7 +205,7 @@ export default async function VisualizarPlanoPage({
               <p>DIRETORIA DE EDUCAÇÃO BÁSICA E PROFISSIONAL</p>
               <p>GERÊNCIA DO ENSINO FUNDAMENTAL</p>
             </div>
-            {temLogos && (
+            {mostrarLogoEscola && escola?.logo_url && (
               <div className="flex h-20 w-32 shrink-0 items-center justify-center">
                 {mostrarLogoEscola && escola?.logo_url && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -218,12 +218,12 @@ export default async function VisualizarPlanoPage({
           <table className="w-full border-collapse border border-black">
             <tbody>
               <tr className="break-inside-avoid">
-                {temLogos && (
+                {mostrarBrasaoEstado && (
                   <td className="w-40 border border-black p-2 align-middle text-center">
                     {mostrarBrasaoEstado && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src="/logo-governo-sc.png"
+                        src={logoGoverno.src}
                         alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
                         className="mx-auto max-h-24 max-w-full object-contain"
                       />
@@ -237,7 +237,7 @@ export default async function VisualizarPlanoPage({
                   <p>MUNICÍPIO: {escola?.municipio ? escola.municipio.toUpperCase() : "_______________"}</p>
                   <p>PROFESSOR (A): {(professor?.nome ?? "").toUpperCase()}</p>
                 </td>
-                {temLogos && (
+                {mostrarLogoEscola && escola?.logo_url && (
                   <td className="w-40 border border-black p-2 align-middle text-center">
                     {mostrarLogoEscola && escola?.logo_url && (
                       // eslint-disable-next-line @next/next/no-img-element

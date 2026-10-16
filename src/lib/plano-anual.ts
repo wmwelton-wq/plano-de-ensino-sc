@@ -1,5 +1,6 @@
 // Tipos, normalização e utilidades do Plano de Ensino ANUAL.
 // (Sem dependência de DOM nem de Supabase: roda no servidor e no navegador.)
+import { livrosDasDisciplinas } from "./referencias-livros";
 
 
 /** Um item de uma lista de marcar (ementa, habilidade, objeto, competência...). */
@@ -48,7 +49,11 @@ export function trimestreVazio(): TrimestreAnual {
 
 /** O que o professor escreveu em "Projetos" só vai para o plano se a opção estiver ligada. */
 export function projetoVisivel(t: TrimestreAnual): string {
-  return t.projetoAtivo ? t.projeto.trim() : "";
+  if (!t.projetoAtivo) return "";
+  const p = (t.projeto ?? "").replace(/<!--rt-->/g, "").trim();
+  if (!p) return "";
+  if (/<(img|table|li)[\s>]/i.test(p)) return t.projeto.trim();
+  return p.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "" ? "" : t.projeto.trim();
 }
 
 export function conteudosVisiveis(t: TrimestreAnual): ItemLista[] {
@@ -72,6 +77,8 @@ export interface CompetenciasEspecificasAnual {
   bncc: ItemLista[];
   curriculo: ItemLista[];
   manuais: ItemLista[];
+  /** Currículo de Educação Digital: seção opcional (só aparece no plano e no PDF quando o professor marca algo). */
+  digital: ItemLista[];
 }
 
 export interface DadosPlanoAnual {
@@ -122,7 +129,6 @@ export interface PlanoAnual {
 
 const MAX_ITENS = 600;
 const MAX_TEXTO = 4000;
-const MAX_PROJETO = 8000;
 const MAX_COMPLEMENTO = 1_200_000;
 
 function texto(v: unknown, max: number): string {
@@ -176,7 +182,7 @@ export function normalizarDados(bruto: {
       conteudosAtivo: t.conteudosAtivo === true,
       conteudos: normalizarItens(t.conteudos),
       projetoAtivo: t.projetoAtivo === true,
-      projeto: texto(t.projeto, MAX_PROJETO),
+      projeto: typeof t.projeto === "string" ? t.projeto.slice(0, MAX_COMPLEMENTO) : "",
       complemento: typeof t.complemento === "string" ? t.complemento.slice(0, MAX_COMPLEMENTO) : "",
     };
   });
@@ -188,6 +194,7 @@ export function normalizarDados(bruto: {
       bncc: normalizarItens(ce.bncc),
       curriculo: normalizarItens(ce.curriculo),
       manuais: normalizarItens(ce.manuais),
+      digital: normalizarItens(ce.digital),
     },
     trimestres,
   };
@@ -285,6 +292,7 @@ export function juntarComponentes(lista: ComponenteAnual[]): {
       bncc: itensUnicos(lista.flatMap((c) => c.competenciasEspecificas.bncc)),
       curriculo: itensUnicos(lista.flatMap((c) => c.competenciasEspecificas.curriculo)),
       manuais: itensUnicos(lista.flatMap((c) => c.competenciasEspecificas.manuais)),
+      digital: itensUnicos(lista.flatMap((c) => c.competenciasEspecificas.digital)),
     },
     trimestres: [0, 1, 2].map((i) => ({
       ...trimestreVazio(),
@@ -433,9 +441,19 @@ export const ROTULO_FONTE: Record<string, string> = {
   manual: "Digitada por você",
 };
 
-/** Referências oficiais sugeridas (botão do editor livre). */
-export function referenciasSugeridas(etapa: string): string[] {
+/**
+ * Referências sugeridas (botão do editor livre): as oficiais e, depois, os livros mais usados em cada disciplina.
+ * `disciplinas` = nomes das disciplinas do plano (ou do trimestre, no quadro livre do trimestre).
+ */
+export function referenciasSugeridas(etapa: string, disciplinas: string[] = []): string[] {
   const fundamental = etapa === "fundamental_anos_iniciais" || etapa === "fundamental_anos_finais";
+  return [
+    ...referenciasOficiaisAnual(fundamental),
+    ...livrosDasDisciplinas(etapa, disciplinas),
+  ];
+}
+
+function referenciasOficiaisAnual(fundamental: boolean): string[] {
   return [
     "BRASIL. Ministério da Educação. Base Nacional Comum Curricular. Brasília: MEC, 2018.",
     fundamental

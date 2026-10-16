@@ -218,6 +218,41 @@ function imagemParaDados(img: HTMLImageElement, larguraPx: number): { dados: str
   }
 }
 
+/**
+ * Imagem de OUTRO endereço (ex.: logo da escola guardada no Supabase): o navegador "suja" o canvas e
+ * não deixa ler os pixels. Baixa o arquivo (permitido pelo servidor) e desenha a partir dele.
+ */
+async function imagemViaDownload(img: HTMLImageElement, larguraPx: number): Promise<{ dados: string; formato: "JPEG" | "PNG" } | null> {
+  try {
+    const src = img.currentSrc || img.src;
+    if (!src || src.startsWith("data:")) return null;
+    const resposta = await fetch(src, { mode: "cors", cache: "force-cache" });
+    if (!resposta.ok) return null;
+    const blob = await resposta.blob();
+    const bitmap = await createImageBitmap(blob);
+    const escala = Math.min(1, (larguraPx * 6) / bitmap.width);
+    const w = Math.max(1, Math.round(bitmap.width * escala));
+    const h = Math.max(1, Math.round(bitmap.height * escala));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    const jpeg = blob.type === "image/jpeg";
+    if (jpeg) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+    }
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+    return jpeg ? { dados: canvas.toDataURL("image/jpeg", 1), formato: "JPEG" } : { dados: canvas.toDataURL("image/png"), formato: "PNG" };
+  } catch {
+    return null;
+  }
+}
+
 /** O caractere (ou sequência) pode ser escrito com as fontes do PDF? */
 function ehSeguro(grupo: string): boolean {
   for (const ch of grupo) {
@@ -351,7 +386,7 @@ export async function desenharPaginaNoPdf(
       }
     }
     if (!colocada) {
-      const dados = imagemParaDados(img, rect.width);
+      const dados = imagemParaDados(img, rect.width) ?? (await imagemViaDownload(img, rect.width));
       if (dados) pdf.addImage(dados.dados, dados.formato, X(rect.left), Y(rect.top), largura, altura);
     }
   }
