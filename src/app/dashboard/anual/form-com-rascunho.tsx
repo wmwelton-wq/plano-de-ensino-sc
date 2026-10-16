@@ -89,6 +89,7 @@ function planoDoBackup(b: Backup, base?: PlanoAnual): PlanoAnual {
     competencias_gerais: {},
     competencias_especificas: {},
     trimestres: [],
+    componentes: null,
     texto_livre: null,
     status: "rascunho",
     created_at: "",
@@ -113,6 +114,8 @@ function planoDoBackup(b: Backup, base?: PlanoAnual): PlanoAnual {
     competencias_gerais: dados.competencias_gerais ?? {},
     competencias_especificas: dados.competencias_especificas ?? {},
     trimestres: dados.trimestres ?? [],
+    // Anos Iniciais com várias disciplinas: os blocos de cada componente também voltam do rascunho.
+    componentes: dados.componentes ?? null,
     texto_livre: f.texto_livre ?? base?.texto_livre ?? null,
     status: f.status === "finalizado" ? "finalizado" : "rascunho",
   };

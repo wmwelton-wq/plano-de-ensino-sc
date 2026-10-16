@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Escola } from "@/lib/database.types";
 import type { EstadoFormulario } from "../planos/actions";
@@ -14,24 +14,32 @@ import {
   carregarDadosComponente,
   DADOS_VAZIOS,
   type DadosComponente,
-  opcaoParaItem,
   type DisciplinaBasica,
   type OpcaoLista,
 } from "@/lib/dados-anuais";
 import {
   ETAPAS_ANUAIS,
   TEXTO_LIVRE_INICIAL,
-  TRIMESTRES_ROTULOS,
+  normalizarComponentes,
   normalizarDados,
   numeroDaSerie,
   referenciasSugeridas,
   type EtapaAnual,
   type ItemLista,
   type PlanoAnual,
-  type TrimestreAnual,
 } from "@/lib/plano-anual";
-import { useAvisoTemporario } from "../planos/linhas-do-editor";
+import { ordenarComponentes } from "@/lib/secoes-componentes";
 import SeletorItens from "./seletor-itens";
+import {
+  BlocoEmenta,
+  BlocoEspecificas,
+  BlocoTrimestres,
+  listasVazias,
+  montarInfo,
+  type Atualizar,
+  type InfoComp,
+  type ListasComp,
+} from "./blocos-componente";
 import { CRITERIOS_AVALIACAO, INSTRUMENTOS_AVALIACAO } from "../planos/sugestoes-avaliacao";
 import EditorLivre from "./editor-livre";
 
@@ -54,6 +62,10 @@ const PASSOS = [
 ];
 
 const OUTRO = "__outro__";
+/** Chave das listas quando o plano tem um componente só (Ensino Médio, Anos Finais). */
+const UNICO = "__unico__";
+const ANOS_INICIAIS: EtapaAnual = "fundamental_anos_iniciais";
+const LISTAS_VAZIAS: ListasComp = listasVazias();
 const LIMITE_ENVIO = 3_800_000;
 
 const GERAIS_OPCOES: OpcaoLista[] = COMPETENCIAS_GERAIS_BNCC.map((c) => ({
@@ -83,91 +95,6 @@ function itensParaGerais(itens: ItemLista[]): { numeros: number[]; manuais: stri
   return { numeros: numeros.sort((a, b) => a - b), manuais };
 }
 
-/** Título de cada bloco do trimestre: botão azul com o nome do que se preenche + etiqueta vermelha do trimestre. */
-function TituloTrimestre({ nome, trimestre }: { nome: string; trimestre: number }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="inline-flex items-center rounded-xl bg-gradient-to-r from-primary-700 to-sky-500 px-4 py-2 text-sm font-extrabold text-white shadow-md">
-        {nome}
-      </span>
-      <span className="inline-flex items-center rounded-xl bg-red-600 px-3 py-2 text-sm font-extrabold text-white shadow-md">
-        {trimestre + 1}º trimestre
-      </span>
-    </div>
-  );
-}
-
-/** "Você marcou estas habilidades; estes objetos de conhecimento estão ligados a elas no currículo." Tudo por caixinha. */
-function SugestaoObjetos({
-  sugeridos,
-  marcados,
-  onAlternar,
-  onTodos,
-}: {
-  sugeridos: OpcaoLista[];
-  marcados: Set<string>;
-  onAlternar: (o: OpcaoLista, marcar: boolean) => void;
-  onTodos: (lista: OpcaoLista[], marcar: boolean) => void;
-}) {
-  const { aviso, mostrar } = useAvisoTemporario();
-  if (sugeridos.length === 0) return null;
-  const qtdMarcados = sugeridos.filter((o) => marcados.has(o.id)).length;
-  return (
-    <div className="rounded-xl border-2 border-sky-300 bg-sky-50 p-3">
-      <p className="text-sm font-bold text-sky-900">
-        Sugestão: {sugeridos.length} objeto(s) de conhecimento ligado(s) às habilidades que você marcou
-      </p>
-      <p className="text-xs text-sky-800">Marque a caixinha para colocar no plano (desmarque para tirar). Os marcados aparecem também na lista abaixo.</p>
-      <ul className="mt-2 max-h-52 space-y-0.5 overflow-y-auto rounded-lg bg-white/70 p-1.5">
-        {sugeridos.map((o) => {
-          const marcado = marcados.has(o.id);
-          return (
-            <li key={o.id}>
-              <label className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 text-sm text-sky-950 hover:bg-sky-100">
-                <input
-                  type="checkbox"
-                  checked={marcado}
-                  onChange={() => {
-                    onAlternar(o, !marcado);
-                    mostrar(marcado ? "Objeto retirado do plano." : "Objeto adicionado ao plano — veja na lista logo abaixo.");
-                  }}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                />
-                <span>{o.texto}</span>
-              </label>
-            </li>
-          );
-        })}
-      </ul>
-      <div className="mt-2 flex flex-wrap items-center gap-3">
-        <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-sky-900">
-          <input
-            type="checkbox"
-            checked={qtdMarcados === sugeridos.length}
-            ref={(el) => {
-              if (el) el.indeterminate = qtdMarcados > 0 && qtdMarcados < sugeridos.length;
-            }}
-            onChange={() => {
-              const marcar = qtdMarcados !== sugeridos.length;
-              onTodos(sugeridos, marcar);
-              mostrar(marcar ? "Todos os objetos sugeridos foram adicionados — veja na lista logo abaixo." : "Objetos sugeridos retirados do plano.");
-            }}
-            className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-          />
-          Marcar todos ({qtdMarcados}/{sugeridos.length})
-        </label>
-        <p
-          role="status"
-          aria-live="polite"
-          className={`rounded-md px-2 py-0.5 text-xs font-semibold transition ${aviso ? "bg-emerald-100 text-emerald-800" : "hidden"}`}
-        >
-          {aviso ? `✓ ${aviso}` : ""}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, plano, action, textoBotao }: PlanoAnualFormProps) {
   const [estado, formAction, pendente] = useActionState(action, {});
   const [erroLocal, setErroLocal] = useState<string | null>(null);
@@ -186,6 +113,9 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
       }),
     [plano]
   );
+  const componentesSalvos = useMemo(() => normalizarComponentes(plano?.componentes), [plano]);
+  // Plano antigo dos Anos Iniciais com "outro componente" digitado (sem disciplina do sistema): segue no formato de um componente só.
+  const formatoUnico = !!plano && plano.etapa === ANOS_INICIAIS && componentesSalvos.length === 0 && !plano.disciplina_id;
 
   // ── Identificação ──
   const [etapa, setEtapa] = useState<EtapaAnual>(plano?.etapa ?? "ensino_medio");
@@ -203,97 +133,172 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
     return disciplinas.filter((d) => d.etapa === alvo);
   }, [disciplinas, etapa]);
 
+  // Anos Iniciais: o mesmo professor dá várias disciplinas, então o plano pode ter vários componentes, cada um com o seu bloco.
+  const multi = etapa === ANOS_INICIAIS && !formatoUnico;
+  const [componentesSel, setComponentesSel] = useState<string[]>(() =>
+    componentesSalvos.length > 0
+      ? componentesSalvos.map((c) => c.disciplina_id)
+      : plano?.etapa === ANOS_INICIAIS && plano.disciplina_id
+      ? [plano.disciplina_id]
+      : []
+  );
+  // Na ordem do plano: Português, Matemática, Ciências, História, Geografia...
+  const componentes = useMemo(
+    () => ordenarComponentes<DisciplinaBasica>(disciplinasDaEtapa.filter((d) => componentesSel.includes(d.id))),
+    [disciplinasDaEtapa, componentesSel]
+  );
+
   const disciplina = disciplinas.find((d) => d.id === disciplinaSel) ?? null;
-  const nomeComponente = disciplinaSel === OUTRO ? componenteLivre : disciplina?.nome ?? "";
+  const nomeComponente = multi ? componentes.map((d) => d.nome).join(", ") : disciplinaSel === OUTRO ? componenteLivre : disciplina?.nome ?? "";
 
   // ── Listas escolhidas ──
-  const [ementa, setEmenta] = useState<ItemLista[]>(inicial.ementa);
   const [gerais, setGerais] = useState<ItemLista[]>(
     geraisParaItens(inicial.competenciasGerais.numeros, inicial.competenciasGerais.manuais)
   );
-  const [compBncc, setCompBncc] = useState<ItemLista[]>(inicial.competenciasEspecificas.bncc);
-  const [compCurr, setCompCurr] = useState<ItemLista[]>(inicial.competenciasEspecificas.curriculo);
-  const [compManuais, setCompManuais] = useState<ItemLista[]>(inicial.competenciasEspecificas.manuais);
-  const [trimestres, setTrimestres] = useState<TrimestreAnual[]>(inicial.trimestres);
-
-  function atualizarTrimestre(i: number, parcial: Partial<TrimestreAnual>) {
-    setTrimestres((atual) => atual.map((t, k) => (k === i ? { ...t, ...parcial } : t)));
-  }
-
-  // ── Dados oficiais do componente escolhido (carregados no navegador) ──
-  const [dados, setDados] = useState<DadosComponente>(DADOS_VAZIOS);
-  // O "objeto de conhecimento" do plano é o que o Currículo chama de "Conteúdo".
-  // (Se o componente não tiver "Conteúdo", mostra todos para não ficar vazio.)
-  const opcoesObjetos = useMemo(() => {
-    const conteudos = dados.objetos.filter((o) => o.grupo === "Conteúdo");
-    const base = conteudos.length > 0 ? conteudos : dados.objetos;
-    return base.map((o) => (o.grupo === "Conteúdo" ? { ...o, grupo: "Objeto de conhecimento" } : o));
-  }, [dados.objetos]);
-  /** Objetos de conhecimento ligados às habilidades marcadas no trimestre (marcados ou não). */
-  function objetosSugeridos(t: TrimestreAnual): OpcaoLista[] {
-    const ids = new Set<string>();
-    for (const h of t.habilidades) {
-      const op = dados.habilidades.find((o) => o.id === h.id);
-      for (const r of op?.relacionados ?? []) ids.add(r);
+  // Ementa, competências específicas e trimestres de cada componente (chave: id da disciplina; UNICO = plano de um componente só).
+  const [listas, setListas] = useState<Record<string, ListasComp>>(() => {
+    const doPlano: ListasComp = {
+      ementa: inicial.ementa,
+      compBncc: inicial.competenciasEspecificas.bncc,
+      compCurr: inicial.competenciasEspecificas.curriculo,
+      compManuais: inicial.competenciasEspecificas.manuais,
+      trimestres: inicial.trimestres,
+    };
+    if (componentesSalvos.length > 0) {
+      return Object.fromEntries(
+        componentesSalvos.map((c) => [
+          c.disciplina_id,
+          {
+            ementa: c.ementa,
+            compBncc: c.competenciasEspecificas.bncc,
+            compCurr: c.competenciasEspecificas.curriculo,
+            compManuais: c.competenciasEspecificas.manuais,
+            trimestres: c.trimestres,
+          },
+        ])
+      );
     }
-    if (ids.size === 0) return [];
-    return opcoesObjetos.filter((o) => ids.has(o.id));
-  }
+    if (plano?.etapa === ANOS_INICIAIS && plano.disciplina_id) return { [plano.disciplina_id]: doPlano };
+    return { [UNICO]: doPlano };
+  });
+  const atualizarDe =
+    (chave: string): Atualizar =>
+    (fn) =>
+      setListas((todas) => {
+        const atual = todas[chave] ?? listasVazias();
+        return { ...todas, [chave]: { ...atual, ...fn(atual) } };
+      });
+  const listasDe = (chave: string): ListasComp => listas[chave] ?? LISTAS_VAZIAS;
 
-  const [carregando, setCarregando] = useState(false);
-  const [erroDados, setErroDados] = useState<string | null>(null);
+  // ── Dados oficiais dos componentes escolhidos (carregados no navegador, uma vez por componente) ──
+  const [carregados, setCarregados] = useState<Record<string, { dados: DadosComponente; carregando: boolean; erro: string | null }>>({});
+  const jaPedidos = useRef(new Set<string>());
+  const idsAtivos = multi ? componentes.map((d) => d.id) : disciplina ? [disciplina.id] : [];
+  const chaveIds = idsAtivos.join(",");
 
   useEffect(() => {
-    if (!disciplina) {
-      setDados(DADOS_VAZIOS);
-      setErroDados(null);
-      return;
+    for (const id of chaveIds ? chaveIds.split(",") : []) {
+      if (jaPedidos.current.has(id)) continue;
+      const alvo = disciplinas.find((d) => d.id === id);
+      if (!alvo) continue;
+      jaPedidos.current.add(id);
+      setCarregados((a) => ({ ...a, [id]: { dados: DADOS_VAZIOS, carregando: true, erro: null } }));
+      carregarDadosComponente(createClient(), alvo)
+        .then((d) => setCarregados((a) => ({ ...a, [id]: { dados: d, carregando: false, erro: null } })))
+        .catch(() => {
+          jaPedidos.current.delete(id); // permite tentar de novo se o professor desmarcar e marcar outra vez
+          setCarregados((a) => ({
+            ...a,
+            [id]: {
+              dados: DADOS_VAZIOS,
+              carregando: false,
+              erro: `Não foi possível carregar as listas de ${alvo.nome}. Recarregue a página ou digite os itens à mão.`,
+            },
+          }));
+        });
     }
-    let cancelado = false;
-    setCarregando(true);
-    setErroDados(null);
-    carregarDadosComponente(createClient(), disciplina)
-      .then((d) => {
-        if (!cancelado) setDados(d);
-      })
-      .catch(() => {
-        if (!cancelado) setErroDados("Não foi possível carregar as listas deste componente. Recarregue a página ou digite os itens à mão.");
-      })
-      .finally(() => {
-        if (!cancelado) setCarregando(false);
+  }, [chaveIds, disciplinas]);
+
+  const infos = useMemo(() => {
+    const mapa: Record<string, InfoComp> = {};
+    for (const [id, c] of Object.entries(carregados)) mapa[id] = montarInfo(c.dados, c.carregando, c.erro);
+    return mapa;
+  }, [carregados]);
+  const infoVazia = useMemo(() => montarInfo(DADOS_VAZIOS, false, null), []);
+  const infoDe = (id: string | null | undefined): InfoComp => (id ? infos[id] : undefined) ?? infoVazia;
+  const erroDados = idsAtivos.map((id) => carregados[id]?.erro).find((e): e is string => !!e) ?? null;
+
+  const vazioDe = (id: string | null | undefined) =>
+    !id
+      ? "Escolha o componente curricular no passo 1 para ver as opções do currículo — ou digite à mão no quadro abaixo."
+      : !infos[id] || infos[id].carregando
+      ? "Carregando as opções do currículo..."
+      : "Não há itens cadastrados para este componente. Digite à mão no quadro abaixo.";
+
+  /** Tudo o que os blocos de um componente precisam. `chave` guarda as listas; `idDados` é a disciplina cujos dados do currículo aparecem. */
+  const propsDe = (chave: string, idDados: string | null | undefined) => ({
+    info: infoDe(idDados),
+    valor: listasDe(chave),
+    atualizar: atualizarDe(chave),
+    anoDaTurma,
+    vazioPadrao: vazioDe(idDados),
+  });
+
+  /** Repete o bloco para cada componente marcado, com o nome em destaque vermelho. */
+  function porComponente(renderizar: (d: DisciplinaBasica) => ReactNode) {
+    if (componentes.length === 0) {
+      return (
+        <p className="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
+          Marque ao menos um componente curricular no passo 1.
+        </p>
+      );
+    }
+    return componentes.map((d) => (
+      <div key={d.id} className="space-y-3 rounded-xl border border-red-100 bg-red-50/30 p-3">
+        <span className="etiqueta-disciplina">{d.nome}</span>
+        {renderizar(d)}
+      </div>
+    ));
+  }
+
+  function alternarComponente(id: string) {
+    setComponentesSel((atual) => (atual.includes(id) ? atual.filter((x) => x !== id) : [...atual, id]));
+  }
+
+  const dadosJson = useMemo(() => {
+    const competenciasGerais = itensParaGerais(gerais);
+    if (multi) {
+      return JSON.stringify({
+        competencias_gerais: competenciasGerais,
+        componentes: componentes.map((d) => {
+          const l = listas[d.id] ?? LISTAS_VAZIAS;
+          return {
+            disciplina_id: d.id,
+            nome: d.nome,
+            ementa: l.ementa,
+            competencias_especificas: { bncc: l.compBncc, curriculo: l.compCurr, manuais: l.compManuais },
+            trimestres: l.trimestres,
+          };
+        }),
       });
-    return () => {
-      cancelado = true;
-    };
-  }, [disciplina]);
-
-  const competenciasBncc = useMemo(() => dados.competencias.filter((c) => c.fonte === "bncc"), [dados]);
-  const competenciasCurriculo = useMemo(() => dados.competencias.filter((c) => c.fonte === "curriculo_catarinense"), [dados]);
-  const ementaOpcoes = opcoesObjetos;
-
-  const semComponenteOficial = !disciplina;
-  const vazioPadrao = semComponenteOficial
-    ? "Escolha o componente curricular no passo 1 para ver as opções do currículo — ou digite à mão no quadro abaixo."
-    : carregando
-    ? "Carregando as opções do currículo..."
-    : "Não há itens cadastrados para este componente. Digite à mão no quadro abaixo.";
-
-  const dadosJson = useMemo(
-    () =>
-      JSON.stringify({
-        ementa,
-        competencias_gerais: itensParaGerais(gerais),
-        competencias_especificas: { bncc: compBncc, curriculo: compCurr, manuais: compManuais },
-        trimestres,
-      }),
-    [ementa, gerais, compBncc, compCurr, compManuais, trimestres]
-  );
+    }
+    const l = listas[UNICO] ?? LISTAS_VAZIAS;
+    return JSON.stringify({
+      ementa: l.ementa,
+      competencias_gerais: competenciasGerais,
+      competencias_especificas: { bncc: l.compBncc, curriculo: l.compCurr, manuais: l.compManuais },
+      trimestres: l.trimestres,
+    });
+  }, [gerais, listas, multi, componentes]);
 
   const textoLivreInicial = plano?.texto_livre ?? TEXTO_LIVRE_INICIAL;
 
   /** Frases prontas para o texto livre: avaliação e metodologia, montadas com os objetos marcados. */
   const sugestoesTexto = useMemo(() => {
-    const objetos = Array.from(new Set(trimestres.flatMap((t) => t.objetos.map((o) => o.texto.trim())).filter(Boolean))).slice(0, 8);
+    const trimestresAtivos = multi
+      ? componentes.flatMap((d) => (listas[d.id] ?? LISTAS_VAZIAS).trimestres)
+      : (listas[UNICO] ?? LISTAS_VAZIAS).trimestres;
+    const objetos = Array.from(new Set(trimestresAtivos.flatMap((t) => t.objetos.map((o) => o.texto.trim())).filter(Boolean))).slice(0, 8);
     const modelos = [
       (o: string) => `Aula expositiva dialogada e problematização inicial sobre ${o}.`,
       (o: string) => `Atividades práticas, em duplas ou grupos, para explorar ${o}.`,
@@ -311,7 +316,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
       { titulo: "Critérios de avaliação", itens: CRITERIOS_AVALIACAO },
       { titulo: "Instrumentos de avaliação", itens: INSTRUMENTOS_AVALIACAO },
     ];
-  }, [trimestres]);
+  }, [listas, multi, componentes]);
 
   /** Lista do que ainda falta (só avisa — nunca muda o formato do plano). */
   function conferir(form: HTMLFormElement): string[] {
@@ -319,18 +324,22 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
     const campo = (nome: string) => String(fd.get(nome) ?? "").trim();
     const p: string[] = [];
     if (!campo("escola_id")) p.push("Escola não escolhida (o plano ficará em “Sem escola definida”).");
-    if (!nomeComponente.trim()) p.push("Componente curricular não informado.");
+    if (!nomeComponente.trim()) p.push(multi ? "Nenhum componente curricular marcado." : "Componente curricular não informado.");
     if (!campo("turma")) p.push("Turma não informada.");
     if (!campo("docente")) p.push("Nome do docente não informado.");
-    if (ementa.length === 0) p.push("Ementa vazia.");
     if (gerais.length === 0) p.push("Nenhuma competência geral marcada.");
-    if (compBncc.length + compCurr.length + compManuais.length === 0) p.push("Nenhuma competência específica marcada.");
-    trimestres.forEach((t, i) => {
-      const n = `${i + 1}º trimestre`;
-      if (t.unidades.length === 0) p.push(`${n}: nenhuma unidade temática.`);
-      if (t.habilidades.length === 0) p.push(`${n}: nenhuma habilidade.`);
-      if (t.objetos.length === 0) p.push(`${n}: nenhum objeto de conhecimento.`);
-    });
+    const conferirListas = (l: ListasComp, prefixo: string) => {
+      if (l.ementa.length === 0) p.push(`${prefixo}Ementa vazia.`);
+      if (l.compBncc.length + l.compCurr.length + l.compManuais.length === 0) p.push(`${prefixo}Nenhuma competência específica marcada.`);
+      l.trimestres.forEach((t, i) => {
+        const n = `${prefixo}${i + 1}º trimestre`;
+        if (t.unidades.length === 0) p.push(`${n}: nenhuma unidade temática.`);
+        if (t.habilidades.length === 0) p.push(`${n}: nenhuma habilidade.`);
+        if (t.objetos.length === 0) p.push(`${n}: nenhum objeto de conhecimento.`);
+      });
+    };
+    if (multi) componentes.forEach((d) => conferirListas(listasDe(d.id), `${d.nome} — `));
+    else conferirListas(listasDe(UNICO), "");
     const livre = campo("texto_livre");
     if (!livre.includes("<img") && livre.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "") {
       p.push("O texto livre (item 6 em diante) está vazio.");
@@ -344,6 +353,11 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
       action={formAction}
       className="space-y-6"
       onSubmit={(e) => {
+        if (multi && componentes.length === 0) {
+          e.preventDefault();
+          setErroLocal("Marque pelo menos um componente curricular no passo 1.");
+          return;
+        }
         const finalizando = (e.currentTarget.elements.namedItem("status") as HTMLSelectElement | null)?.value === "finalizado";
         if (finalizando && !ignorarPendencias.current) {
           const faltas = conferir(e.currentTarget);
@@ -367,7 +381,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
       }}
     >
       <input type="hidden" name="etapa" value={etapa} />
-      <input type="hidden" name="disciplina_id" value={disciplina?.id ?? ""} />
+      <input type="hidden" name="disciplina_id" value={multi ? componentes[0]?.id ?? "" : disciplina?.id ?? ""} />
       <input type="hidden" name="componente" value={nomeComponente} />
       <input type="hidden" name="dados" value={dadosJson} />
 
@@ -406,6 +420,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
               onChange={(e) => {
                 setEtapa(e.target.value as EtapaAnual);
                 setDisciplinaSel("");
+                setComponentesSel([]);
                 setArea("");
                 setAnoDaTurma(null);
               }}
@@ -419,6 +434,45 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
             </select>
           </div>
 
+          {multi ? (
+            <fieldset className="sm:col-span-2">
+              <legend className="field-label">Componentes curriculares</legend>
+              <p className="field-hint">
+                Marque todos os componentes que você leciona nesta turma. Cada um ganha o seu bloco (ementa, competências e os três
+                trimestres), tudo separado por componente, com o nome em destaque.
+              </p>
+              {disciplinasDaEtapa.length === 0 ? (
+                <p className="mt-2 rounded-xl border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
+                  Nenhum componente curricular cadastrado para os Anos Iniciais.
+                </p>
+              ) : (
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {ordenarComponentes<DisciplinaBasica>(disciplinasDaEtapa).map((d) => {
+                    const marcado = componentesSel.includes(d.id);
+                    return (
+                      <label
+                        key={d.id}
+                        className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition ${
+                          marcado
+                            ? "border-primary-500 bg-primary-50 font-medium text-primary-800"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-primary-300"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={marcado}
+                          onChange={() => alternarComponente(d.id)}
+                          className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        {d.nome}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </fieldset>
+          ) : (
+            <>
           <div>
             <label htmlFor="disciplina_sel" className="field-label">
               Disciplina / componente curricular
@@ -460,6 +514,8 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
               />
               <p className="field-hint">Para componentes sem lista oficial no sistema, você digita os itens à mão nos passos seguintes.</p>
             </div>
+          )}
+            </>
           )}
 
           <div>
@@ -555,19 +611,17 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
       </SecaoPlano>
 
       {/* ───────── 2. Ementa ───────── */}
-      <SecaoPlano id="passo-2" numero={2} titulo="Ementa" descricao="Marque os temas que farão parte da ementa — e acrescente os seus.">
-        <SeletorItens
-          opcoes={ementaOpcoes}
-          valor={ementa}
-          onChange={setEmenta}
-          anos={dados.anos}
-          anoDaTurma={anoDaTurma}
-          ajuda="Sugestões tiradas dos objetos de conhecimento do currículo deste componente."
-          vazio={vazioPadrao}
-          rotuloManual="Acrescentar temas à ementa"
-          placeholderManual="Ex.: Introdução à Química (História da Química)"
-          alturaRem={20}
-        />
+      <SecaoPlano
+        id="passo-2"
+        numero={2}
+        titulo="Ementa"
+        descricao={multi ? "Marque os temas da ementa de cada componente — e acrescente os seus." : "Marque os temas que farão parte da ementa — e acrescente os seus."}
+      >
+        {multi ? (
+          porComponente((d) => <BlocoEmenta {...propsDe(d.id, d.id)} />)
+        ) : (
+          <BlocoEmenta {...propsDe(UNICO, disciplina?.id)} />
+        )}
       </SecaoPlano>
 
       {/* ───────── 3. Competências gerais ───────── */}
@@ -588,48 +642,21 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
         id="passo-4"
         numero={4}
         titulo="Competências específicas"
-        descricao="Da BNCC e do Currículo Catarinense, em listas separadas — marque as que quiser."
+        descricao={
+          multi
+            ? "Da BNCC e do Currículo Catarinense, em listas separadas, para cada componente — marque as que quiser."
+            : "Da BNCC e do Currículo Catarinense, em listas separadas — marque as que quiser."
+        }
       >
-        <div className="space-y-2">
-          <h3 className="text-sm font-bold text-primary-800">BNCC</h3>
-          <SeletorItens
-            opcoes={competenciasBncc}
-            valor={compBncc}
-            onChange={setCompBncc}
-            filtrarPorGrupo
-            vazio={vazioPadrao}
-            rotuloManual="Acrescentar competência da BNCC"
-            placeholderManual="Digite a competência"
-            semManual
-            alturaRem={20}
-          />
-        </div>
-        <div className="space-y-2">
-          <h3 className="text-sm font-bold text-primary-800">Currículo Catarinense</h3>
-          <SeletorItens
-            opcoes={competenciasCurriculo}
-            valor={compCurr}
-            onChange={setCompCurr}
-            filtrarPorGrupo
-            vazio="O Currículo Base do Território Catarinense adota as competências específicas da BNCC (listadas acima); aqui ficam as que forem cadastradas como próprias do Currículo Catarinense. Se quiser incluir alguma, digite no quadro de competências adicionais abaixo."
-            rotuloManual="Acrescentar competência do Currículo Catarinense"
-            placeholderManual="Digite a competência"
-            semManual
-            alturaRem={20}
-          />
-        </div>
-        <div className="space-y-2">
-          <h3 className="text-sm font-bold text-primary-800">Competências adicionais (digitadas por você)</h3>
-          <SeletorItens
-            opcoes={[]}
-            valor={compManuais}
-            onChange={setCompManuais}
-            vazio=""
-            rotuloManual="Acrescentar competência"
-            placeholderManual="Digite a competência (um item por linha)"
-            manualComCodigo
-          />
-        </div>
+        {multi ? (
+          porComponente((d) => (
+            <div className="space-y-4">
+              <BlocoEspecificas {...propsDe(d.id, d.id)} />
+            </div>
+          ))
+        ) : (
+          <BlocoEspecificas {...propsDe(UNICO, disciplina?.id)} />
+        )}
       </SecaoPlano>
 
       {/* ───────── 5. Componente curricular ───────── */}
@@ -637,82 +664,21 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
         id="passo-5"
         numero={5}
         titulo="Componente curricular"
-        descricao="Preencha cada trimestre: o botão azul diz o que está sendo preenchido e a etiqueta vermelha, em qual trimestre."
+        descricao={
+          multi
+            ? "Preencha os trimestres de cada componente: o botão azul diz o que está sendo preenchido, a etiqueta vermelha com o nome diz de qual componente e a outra, de qual trimestre."
+            : "Preencha cada trimestre: o botão azul diz o que está sendo preenchido e a etiqueta vermelha, em qual trimestre."
+        }
       >
-        {trimestres.map((t, i) => (
-          <details key={i} open={i === 0} className="rounded-2xl border-2 border-red-300 bg-white shadow-sm">
-            <summary className="cursor-pointer select-none rounded-2xl border-l-8 border-red-600 bg-red-50 px-4 py-3 text-base font-extrabold text-red-700">
-              {TRIMESTRES_ROTULOS[i]}{" "}
-              <span className="text-sm font-semibold text-red-900/70">
-                ({t.habilidades.length} habilidade(s) · {t.objetos.length} objeto(s) · {t.unidades.length} unidade(s))
-              </span>
-            </summary>
-            <div className="space-y-7 p-4">
-              <div className="space-y-2">
-                <TituloTrimestre nome="Unidades temáticas" trimestre={i} />
-                <p className="text-xs text-slate-500">Unidade do livro e/ou de outras fontes.</p>
-                <SeletorItens
-                  opcoes={dados.unidades}
-                  valor={t.unidades}
-                  onChange={(v) => atualizarTrimestre(i, { unidades: v })}
-                  anos={dados.anos}
-                  anoDaTurma={anoDaTurma}
-                  filtrarPorGrupo
-                  vazio={vazioPadrao}
-                  rotuloManual="Acrescentar unidade temática / unidade do livro"
-                  placeholderManual="Ex.: Constituição e propriedades dos materiais"
-                  alturaRem={12}
-                />
-              </div>
-              <div className="space-y-2">
-                <TituloTrimestre nome="Habilidades" trimestre={i} />
-                <SeletorItens
-                  opcoes={dados.habilidades}
-                  valor={t.habilidades}
-                  onChange={(v) => atualizarTrimestre(i, { habilidades: v })}
-                  anos={dados.anos}
-                  anoDaTurma={anoDaTurma}
-                  filtrarPorFonte
-                  vazio={vazioPadrao}
-                  rotuloManual="Acrescentar habilidade"
-                  placeholderManual="Descrição da habilidade"
-                  manualComCodigo
-                  alturaRem={22}
-                />
-              </div>
-              <div className="space-y-2">
-                <TituloTrimestre nome="Objetos de conhecimento" trimestre={i} />
-                <SugestaoObjetos
-                  sugeridos={objetosSugeridos(t)}
-                  marcados={new Set(t.objetos.map((o) => o.id))}
-                  onAlternar={(o, marcar) =>
-                    atualizarTrimestre(i, { objetos: marcar ? [...t.objetos, opcaoParaItem(o)] : t.objetos.filter((x) => x.id !== o.id) })
-                  }
-                  onTodos={(lista, marcar) => {
-                    const ids = new Set(lista.map((o) => o.id));
-                    const jaTem = new Set(t.objetos.map((o) => o.id));
-                    atualizarTrimestre(i, {
-                      objetos: marcar
-                        ? [...t.objetos, ...lista.filter((o) => !jaTem.has(o.id)).map(opcaoParaItem)]
-                        : t.objetos.filter((x) => !ids.has(x.id)),
-                    });
-                  }}
-                />
-                <SeletorItens
-                  opcoes={opcoesObjetos}
-                  valor={t.objetos}
-                  onChange={(v) => atualizarTrimestre(i, { objetos: v })}
-                  anos={dados.anos}
-                  anoDaTurma={anoDaTurma}
-                  vazio={vazioPadrao}
-                  rotuloManual="Acrescentar objeto do conhecimento"
-                  placeholderManual="Ex.: Ligações químicas"
-                  alturaRem={18}
-                />
-              </div>
+        {multi ? (
+          porComponente((d) => (
+            <div className="space-y-4">
+              <BlocoTrimestres {...propsDe(d.id, d.id)} nomeComponente={d.nome} />
             </div>
-          </details>
-        ))}
+          ))
+        ) : (
+          <BlocoTrimestres {...propsDe(UNICO, disciplina?.id)} />
+        )}
       </SecaoPlano>
 
       {/* ───────── 6. Texto livre ───────── */}

@@ -68,6 +68,8 @@ export interface PlanoAnual {
   competencias_gerais: unknown;
   competencias_especificas: unknown;
   trimestres: unknown;
+  /** Anos Iniciais com várias disciplinas: um bloco por componente (ver `ComponenteAnual`). Nulo nos demais planos. */
+  componentes?: unknown;
   texto_livre: string | null;
   status: "rascunho" | "finalizado";
   favorito?: boolean;
@@ -141,6 +143,93 @@ export function normalizarDados(bruto: {
 
 export function dadosVazios(): DadosPlanoAnual {
   return normalizarDados({});
+}
+
+/**
+ * Anos Iniciais: o mesmo professor dá várias disciplinas, então o plano anual tem um bloco por componente
+ * (ementa, competências específicas e os três trimestres de cada um). Competências gerais e texto livre são comuns.
+ */
+export interface ComponenteAnual {
+  disciplina_id: string;
+  nome: string;
+  ementa: ItemLista[];
+  competenciasEspecificas: CompetenciasEspecificasAnual;
+  trimestres: TrimestreAnual[];
+}
+
+const UUID_ANUAL = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Valida/limpa a lista de componentes vinda do navegador ou do banco (sem repetidos, ids válidos). */
+export function normalizarComponentes(v: unknown): ComponenteAnual[] {
+  if (!Array.isArray(v)) return [];
+  const vistos = new Set<string>();
+  const saida: ComponenteAnual[] = [];
+  for (const bruto of v.slice(0, 20)) {
+    if (!bruto || typeof bruto !== "object") continue;
+    const o = bruto as Record<string, unknown>;
+    const id = texto(o.disciplina_id, 80);
+    if (!UUID_ANUAL.test(id) || vistos.has(id)) continue;
+    vistos.add(id);
+    const d = normalizarDados({
+      ementa: o.ementa,
+      competencias_especificas: o.competencias_especificas,
+      trimestres: o.trimestres,
+    });
+    saida.push({
+      disciplina_id: id,
+      nome: texto(o.nome, 200),
+      ementa: d.ementa,
+      competenciasEspecificas: d.competenciasEspecificas,
+      trimestres: d.trimestres,
+    });
+  }
+  return saida;
+}
+
+/** Forma gravada no banco (coluna `componentes`). */
+export function componentesParaJson(lista: ComponenteAnual[]) {
+  return lista.map((c) => ({
+    disciplina_id: c.disciplina_id,
+    nome: c.nome,
+    ementa: c.ementa,
+    competencias_especificas: c.competenciasEspecificas,
+    trimestres: c.trimestres,
+  }));
+}
+
+/** Junta itens de vários componentes sem repetir (oficiais pelo id; digitados à mão pelo texto). */
+function itensUnicos(itens: ItemLista[]): ItemLista[] {
+  const vistos = new Set<string>();
+  return itens.filter((i) => {
+    const chave = i.manual || i.id.startsWith("manual:") ? `t:${chaveTexto(i.texto)}` : `i:${i.id}`;
+    if (vistos.has(chave)) return false;
+    vistos.add(chave);
+    return true;
+  });
+}
+
+/**
+ * Todos os componentes numa visão só (ementa, competências específicas e trimestres juntos).
+ * Vai para as colunas antigas do plano: assim a contagem, a duplicação e a geração dos planos mensais continuam funcionando.
+ */
+export function juntarComponentes(lista: ComponenteAnual[]): {
+  ementa: ItemLista[];
+  competenciasEspecificas: CompetenciasEspecificasAnual;
+  trimestres: TrimestreAnual[];
+} {
+  return {
+    ementa: itensUnicos(lista.flatMap((c) => c.ementa)),
+    competenciasEspecificas: {
+      bncc: itensUnicos(lista.flatMap((c) => c.competenciasEspecificas.bncc)),
+      curriculo: itensUnicos(lista.flatMap((c) => c.competenciasEspecificas.curriculo)),
+      manuais: itensUnicos(lista.flatMap((c) => c.competenciasEspecificas.manuais)),
+    },
+    trimestres: [0, 1, 2].map((i) => ({
+      unidades: itensUnicos(lista.flatMap((c) => c.trimestres[i].unidades)),
+      habilidades: itensUnicos(lista.flatMap((c) => c.trimestres[i].habilidades)),
+      objetos: itensUnicos(lista.flatMap((c) => c.trimestres[i].objetos)),
+    })),
+  };
 }
 
 /** Primeiro número que aparece em "7º Ano", "1ª Série"... */

@@ -4,8 +4,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prepararCampoParaSalvar } from "@/lib/texto-rico";
-import { normalizarDados, type EtapaAnual } from "@/lib/plano-anual";
+import {
+  componentesParaJson,
+  juntarComponentes,
+  normalizarComponentes,
+  normalizarDados,
+  type EtapaAnual,
+} from "@/lib/plano-anual";
 import { MARCADOR_HTML } from "@/lib/texto-rico";
+import { ordenarComponentes, type SecaoComponente } from "@/lib/secoes-componentes";
 import { MESES, conteudosEmHtml, ehUuid, periodoDoMes, repartir } from "@/lib/mensal-do-anual";
 import type { EstadoFormulario } from "../planos/actions";
 
@@ -31,8 +38,15 @@ function lerFormulario(formData: FormData): { erro: string } | { valores: Record
   const etapa = (ETAPAS as string[]).includes(String(etapaBruta)) ? (etapaBruta as EtapaAnual) : null;
   if (!etapa) return { erro: "Escolha a etapa de ensino." };
 
-  const componente = txt(formData, "componente", 200);
-  if (!componente) return { erro: "Informe o componente curricular (disciplina)." };
+  let componente = txt(formData, "componente", 200);
+  if (!componente) {
+    return {
+      erro:
+        etapa === "fundamental_anos_iniciais"
+          ? "Marque pelo menos um componente curricular no passo 1."
+          : "Informe o componente curricular (disciplina).",
+    };
+  }
 
   const ano = Number(formData.get("ano_letivo"));
   if (!Number.isInteger(ano) || ano < 2000 || ano > 2100) return { erro: "Informe um ano letivo válido." };
@@ -49,6 +63,19 @@ function lerFormulario(formData: FormData): { erro: string } | { valores: Record
   }
   const dados = normalizarDados((bruto ?? {}) as Record<string, unknown>);
 
+  // Anos Iniciais com várias disciplinas: um bloco por componente. As colunas antigas (ementa, competências
+  // específicas e trimestres) recebem todos os componentes juntos, para o resto do sistema continuar funcionando.
+  const componentes =
+    etapa === "fundamental_anos_iniciais"
+      ? ordenarComponentes(normalizarComponentes((bruto as Record<string, unknown> | null)?.componentes))
+      : [];
+  const multi = componentes.length > 0;
+  const juntos = multi ? juntarComponentes(componentes) : null;
+  if (multi) {
+    const nomes = componentes.map((c) => c.nome).filter(Boolean);
+    if (nomes.length > 0) componente = nomes.join(", ").slice(0, 200);
+  }
+
   const textoLivre = prepararCampoParaSalvar(formData.get("texto_livre"));
   if (textoLivre && textoLivre.length > LIMITE_CARACTERES) {
     return { erro: "O texto livre está grande demais (provavelmente por causa das imagens). Reduza ou remova algumas imagens." };
@@ -56,9 +83,12 @@ function lerFormulario(formData: FormData): { erro: string } | { valores: Record
 
   const turma = txt(formData, "turma", 80);
   const tituloDigitado = txt(formData, "titulo", 200);
-  const titulo = tituloDigitado ?? `Plano de Ensino Anual — ${componente}${turma ? ` — ${turma}` : ""} — ${ano}`;
+  // Com muitas disciplinas o nome ficaria enorme: usa só "Anos Iniciais".
+  const nomeNoTitulo = multi && componentes.length > 2 ? "Anos Iniciais" : componente;
+  const titulo = tituloDigitado ?? `Plano de Ensino Anual — ${nomeNoTitulo}${turma ? ` — ${turma}` : ""} — ${ano}`;
 
-  const disciplinaId = uuidOuNulo(formData.get("disciplina_id"));
+  // O primeiro componente (na ordem do plano) é o "principal" nas consultas e na lista de planos.
+  const disciplinaId = multi ? componentes[0].disciplina_id : uuidOuNulo(formData.get("disciplina_id"));
   const status = formData.get("status") === "finalizado" ? "finalizado" : "rascunho";
 
   return {
@@ -76,10 +106,11 @@ function lerFormulario(formData: FormData): { erro: string } | { valores: Record
       formacao: txt(formData, "formacao", 300),
       incluir_logo_estado: formData.get("incluir_logo_estado") === "on",
       incluir_logo_escola: formData.get("incluir_logo_escola") === "on",
-      ementa: dados.ementa,
+      ementa: juntos ? juntos.ementa : dados.ementa,
       competencias_gerais: dados.competenciasGerais,
-      competencias_especificas: dados.competenciasEspecificas,
-      trimestres: dados.trimestres,
+      competencias_especificas: juntos ? juntos.competenciasEspecificas : dados.competenciasEspecificas,
+      trimestres: juntos ? juntos.trimestres : dados.trimestres,
+      componentes: multi ? componentesParaJson(componentes) : null,
       texto_livre: textoLivre,
       status,
     },
@@ -215,6 +246,7 @@ export async function gerarMensaisDoAnual(
     trimestres: unknown;
     ementa: unknown;
     competencias_gerais: unknown;
+    componentes: unknown;
   };
 
   const tri = Number(formData.get("trimestre"));
@@ -227,8 +259,28 @@ export async function gerarMensaisDoAnual(
 
   const dados = normalizarDados(o as unknown as Record<string, unknown>);
   const t = dados.trimestres[tri];
-  const habPorMes = dividir ? repartir(t.habilidades, meses.length) : meses.map(() => t.habilidades);
-  const objPorMes = dividir ? repartir(t.objetos, meses.length) : meses.map(() => t.objetos);
+  // Anos Iniciais com várias disciplinas: cada mês leva o que é de cada componente, separado por componente.
+  const comps =
+    o.etapa === "fundamental_anos_iniciais" ? ordenarComponentes(normalizarComponentes(o.componentes)) : [];
+  const multi = comps.length >= 2;
+  const habDosComps = comps.map((c) => {
+    const lista = c.trimestres[tri].habilidades;
+    return dividir ? repartir(lista, meses.length) : meses.map(() => lista);
+  });
+  const objDosComps = comps.map((c) => {
+    const lista = c.trimestres[tri].objetos;
+    return dividir ? repartir(lista, meses.length) : meses.map(() => lista);
+  });
+  const habPorMes = multi
+    ? meses.map((_, k) => habDosComps.flatMap((porMes) => porMes[k]))
+    : dividir
+    ? repartir(t.habilidades, meses.length)
+    : meses.map(() => t.habilidades);
+  const objPorMes = multi
+    ? meses.map((_, k) => objDosComps.flatMap((porMes) => porMes[k]))
+    : dividir
+    ? repartir(t.objetos, meses.length)
+    : meses.map(() => t.objetos);
   const competenciasIds = [...dados.competenciasEspecificas.bncc, ...dados.competenciasEspecificas.curriculo]
     .map((c) => c.id)
     .filter(ehUuid);
@@ -242,11 +294,30 @@ export async function gerarMensaisDoAnual(
       .filter((h) => !ehUuid(h.id))
       .map((h) => ({ codigo: h.codigo ?? null, descricao: h.texto }));
 
+    // Um bloco de conteúdos por componente (e o texto antigo com o nome de cada componente em negrito).
+    let secoes: SecaoComponente[] | null = null;
+    let conteudosJuntos: string | null = conteudosEmHtml(objPorMes[k].map((x) => x.texto), MARCADOR_HTML);
+    if (multi) {
+      secoes = comps.map((c, i) => ({
+        disciplina_id: c.disciplina_id,
+        conteudos: conteudosEmHtml(objDosComps[i][k].map((x) => x.texto), MARCADOR_HTML),
+      }));
+      const partes = comps
+        .map((c, i) => {
+          const miolo = conteudosEmHtml(objDosComps[i][k].map((x) => x.texto), "");
+          if (!miolo) return null;
+          const nome = c.nome.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          return `<p><strong>${nome}</strong></p>${miolo}`;
+        })
+        .filter((x): x is string => !!x);
+      conteudosJuntos = partes.length > 0 ? MARCADOR_HTML + partes.join("") : null;
+    }
+
     const { data, error } = await supabase
       .from("planos_de_ensino")
       .insert({
         professor_id: user.id,
-        disciplina_id: o.disciplina_id,
+        disciplina_id: multi ? comps[0].disciplina_id : o.disciplina_id,
         etapa: o.etapa,
         escola_id: o.escola_id,
         incluir_logo_estado: o.incluir_logo_estado,
@@ -257,7 +328,8 @@ export async function gerarMensaisDoAnual(
         data_inicio: inicio,
         data_fim: fim,
         habilidades_manuais: manuais,
-        conteudos_programaticos: conteudosEmHtml(objPorMes[k].map((x) => x.texto), MARCADOR_HTML),
+        conteudos_programaticos: conteudosJuntos,
+        ...(secoes ? { secoes_componentes: secoes } : {}),
         status: "rascunho",
       })
       .select("id")
@@ -266,7 +338,7 @@ export async function gerarMensaisDoAnual(
     const novoId = (data as { id: string }).id;
     criados.push(novoId);
 
-    const habIds = habilidades.map((h) => h.id).filter(ehUuid);
+    const habIds = Array.from(new Set(habilidades.map((h) => h.id).filter(ehUuid)));
     if (habIds.length > 0) {
       await supabase.from("planos_habilidades").insert(habIds.map((habilidade_id) => ({ plano_id: novoId, habilidade_id })));
     }
@@ -275,7 +347,11 @@ export async function gerarMensaisDoAnual(
         .from("planos_competencias")
         .insert(competenciasIds.map((competencia_id) => ({ plano_id: novoId, competencia_id })));
     }
-    if (o.etapa === "fundamental_anos_iniciais" && o.disciplina_id) {
+    if (multi) {
+      await supabase
+        .from("planos_disciplinas")
+        .insert(comps.map((c) => ({ plano_id: novoId, disciplina_id: c.disciplina_id })));
+    } else if (o.etapa === "fundamental_anos_iniciais" && o.disciplina_id) {
       await supabase.from("planos_disciplinas").insert({ plano_id: novoId, disciplina_id: o.disciplina_id });
     }
   }
