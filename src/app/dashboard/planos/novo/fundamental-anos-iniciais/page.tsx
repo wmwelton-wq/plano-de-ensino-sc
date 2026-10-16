@@ -17,6 +17,12 @@ export default async function NovoPlanoFundamentalAnosIniciaisPage() {
     carregarHabilidades(supabase, "Ensino Fundamental - Anos Iniciais"),
   ]);
 
+  const idsDisciplinas = (disciplinas ?? []).map((d) => d.id);
+  const { data: competencias } =
+    idsDisciplinas.length > 0
+      ? await supabase.from("competencias_curriculares").select("*").in("disciplina_id", idsDisciplinas).order("numero")
+      : { data: [] };
+
   return (
     <div>
       <VoltarLink />
@@ -28,6 +34,7 @@ export default async function NovoPlanoFundamentalAnosIniciaisPage() {
           disciplinas={disciplinas ?? []}
           escolas={escolas ?? []}
           habilidades={habilidades ?? []}
+          competencias={competencias ?? []}
           action={criarPlano}
           textoBotao="Salvar plano"
         />

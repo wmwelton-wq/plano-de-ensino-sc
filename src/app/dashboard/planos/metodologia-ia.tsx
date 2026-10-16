@@ -47,7 +47,15 @@ function montarContexto(form: HTMLFormElement, instrucoes: string): ContextoIA {
     habilidadeIds: dados.getAll("habilidade_ids").map(String),
     competenciaIds: dados.getAll("competencia_ids").map(String),
     habilidadesManuais: descricoes.map((descricao, i) => ({ codigo: codigos[i] ?? "", descricao })),
-    conteudos: texto(dados, "conteudos_programaticos"),
+    // Anos Iniciais: cada componente tem o seu campo (sec_conteudos__<id>); os demais planos têm um só.
+    conteudos: [
+      texto(dados, "conteudos_programaticos"),
+      ...Array.from(dados.entries())
+        .filter(([nome]) => nome.startsWith("sec_conteudos__"))
+        .map(([, valor]) => String(valor)),
+    ]
+      .filter((t) => t.length > 0)
+      .join("\n"),
     instrucoes,
   };
 }

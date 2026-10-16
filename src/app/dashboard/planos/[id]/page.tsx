@@ -122,7 +122,7 @@ export default async function EditarPlanoPage({
   }
 
   if (etapa === "fundamental_anos_iniciais") {
-    const [{ data: disciplinas }, { data: habilidades }, { data: planoDisciplinas }] = await Promise.all([
+    const [{ data: disciplinas }, { data: habilidades }, { data: planoDisciplinas }, { data: planoCompetenciasAI }] = await Promise.all([
       supabase
         .from("disciplinas")
         .select("*")
@@ -130,8 +130,14 @@ export default async function EditarPlanoPage({
         .order("nome"),
       carregarHabilidades(supabase, "Ensino Fundamental - Anos Iniciais"),
       supabase.from("planos_disciplinas").select("disciplina_id").eq("plano_id", id),
+      supabase.from("planos_competencias").select("competencia_id").eq("plano_id", id),
     ]);
 
+    const idsDisciplinas = (disciplinas ?? []).map((d) => d.id);
+    const { data: competenciasAI } =
+      idsDisciplinas.length > 0
+        ? await supabase.from("competencias_curriculares").select("*").in("disciplina_id", idsDisciplinas).order("numero")
+        : { data: [] };
     const disciplinasSelecionadasIds = (planoDisciplinas ?? []).map((p) => p.disciplina_id);
 
     return (
@@ -144,6 +150,8 @@ export default async function EditarPlanoPage({
             habilidades={habilidades ?? []}
             habilidadesSelecionadasIds={habilidadesSelecionadasIds}
             disciplinasSelecionadasIds={disciplinasSelecionadasIds}
+            competencias={competenciasAI ?? []}
+            competenciasSelecionadasIds={(planoCompetenciasAI ?? []).map((c) => c.competencia_id)}
             plano={plano}
             action={atualizarComId}
             textoBotao="Salvar alterações"

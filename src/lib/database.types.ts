@@ -112,6 +112,8 @@ export interface PlanoDeEnsino {
   /** Logo/brasão da escola no cabeçalho (o espaço fica reservado do lado oposto ao brasão do Estado). */
   incluir_logo_escola: boolean;
   usar_curriculo_digital: boolean;
+  /** Anos Iniciais: textos de cada componente curricular (conteúdos, metodologia, critérios, instrumentos, recomposição). */
+  secoes_componentes?: import("./secoes-componentes").SecaoComponente[] | null;
   /** Habilidades do currículo de educação digital digitadas manualmente. */
   habilidades_manuais: HabilidadeManual[] | null;
   titulo: string;

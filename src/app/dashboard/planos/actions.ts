@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { EtapaPlano, HabilidadeManual } from "@/lib/database.types";
-import { prepararCampoParaSalvar } from "@/lib/texto-rico";
+import { MARCADOR_HTML, prepararCampoParaSalvar } from "@/lib/texto-rico";
+import { CAMPOS_SECAO, nomeCampoSecao, ordenarComponentes, type SecaoComponente } from "@/lib/secoes-componentes";
 
 export interface EstadoFormulario {
   erro?: string;
@@ -151,6 +152,59 @@ async function sincronizarDisciplinas(
   }
 }
 
+/**
+ * Anos Iniciais: cada componente curricular tem os seus próprios textos (objetos/conteúdos, caminho
+ * metodológico, critérios, instrumentos e recomposição). Só mexemos nisso quando o formulário envia o
+ * marcador "tem_secoes". Os campos únicos antigos (usados em outras telas) também são preenchidos, com
+ * os textos de todos os componentes juntos, cada um sob o nome do componente.
+ */
+async function lerSecoesComponentes(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  formData: FormData,
+  disciplinaIds: string[]
+): Promise<{
+  secoes_componentes?: SecaoComponente[];
+  conteudos_programaticos?: string | null;
+  metodologia?: string | null;
+  avaliacao?: string | null;
+  instrumentos_avaliacao?: string | null;
+}> {
+  if (!formData.has("tem_secoes")) return {};
+  const ids = Array.from(new Set(disciplinaIds));
+  let nomes: { id: string; nome: string }[] = [];
+  if (ids.length > 0) {
+    const { data } = await supabase.from("disciplinas").select("id, nome").in("id", ids);
+    nomes = (data ?? []) as { id: string; nome: string }[];
+  }
+  const ordem = ordenarComponentes(nomes);
+
+  const secoes: SecaoComponente[] = ordem.map((d) => {
+    const secao: SecaoComponente = { disciplina_id: d.id };
+    for (const campo of CAMPOS_SECAO) secao[campo] = prepararCampoParaSalvar(formData.get(nomeCampoSecao(campo, d.id)));
+    return secao;
+  });
+
+  const juntar = (campo: (typeof CAMPOS_SECAO)[number]) => {
+    const partes: string[] = [];
+    secoes.forEach((secao, i) => {
+      const texto = secao[campo];
+      if (!texto) return;
+      const html = texto.startsWith(MARCADOR_HTML) ? texto.slice(MARCADOR_HTML.length) : texto;
+      const nome = ordem[i].nome.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      partes.push(`<p><strong>${nome}</strong></p>${html}`);
+    });
+    return partes.length > 0 ? prepararCampoParaSalvar(MARCADOR_HTML + partes.join("")) : null;
+  };
+
+  return {
+    secoes_componentes: secoes,
+    conteudos_programaticos: juntar("conteudos"),
+    metodologia: juntar("metodologia"),
+    avaliacao: juntar("criterios"),
+    instrumentos_avaliacao: juntar("instrumentos"),
+  };
+}
+
 export async function criarPlano(
   _estadoAnterior: EstadoFormulario,
   formData: FormData
@@ -214,6 +268,7 @@ export async function criarPlano(
       cronograma: (formData.get("cronograma") as string) || null,
       referencias: (formData.get("referencias") as string) || null,
       status: (formData.get("status") as string) || "rascunho",
+      ...(await lerSecoesComponentes(supabase, formData, disciplinaIds)),
     })
     .select("id")
     .single();
@@ -290,6 +345,7 @@ export async function atualizarPlano(
       cronograma: (formData.get("cronograma") as string) || null,
       referencias: (formData.get("referencias") as string) || null,
       status: (formData.get("status") as string) || "rascunho",
+      ...(await lerSecoesComponentes(supabase, formData, disciplinaIds)),
     })
     .eq("id", planoId);
 

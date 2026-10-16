@@ -11,7 +11,14 @@ interface ObjetosEHabilidadesProps {
   habilidades: HabilidadeCurricular[];
   selecionadasIniciais: string[];
   /** Campo de texto dos conteúdos: marcar uma caixinha escreve a linha nele e desmarcar a tira. */
-  editorRef: RefObject<EditorTextoRicoHandle | null>;
+  editorRef?: RefObject<EditorTextoRicoHandle | null>;
+  /**
+   * Plano com vários componentes (Anos Iniciais): lista dos componentes escolhidos, na ordem do plano. Com ela,
+   * tudo (objetos, caixinhas e habilidades) aparece separado por componente, com o nome em destaque vermelho, e
+   * cada componente escreve no SEU campo de texto (`editorPorComponente`).
+   */
+  componentes?: { id: string; nome: string }[];
+  editorPorComponente?: (disciplinaId: string) => RefObject<EditorTextoRicoHandle | null>;
   vazio: string;
   /** Nomes dos componentes (usado quando o plano reúne mais de um componente curricular). */
   nomesDisciplinas?: Record<string, string>;
@@ -45,6 +52,8 @@ function anosDoRotulo(rotulo: string | null): number[] {
 }
 
 const chaveObjeto = (chave: string) => `o:${chave}`;
+/** A chave de um grupo é "<id da disciplina>||<objeto>". */
+const disciplinaDaChave = (chave: string) => chave.slice(0, chave.indexOf("||"));
 const chaveConteudo = (chave: string, c: string) => `c:${chave}||${c}`;
 
 /** "Unidade Temática: Objeto" -> "Objeto" (se não houver ": ", devolve o texto inteiro). */
@@ -148,6 +157,161 @@ function semDuplicatas(itens: string[]): string[] {
   return saida;
 }
 
+interface BlocoObjetosProps {
+  editorRef: RefObject<EditorTextoRicoHandle | null>;
+  /** Todos os objetos deste bloco (usado para reconhecer o que já está escrito num plano salvo). */
+  todos: GrupoObjeto[];
+  /** Os que aparecem agora (depois da busca). */
+  visiveis: GrupoObjeto[];
+  ehBncc: boolean;
+  /** Mostra "Disciplina — " antes de cada objeto (só quando o bloco mistura disciplinas). */
+  mostrarDisciplina: boolean;
+  /** Onde o texto aparece, para a mensagem: "no campo logo abaixo" ou "no campo de Português, logo abaixo". */
+  rotuloCampo: string;
+  idBase: string;
+  objetoAtivo: string | null;
+  setObjetoAtivo: (chave: string | null) => void;
+  mostrar: (texto: string) => void;
+}
+
+/** Lista de objetos de conhecimento com caixinhas ligadas a UM campo de texto. */
+function BlocoObjetos({
+  editorRef,
+  todos,
+  visiveis,
+  ehBncc,
+  mostrarDisciplina,
+  rotuloCampo,
+  idBase,
+  objetoAtivo,
+  setObjetoAtivo,
+  mostrar,
+}: BlocoObjetosProps) {
+  const caixas = useCaixinhasIndependentes(editorRef);
+
+  // Plano já salvo: marca as caixinhas dos objetos e conteúdos que já estão escritos no campo.
+  const { textoPronto, jaDecidiu, semear } = caixas;
+  useEffect(() => {
+    if (ehBncc || todos.length === 0 || !textoPronto || jaDecidiu()) return;
+    const candidatos: ItemCaixinha[] = [];
+    for (const o of todos) {
+      candidatos.push({ chave: chaveObjeto(o.chave), linha: nomeDoObjeto(o.objeto) });
+      for (const c of semDuplicatas(o.itens.flatMap((h) => itensDeConteudo(h.conteudos)))) {
+        candidatos.push({ chave: chaveConteudo(o.chave, c), linha: c, pai: chaveObjeto(o.chave) });
+      }
+    }
+    semear(candidatos);
+  }, [todos, ehBncc, textoPronto]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <ul className="divide-y divide-slate-100">
+      {visiveis.map(({ chave, objeto, disciplina, itens }) => {
+        const aberto = objetoAtivo === chave;
+        const conteudos = ehBncc ? [] : semDuplicatas(itens.flatMap((h) => itensDeConteudo(h.conteudos)));
+        const linhaObjeto = ehBncc ? objeto : nomeDoObjeto(objeto);
+        const itemObjeto: ItemCaixinha = { chave: chaveObjeto(chave), linha: linhaObjeto };
+        const itensConteudo: ItemCaixinha[] = conteudos.map((c) => ({ chave: chaveConteudo(chave, c), linha: c }));
+        const objetoMarcado = caixas.marcado(itemObjeto.chave);
+        const conteudosMarcados = itensConteudo.filter((i) => caixas.marcado(i.chave)).length;
+        const parcial = conteudosMarcados > 0 && (!objetoMarcado || conteudosMarcados < conteudos.length);
+        const semCaixa = objeto === GRUPO_BNCC;
+
+        function alternarObjeto() {
+          if (objetoMarcado || conteudosMarcados > 0) {
+            caixas.desmarcar([itemObjeto, ...itensConteudo]);
+            mostrar("Retirado do plano.");
+          } else {
+            caixas.marcar([itemObjeto, ...itensConteudo]);
+            mostrar(
+              conteudos.length > 0
+                ? `Objeto e conteúdos adicionados ao plano, ${rotuloCampo}.`
+                : `Objeto adicionado ao plano, ${rotuloCampo}.`
+            );
+          }
+        }
+        function alternarConteudo(i: ItemCaixinha) {
+          if (caixas.marcado(i.chave)) {
+            caixas.desmarcar([i]);
+            mostrar("Conteúdo retirado do plano.");
+          } else {
+            caixas.marcar(objetoMarcado ? [i] : [itemObjeto, i]);
+            mostrar(`Conteúdo adicionado ao plano, ${rotuloCampo}.`);
+          }
+        }
+
+        return (
+          <li key={chave}>
+            <div className={`flex items-start gap-2 px-3 py-2.5 text-sm ${aberto ? "bg-primary-50/70" : ""}`}>
+              {semCaixa ? (
+                <span className="w-4 shrink-0" aria-hidden="true" />
+              ) : (
+                <input
+                  id={`${idBase}-obj-${chave}`}
+                  type="checkbox"
+                  checked={objetoMarcado}
+                  ref={(el) => {
+                    if (el) el.indeterminate = parcial;
+                  }}
+                  onChange={alternarObjeto}
+                  aria-label={`Colocar no plano: ${linhaObjeto}`}
+                  className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                />
+              )}
+              <label htmlFor={`${idBase}-obj-${chave}`} className="min-w-0 flex-1 cursor-pointer text-slate-800">
+                {mostrarDisciplina && disciplina && <strong>{disciplina} — </strong>}
+                {objeto}
+              </label>
+              {conteudos.length > 0 && (
+                <button
+                  type="button"
+                  aria-expanded={aberto}
+                  onClick={() => setObjetoAtivo(aberto ? null : chave)}
+                  className="shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold text-primary-700 hover:bg-primary-100"
+                >
+                  {conteudosMarcados > 0 ? `${conteudosMarcados}/${conteudos.length} · ` : ""}
+                  Conteúdos ({conteudos.length}) {aberto ? "▲" : "▼"}
+                </button>
+              )}
+            </div>
+            {aberto && conteudos.length > 0 && (
+              <div className="space-y-0.5 bg-primary-50/40 px-3 pb-3 pt-1 pl-9">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Conteúdos sugeridos</p>
+                {itensConteudo.map((ic) => (
+                  <label
+                    key={ic.chave}
+                    className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-sm text-slate-700 hover:bg-white"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={caixas.marcado(ic.chave)}
+                      onChange={() => alternarConteudo(ic)}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span>{ic.linha}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            {aberto && conteudos.length === 0 && !ehBncc && (
+              <p className="bg-primary-50/40 px-3 pb-3 pl-9 text-sm text-slate-500">Este objeto não traz conteúdos sugeridos no currículo.</p>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** Nome do componente em destaque vermelho (cabeçalho de cada grupo). */
+function EtiquetaDisciplina({ nome, children }: { nome: string; children?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-y border-red-100 bg-red-50/60 px-3 py-2">
+      <span className="etiqueta-disciplina">{nome}</span>
+      {children}
+    </div>
+  );
+}
+
 /**
  * Duas etapas do plano que compartilham o mesmo currículo/ano:
  *  1) Objetos de conhecimento e conteúdos — lista com caixinhas: marcar coloca o objeto
@@ -159,6 +323,8 @@ export default function ObjetosEHabilidades({
   habilidades,
   selecionadasIniciais,
   editorRef,
+  componentes,
+  editorPorComponente,
   vazio,
   nomesDisciplinas,
   anoSugerido = null,
@@ -172,8 +338,9 @@ export default function ObjetosEHabilidades({
   const idAno = useId();
   const idBuscaObj = useId();
   const idBuscaHab = useId();
-  const caixas = useCaixinhasIndependentes(editorRef);
   const { aviso, mostrar } = useAvisoTemporario();
+  // Vários componentes: grupos com o nome em vermelho, cada um com o seu campo de texto.
+  const multi = Boolean(componentes && componentes.length > 0 && editorPorComponente);
 
   const porId = useMemo(() => new Map(habilidades.map((h) => [h.id, h])), [habilidades]);
 
@@ -270,20 +437,6 @@ export default function ObjetosEHabilidades({
       );
   }, [linhasCurriculo, ano, nomesDisciplinas, ehBncc]);
 
-  // Plano já salvo: marca as caixinhas dos objetos e conteúdos que já estão escritos no campo.
-  const { textoPronto, jaDecidiu, semear } = caixas;
-  useEffect(() => {
-    if (ehBncc || objetos.length === 0 || !textoPronto || jaDecidiu()) return;
-    const candidatos: ItemCaixinha[] = [];
-    for (const o of objetos) {
-      candidatos.push({ chave: chaveObjeto(o.chave), linha: nomeDoObjeto(o.objeto) });
-      for (const c of semDuplicatas(o.itens.flatMap((h) => itensDeConteudo(h.conteudos)))) {
-        candidatos.push({ chave: chaveConteudo(o.chave, c), linha: c, pai: chaveObjeto(o.chave) });
-      }
-    }
-    semear(candidatos);
-  }, [objetos, ehBncc, textoPronto]); // eslint-disable-line react-hooks/exhaustive-deps
-
   function filtrar(busca: string) {
     const termo = busca.trim().toLowerCase();
     if (!termo) return objetos;
@@ -315,6 +468,60 @@ export default function ObjetosEHabilidades({
   const selecionadasLista = Array.from(selecionadas)
     .map((id) => porId.get(id))
     .filter((h): h is HabilidadeCurricular => Boolean(h));
+
+  const itemSelecionada = (h: HabilidadeCurricular) => (
+    <li key={h.id} className="flex items-start justify-between gap-3 px-3 py-2 text-sm">
+      <span className="text-slate-600">
+        {h.codigo && <span className="font-medium text-slate-900">({h.codigo}) </span>}
+        {h.descricao}
+      </span>
+      <button type="button" onClick={() => alternar(h.id)} className="btn-text-danger shrink-0" aria-label="Remover habilidade do plano">
+        Remover
+      </button>
+    </li>
+  );
+
+  function itemHabilidades({ chave, objeto, disciplina, itens }: GrupoObjeto, comPrefixo: boolean) {
+    const aberto = objetoAtivoHab === chave;
+    const marcadas = itens.filter((h) => selecionadas.has(h.id)).length;
+    return (
+      <li key={chave}>
+        <div className={`flex flex-wrap items-start justify-between gap-3 px-3 py-2.5 text-sm ${aberto ? "bg-primary-50/70" : ""}`}>
+          <span className="min-w-0 flex-1 text-slate-800">
+            {comPrefixo && disciplina && <strong>{disciplina} — </strong>}
+            {objeto}
+          </span>
+          <button
+            type="button"
+            aria-expanded={aberto}
+            onClick={() => setObjetoAtivoHab(aberto ? null : chave)}
+            className={`${marcadas > 0 ? "btn-verde-suave" : "btn-azul-suave"} shrink-0 !px-3 !py-1.5 !text-xs`}
+          >
+            {marcadas > 0 ? `${marcadas} marcada(s) · ` : ""}
+            {aberto ? "Fechar" : "Clique para adicionar habilidades"} ({itens.length}) {aberto ? "▲" : "▼"}
+          </button>
+        </div>
+        {aberto && (
+          <div className="bg-primary-50/40 px-3 pb-3 pt-1">
+            {itens.map((h) => (
+              <label key={h.id} className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1.5 text-sm hover:bg-white">
+                <input
+                  type="checkbox"
+                  checked={selecionadas.has(h.id)}
+                  onChange={() => alternar(h.id)}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-slate-600">
+                  {h.codigo && <span className="font-medium text-slate-900">({h.codigo}) </span>}
+                  {h.descricao}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+      </li>
+    );
+  }
 
   const vazioLista = habilidades.length === 0;
 
@@ -432,104 +639,53 @@ export default function ObjetosEHabilidades({
                         className="mt-2 w-full rounded-lg border border-primary-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
                       />
                     </div>
-                    <ul className="max-h-[26rem] divide-y divide-slate-100 overflow-y-auto">
+                    <div className="max-h-[30rem] overflow-y-auto">
                       {objetosFiltradosObj.length === 0 && (
-                        <li className="px-3 py-3 text-sm text-slate-400">Nenhum objeto encontrado para essa busca.</li>
+                        <p className="px-3 py-3 text-sm text-slate-400">Nenhum objeto encontrado para essa busca.</p>
                       )}
-                      {objetosFiltradosObj.map(({ chave, objeto, disciplina, itens }) => {
-                        const aberto = objetoAtivoObj === chave;
-                        const conteudos = ehBncc ? [] : semDuplicatas(itens.flatMap((h) => itensDeConteudo(h.conteudos)));
-                        const linhaObjeto = ehBncc ? objeto : nomeDoObjeto(objeto);
-                        const itemObjeto: ItemCaixinha = { chave: chaveObjeto(chave), linha: linhaObjeto };
-                        const itensConteudo: ItemCaixinha[] = conteudos.map((c) => ({ chave: chaveConteudo(chave, c), linha: c }));
-                        const objetoMarcado = caixas.marcado(itemObjeto.chave);
-                        const conteudosMarcados = itensConteudo.filter((i) => caixas.marcado(i.chave)).length;
-                        const parcial = conteudosMarcados > 0 && (!objetoMarcado || conteudosMarcados < conteudos.length);
-                        const semCaixa = objeto === GRUPO_BNCC;
-
-                        function alternarObjeto() {
-                          if (objetoMarcado || conteudosMarcados > 0) {
-                            caixas.desmarcar([itemObjeto, ...itensConteudo]);
-                            mostrar("Retirado do plano.");
-                          } else {
-                            caixas.marcar([itemObjeto, ...itensConteudo]);
-                            mostrar(
-                              conteudos.length > 0
-                                ? "Objeto e conteúdos adicionados ao plano, no campo logo abaixo."
-                                : "Objeto adicionado ao plano, no campo logo abaixo."
-                            );
-                          }
-                        }
-                        function alternarConteudo(i: ItemCaixinha) {
-                          if (caixas.marcado(i.chave)) {
-                            caixas.desmarcar([i]);
-                            mostrar("Conteúdo retirado do plano.");
-                          } else {
-                            caixas.marcar(objetoMarcado ? [i] : [itemObjeto, i]);
-                            mostrar("Conteúdo adicionado ao plano, no campo logo abaixo.");
-                          }
-                        }
-
-                        return (
-                          <li key={chave}>
-                            <div className={`flex items-start gap-2 px-3 py-2.5 text-sm ${aberto ? "bg-primary-50/70" : ""}`}>
-                              {semCaixa ? (
-                                <span className="w-4 shrink-0" aria-hidden="true" />
-                              ) : (
-                                <input
-                                  id={`${idBuscaObj}-obj-${chave}`}
-                                  type="checkbox"
-                                  checked={objetoMarcado}
-                                  ref={(el) => {
-                                    if (el) el.indeterminate = parcial;
-                                  }}
-                                  onChange={alternarObjeto}
-                                  aria-label={`Colocar no plano: ${linhaObjeto}`}
-                                  className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                                />
-                              )}
-                              <label htmlFor={`${idBuscaObj}-obj-${chave}`} className="min-w-0 flex-1 cursor-pointer text-slate-800">
-                                {disciplina && <strong>{disciplina} — </strong>}
-                                {objeto}
-                              </label>
-                              {conteudos.length > 0 && (
-                                <button
-                                  type="button"
-                                  aria-expanded={aberto}
-                                  onClick={() => setObjetoAtivoObj(aberto ? null : chave)}
-                                  className="shrink-0 rounded-md px-2 py-0.5 text-xs font-semibold text-primary-700 hover:bg-primary-100"
-                                >
-                                  {conteudosMarcados > 0 ? `${conteudosMarcados}/${conteudos.length} · ` : ""}
-                                  Conteúdos ({conteudos.length}) {aberto ? "▲" : "▼"}
-                                </button>
-                              )}
+                      {multi ? (
+                        componentes!.map((comp) => {
+                          const doComp = objetos.filter((o) => disciplinaDaChave(o.chave) === comp.id);
+                          const visiveis = objetosFiltradosObj.filter((o) => disciplinaDaChave(o.chave) === comp.id);
+                          return (
+                            <div key={comp.id}>
+                              <EtiquetaDisciplina nome={comp.nome}>
+                                <span className="text-xs text-slate-500">
+                                  {doComp.length === 0
+                                    ? "sem objetos neste ano"
+                                    : `${doComp.length} objeto(s) · o que você marcar vai para o campo de ${comp.nome}`}
+                                </span>
+                              </EtiquetaDisciplina>
+                              <BlocoObjetos
+                                editorRef={editorPorComponente!(comp.id)}
+                                todos={doComp}
+                                visiveis={visiveis}
+                                ehBncc={ehBncc}
+                                mostrarDisciplina={false}
+                                rotuloCampo={`no campo de ${comp.nome}, logo abaixo`}
+                                idBase={`${idBuscaObj}-${comp.id}`}
+                                objetoAtivo={objetoAtivoObj}
+                                setObjetoAtivo={setObjetoAtivoObj}
+                                mostrar={mostrar}
+                              />
                             </div>
-                            {aberto && conteudos.length > 0 && (
-                              <div className="space-y-0.5 bg-primary-50/40 px-3 pb-3 pt-1 pl-9">
-                                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Conteúdos sugeridos</p>
-                                {itensConteudo.map((ic) => (
-                                  <label
-                                    key={ic.chave}
-                                    className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-sm text-slate-700 hover:bg-white"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={caixas.marcado(ic.chave)}
-                                      onChange={() => alternarConteudo(ic)}
-                                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                                    />
-                                    <span>{ic.linha}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            )}
-                            {aberto && conteudos.length === 0 && !ehBncc && (
-                              <p className="bg-primary-50/40 px-3 pb-3 pl-9 text-sm text-slate-500">Este objeto não traz conteúdos sugeridos no currículo.</p>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
+                          );
+                        })
+                      ) : editorRef ? (
+                        <BlocoObjetos
+                          editorRef={editorRef}
+                          todos={objetos}
+                          visiveis={objetosFiltradosObj}
+                          ehBncc={ehBncc}
+                          mostrarDisciplina
+                          rotuloCampo="no campo logo abaixo"
+                          idBase={idBuscaObj}
+                          objetoAtivo={objetoAtivoObj}
+                          setObjetoAtivo={setObjetoAtivoObj}
+                          mostrar={mostrar}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 )}
               </div>
@@ -586,60 +742,30 @@ export default function ObjetosEHabilidades({
                         className="mt-2 w-full rounded-lg border border-primary-200 bg-white px-3 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
                       />
                     </div>
-                    <ul className="max-h-[28rem] divide-y divide-slate-100 overflow-y-auto">
+                    <div className="max-h-[30rem] overflow-y-auto">
                       {objetosFiltradosHab.length === 0 && (
-                        <li className="px-3 py-3 text-sm text-slate-400">Nenhum objeto encontrado para essa busca.</li>
+                        <p className="px-3 py-3 text-sm text-slate-400">Nenhum objeto encontrado para essa busca.</p>
                       )}
-                      {objetosFiltradosHab.map(({ chave, objeto, disciplina, itens }) => {
-                        const aberto = objetoAtivoHab === chave;
-                        const marcadas = itens.filter((h) => selecionadas.has(h.id)).length;
-                        return (
-                          <li key={chave}>
-                            <div
-                              className={`flex flex-wrap items-start justify-between gap-3 px-3 py-2.5 text-sm ${
-                                aberto ? "bg-primary-50/70" : ""
-                              }`}
-                            >
-                              <span className="min-w-0 flex-1 text-slate-800">
-                                {disciplina && <strong>{disciplina} — </strong>}
-                                {objeto}
-                              </span>
-                              <button
-                                type="button"
-                                aria-expanded={aberto}
-                                onClick={() => setObjetoAtivoHab(aberto ? null : chave)}
-                                className={`${marcadas > 0 ? "btn-verde-suave" : "btn-azul-suave"} shrink-0 !px-3 !py-1.5 !text-xs`}
-                              >
-                                {marcadas > 0 ? `${marcadas} marcada(s) · ` : ""}
-                                {aberto ? "Fechar" : "Clique para adicionar habilidades"} ({itens.length}){" "}
-                                {aberto ? "▲" : "▼"}
-                              </button>
+                      {multi ? (
+                        componentes!.map((comp) => {
+                          const doComp = objetos.filter((o) => disciplinaDaChave(o.chave) === comp.id);
+                          const visiveis = objetosFiltradosHab.filter((o) => disciplinaDaChave(o.chave) === comp.id);
+                          const marcadasComp = selecionadasLista.filter((h) => h.disciplina_id === comp.id).length;
+                          return (
+                            <div key={comp.id}>
+                              <EtiquetaDisciplina nome={comp.nome}>
+                                <span className="text-xs text-slate-500">
+                                  {doComp.length === 0 ? "sem objetos neste ano" : `${marcadasComp} habilidade(s) no plano`}
+                                </span>
+                              </EtiquetaDisciplina>
+                              <ul className="divide-y divide-slate-100">{visiveis.map((g) => itemHabilidades(g, false))}</ul>
                             </div>
-                            {aberto && (
-                              <div className="bg-primary-50/40 px-3 pb-3 pt-1">
-                                {itens.map((h) => (
-                                  <label
-                                    key={h.id}
-                                    className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1.5 text-sm hover:bg-white"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selecionadas.has(h.id)}
-                                      onChange={() => alternar(h.id)}
-                                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                                    />
-                                    <span className="text-slate-600">
-                                      {h.codigo && <span className="font-medium text-slate-900">({h.codigo}) </span>}
-                                      {h.descricao}
-                                    </span>
-                                  </label>
-                                ))}
-                              </div>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
+                          );
+                        })
+                      ) : (
+                        <ul className="divide-y divide-slate-100">{objetosFiltradosHab.map((g) => itemHabilidades(g, true))}</ul>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -651,29 +777,26 @@ export default function ObjetosEHabilidades({
           <p className="border-b border-primary-100 px-3 py-2 text-sm font-bold text-slate-800">
             Habilidades no plano <span className="font-normal text-slate-400">({selecionadasLista.length})</span>
           </p>
-          {selecionadasLista.length === 0 ? (
-            <p className="px-3 py-2.5 text-sm text-slate-400">
-              Nenhuma habilidade escolhida ainda. Use o botão verde acima.
-            </p>
+          {multi ? (
+            componentes!.map((comp) => {
+              const doComp = selecionadasLista.filter((h) => h.disciplina_id === comp.id);
+              return (
+                <div key={comp.id}>
+                  <EtiquetaDisciplina nome={comp.nome}>
+                    <span className="text-xs text-slate-500">{doComp.length} habilidade(s)</span>
+                  </EtiquetaDisciplina>
+                  {doComp.length === 0 ? (
+                    <p className="px-3 py-2.5 text-sm text-slate-400">Nenhuma habilidade de {comp.nome} escolhida ainda.</p>
+                  ) : (
+                    <ul className="divide-y divide-slate-100">{doComp.map(itemSelecionada)}</ul>
+                  )}
+                </div>
+              );
+            })
+          ) : selecionadasLista.length === 0 ? (
+            <p className="px-3 py-2.5 text-sm text-slate-400">Nenhuma habilidade escolhida ainda. Use o botão verde acima.</p>
           ) : (
-            <ul className="divide-y divide-slate-100">
-              {selecionadasLista.map((h) => (
-                <li key={h.id} className="flex items-start justify-between gap-3 px-3 py-2 text-sm">
-                  <span className="text-slate-600">
-                    {h.codigo && <span className="font-medium text-slate-900">({h.codigo}) </span>}
-                    {h.descricao}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => alternar(h.id)}
-                    className="btn-text-danger shrink-0"
-                    aria-label="Remover habilidade do plano"
-                  >
-                    Remover
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <ul className="divide-y divide-slate-100">{selecionadasLista.map(itemSelecionada)}</ul>
           )}
         </div>
       </SecaoPlano>

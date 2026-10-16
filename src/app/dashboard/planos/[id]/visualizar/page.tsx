@@ -3,6 +3,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import BarraAcoesPlano from "./barra-acoes-plano";
 import AutoAcao from "./auto-acao";
+import PlanoAnosIniciais from "./plano-anos-iniciais";
+import { lerSecoes } from "@/lib/secoes-componentes";
 import ImpressaoPaginada from "./impressao-paginada";
 import { ESTILO_TEXTO_PLANO } from "@/lib/estilo-plano";
 import { ehHtml, sanitizarHtml } from "@/lib/texto-rico";
@@ -117,6 +119,15 @@ export default async function VisualizarPlanoPage({
     ? nomesComponentes.join(", ") || disciplina?.nome || ""
     : disciplina?.nome ?? curso?.nome ?? "";
   const ehInfantil = plano.etapa === "educacao_infantil";
+  // Planos dos Anos Iniciais salvos com seções por componente usam o modelo em PDF (uma seção por componente);
+  // os salvos antes disso continuam no formato anterior até serem editados e salvos de novo.
+  const modeloPorComponente = ehAnosIniciais && lerSecoes(plano.secoes_componentes).length > 0;
+  const componentesDoPlano = (planoDisciplinas ?? [])
+    .map((p) => {
+      const linha = p as unknown as { disciplina_id: string; disciplinas: { nome: string } | null };
+      return linha.disciplinas?.nome ? { id: linha.disciplina_id, nome: linha.disciplinas.nome } : null;
+    })
+    .filter((c): c is { id: string; nome: string } => c !== null);
   // Brasões do cabeçalho: o do Estado fica à esquerda e o da escola à direita; cada um pode ser retirado.
   // Se ao menos um estiver ligado, os dois lados ficam reservados (a escola sem logo deixa o espaço em
   // branco para o professor colar o brasão depois).
@@ -152,6 +163,27 @@ export default async function VisualizarPlanoPage({
       */}
       <div className={`mx-auto ${paisagem ? "max-w-[297mm]" : "max-w-[210mm]"} rounded-xl border border-slate-300 bg-white shadow-lg shadow-slate-900/10 print:hidden`}>
         <div id="plano-conteudo" style={ESTILO_TEXTO_PLANO} className="px-4 py-6 sm:px-[2cm] sm:py-[1.5cm]">
+        {modeloPorComponente ? (
+          <PlanoAnosIniciais
+            dados={{
+              turma: plano.turma,
+              dataInicio: plano.data_inicio,
+              dataFim: plano.data_fim,
+              segundoProfessor: plano.segundo_professor_nome,
+              professorNome: professor?.nome ?? "",
+              escola: escola ? { nome: escola.nome, municipio: escola.municipio, logo_url: escola.logo_url } : null,
+              mostrarBrasaoEstado,
+              mostrarLogoEscola,
+              componentes: componentesDoPlano,
+              secoes: plano.secoes_componentes,
+              habilidades: habilidadesCurriculo,
+              habilidadesDigitais,
+              competencias: competenciasSelecionadas ?? [],
+              referencias: referenciasDoPlano(plano.etapa, plano.usar_curriculo_digital, plano.referencias),
+            }}
+          />
+        ) : (
+        <>
           {/* Cabeçalho */}
         {ehAnosIniciais ? (
           <div className="mb-4 flex items-start gap-3">
@@ -431,6 +463,8 @@ export default async function VisualizarPlanoPage({
               </Linha>
             </tbody>
           </table>
+        )}
+        </>
         )}
         </div>
       </div>

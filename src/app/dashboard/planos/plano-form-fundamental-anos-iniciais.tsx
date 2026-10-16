@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useMemo, useRef, useState } from "react";
+import { useActionState, useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import OpcoesLogo from "./opcoes-logo";
-import type { Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/lib/database.types";
+import type { CompetenciaCurricular, Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
 import SecaoPlano from "./secao-plano";
 import PassosPlano from "./passos-plano";
@@ -16,7 +16,22 @@ import TurmaSelector, { separarTurma } from "./turma-selector";
 import EditorTextoRico, { type EditorTextoRicoHandle } from "./editor-texto-rico";
 import SugestoesPanel from "./sugestoes-panel";
 import ObjetosEHabilidades from "./objeto-conhecimento-picker";
+import CompetenciaPicker from "./competencia-picker";
 import { CRITERIOS_AVALIACAO, INSTRUMENTOS_AVALIACAO } from "./sugestoes-avaliacao";
+import { lerSecoes, nomeCampoSecao, ordenarComponentes, type CampoSecao } from "@/lib/secoes-componentes";
+
+/** Um campo de texto (referência) por componente curricular; cria o da vez em que é pedido pela primeira vez. */
+function useRefsPorComponente() {
+  const mapa = useRef(new Map<string, { current: EditorTextoRicoHandle | null }>());
+  return useCallback((id: string) => {
+    let ref = mapa.current.get(id);
+    if (!ref) {
+      ref = { current: null };
+      mapa.current.set(id, ref);
+    }
+    return ref;
+  }, []);
+}
 
 interface PlanoFormFundamentalAnosIniciaisProps {
   disciplinas: Disciplina[];
@@ -24,6 +39,9 @@ interface PlanoFormFundamentalAnosIniciaisProps {
   habilidades: HabilidadeCurricular[];
   habilidadesSelecionadasIds?: string[];
   disciplinasSelecionadasIds?: string[];
+  /** Competências específicas dos componentes (de todos os componentes dos Anos Iniciais). */
+  competencias?: CompetenciaCurricular[];
+  competenciasSelecionadasIds?: string[];
   plano?: PlanoDeEnsino;
   action: (estado: EstadoFormulario, formData: FormData) => Promise<EstadoFormulario>;
   textoBotao: string;
@@ -42,12 +60,14 @@ interface PlanoFormFundamentalAnosIniciaisProps {
 const PASSOS = [
   { id: "passo-1", rotulo: "Identificação" },
   { id: "passo-2", rotulo: "Componentes" },
-  { id: "passo-3", rotulo: "Objetos e conteúdos" },
-  { id: "passo-4", rotulo: "Habilidades" },
-  { id: "passo-5", rotulo: "Educação digital" },
-  { id: "passo-6", rotulo: "Caminho metodológico" },
-  { id: "passo-7", rotulo: "Avaliação" },
-  { id: "passo-8", rotulo: "Referências e salvar" },
+  { id: "passo-3", rotulo: "Competências" },
+  { id: "passo-4", rotulo: "Objetos e conteúdos" },
+  { id: "passo-5", rotulo: "Habilidades" },
+  { id: "passo-6", rotulo: "Educação digital" },
+  { id: "passo-7", rotulo: "Caminho metodológico" },
+  { id: "passo-8", rotulo: "Avaliação" },
+  { id: "passo-9", rotulo: "Recomposição" },
+  { id: "passo-10", rotulo: "Referências e salvar" },
 ];
 
 export default function PlanoFormFundamentalAnosIniciais({
@@ -56,6 +76,8 @@ export default function PlanoFormFundamentalAnosIniciais({
   habilidades,
   habilidadesSelecionadasIds = [],
   disciplinasSelecionadasIds = [],
+  competencias = [],
+  competenciasSelecionadasIds = [],
   plano,
   action,
   textoBotao,
@@ -69,10 +91,10 @@ export default function PlanoFormFundamentalAnosIniciais({
     plano?.usar_curriculo_digital ?? true
   );
 
-  // Editores formatados e ano sugerido pela turma escolhida (ex.: "3º Ano" -> 3).
-  const refConteudos = useRef<EditorTextoRicoHandle>(null);
-  const refAvaliacao = useRef<EditorTextoRicoHandle>(null);
-  const refInstrumentos = useRef<EditorTextoRicoHandle>(null);
+  // Um campo de texto por componente (objetos/conteúdos, instrumentos e critérios); marcar caixinhas escreve no do componente certo.
+  const refConteudosDe = useRefsPorComponente();
+  const refInstrumentosDe = useRefsPorComponente();
+  const refCriteriosDe = useRefsPorComponente();
   const anoDaSerie = (serie: string | null | undefined) => {
     const m = /(\d+)\s*º/.exec(serie ?? "");
     return m ? Number(m[1]) : null;
@@ -85,7 +107,12 @@ export default function PlanoFormFundamentalAnosIniciais({
     [disciplinas]
   );
 
+  // Componentes já marcados alguma vez: os campos deles continuam na página (escondidos se desmarcados),
+  // assim o que o professor escreveu não se perde se ele desmarcar sem querer e marcar de novo.
+  const [vistos, setVistos] = useState<Set<string>>(new Set(componentesSelecionados));
+
   function alternarComponente(id: string) {
+    setVistos((atual) => (atual.has(id) ? atual : new Set(atual).add(id)));
     setComponentesSelecionados((atual) => {
       const novo = new Set(atual);
       if (novo.has(id)) {
@@ -97,14 +124,46 @@ export default function PlanoFormFundamentalAnosIniciais({
     });
   }
 
-  // O primeiro componente marcado vira o "componente principal" do plano
-  // (usado em consultas e no cabeçalho); a lista completa (para planos
-  // interdisciplinares) vai nos checkboxes "disciplina_ids" abaixo.
-  const componentePrincipalId = useMemo(() => {
-    const ordemOriginal = disciplinas.map((d) => d.id);
-    const selecionadosNaOrdem = ordemOriginal.filter((id) => componentesSelecionados.has(id));
-    return selecionadosNaOrdem[0] ?? "";
-  }, [componentesSelecionados, disciplinas]);
+  // Ordem do plano: Português, Matemática, Ciências, História, Geografia... (como no modelo).
+  const componentesOrdenados = useMemo(
+    () => ordenarComponentes(disciplinas.filter((d) => componentesSelecionados.has(d.id))),
+    [disciplinas, componentesSelecionados]
+  );
+  const componentesVistos = useMemo(
+    () => ordenarComponentes(disciplinas.filter((d) => vistos.has(d.id))),
+    [disciplinas, vistos]
+  );
+  // O primeiro componente do plano vira o "componente principal" (consultas e lista de planos);
+  // a lista completa vai nos checkboxes "disciplina_ids" do passo 2.
+  const componentePrincipalId = componentesOrdenados[0]?.id ?? "";
+
+  // Textos já salvos de cada componente. Plano antigo (campo único): o texto vai para o componente principal.
+  const secoesSalvas = useMemo(() => {
+    const mapa = new Map(lerSecoes(plano?.secoes_componentes).map((x) => [x.disciplina_id, x]));
+    if (mapa.size === 0 && plano) {
+      const principal = plano.disciplina_id ?? disciplinasSelecionadasIds[0];
+      if (principal) {
+        mapa.set(principal, {
+          disciplina_id: principal,
+          conteudos: plano.conteudos_programaticos,
+          metodologia: plano.metodologia,
+          criterios: plano.avaliacao,
+          instrumentos: plano.instrumentos_avaliacao,
+        });
+      }
+    }
+    return mapa;
+  }, [plano, disciplinasSelecionadasIds]);
+  const textoSalvo = (id: string, campo: CampoSecao) => secoesSalvas.get(id)?.[campo] ?? null;
+
+  const competenciasPorComponente = useMemo(() => {
+    const mapa = new Map<string, CompetenciaCurricular[]>();
+    for (const c of competencias) {
+      if (!c.disciplina_id) continue;
+      mapa.set(c.disciplina_id, [...(mapa.get(c.disciplina_id) ?? []), c]);
+    }
+    return mapa;
+  }, [competencias]);
 
   const habilidadesCurriculo = useMemo(
     () => habilidades.filter((h) => h.disciplina_id && componentesSelecionados.has(h.disciplina_id)),
@@ -116,22 +175,50 @@ export default function PlanoFormFundamentalAnosIniciais({
     [habilidades]
   );
 
-  const campoConteudos = (
-    <div>
-      <label htmlFor="conteudos_programaticos" className="field-label">
-        Objeto(s) de Conhecimento
-      </label>
-      <p className="text-xs text-slate-500">
-        Conteúdos, conceitos e princípios do Currículo Base do Território Catarinense (CBTC). O que
-        você marcar nas caixinhas das sugestões aparece aqui; você também pode escrever livremente.
-      </p>
-      <EditorTextoRico
-        id="conteudos_programaticos"
-        name="conteudos_programaticos"
-        valorInicial={plano?.conteudos_programaticos}
-        editorRef={refConteudos}
-        linhas={5}
-      />
+  /** Repete o bloco para cada componente, com o nome em destaque vermelho; os desmarcados ficam escondidos. */
+  function porComponente(renderizar: (d: Disciplina) => ReactNode) {
+    if (componentesSelecionados.size === 0) {
+      return (
+        <p className="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
+          Selecione ao menos um componente curricular no passo 2.
+        </p>
+      );
+    }
+    return componentesVistos.map((d) => (
+      <div
+        key={d.id}
+        hidden={!componentesSelecionados.has(d.id)}
+        className="space-y-3 rounded-xl border border-red-100 bg-red-50/30 p-3"
+      >
+        <span className="etiqueta-disciplina">{d.nome}</span>
+        {renderizar(d)}
+      </div>
+    ));
+  }
+
+  const camposConteudos = (
+    <div className="space-y-3">
+      <div>
+        <p className="field-label">Objeto(s) de Conhecimento — por componente</p>
+        <p className="text-xs text-slate-500">
+          Conteúdos, conceitos e princípios do Currículo Base do Território Catarinense (CBTC). O que você marcar nas
+          caixinhas aparece no campo do componente certo; você também pode escrever livremente.
+        </p>
+      </div>
+      {porComponente((d) => (
+        <div>
+          <label htmlFor={`conteudos-${d.id}`} className="field-label">
+            Objetos e conteúdos de {d.nome}
+          </label>
+          <EditorTextoRico
+            id={`conteudos-${d.id}`}
+            name={nomeCampoSecao("conteudos", d.id)}
+            valorInicial={textoSalvo(d.id, "conteudos")}
+            editorRef={refConteudosDe(d.id)}
+            linhas={4}
+          />
+        </div>
+      ))}
     </div>
   );
 
@@ -301,18 +388,39 @@ export default function PlanoFormFundamentalAnosIniciais({
         )}
       </SecaoPlano>
 
-      {/* ───────── 3 e 4. Objetos, conteúdos e habilidades ───────── */}
+      <input type="hidden" name="tem_secoes" value="1" />
+
+      {/* ───────── 3. Competências específicas ───────── */}
+      <SecaoPlano
+        id="passo-3"
+        numero={3}
+        titulo="Competência específica de cada componente"
+        descricao="Escolha a competência específica de cada componente; ela aparece no plano logo abaixo do nome do componente."
+      >
+        {porComponente((d) => (
+          <CompetenciaPicker
+            competencias={competenciasPorComponente.get(d.id) ?? []}
+            selecionadasIniciais={(competenciasPorComponente.get(d.id) ?? [])
+              .filter((c) => competenciasSelecionadasIds.includes(c.id))
+              .map((c) => c.id)}
+            vazio={`Ainda não há competências específicas cadastradas para ${d.nome}.`}
+          />
+        ))}
+      </SecaoPlano>
+
+      {/* ───────── 4 e 5. Objetos, conteúdos e habilidades ───────── */}
       <ObjetosEHabilidades
         habilidades={habilidadesCurriculo}
         selecionadasIniciais={habilidadesSelecionadasIds}
-        editorRef={refConteudos}
+        componentes={componentesOrdenados.map((d) => ({ id: d.id, nome: d.nome }))}
+        editorPorComponente={refConteudosDe}
         nomesDisciplinas={nomesDisciplinas}
         anoSugerido={anoSugerido}
-        editorConteudos={campoConteudos}
-        numeroObjetos={3}
-        numeroHabilidades={4}
-        idObjetos="passo-3"
-        idHabilidades="passo-4"
+        editorConteudos={camposConteudos}
+        numeroObjetos={4}
+        numeroHabilidades={5}
+        idObjetos="passo-4"
+        idHabilidades="passo-5"
         vazio={
           componentesSelecionados.size > 0
             ? "Ainda não há habilidades cadastradas para o(s) componente(s) selecionado(s)."
@@ -320,10 +428,10 @@ export default function PlanoFormFundamentalAnosIniciais({
         }
       />
 
-      {/* ───────── 5. Currículo de educação digital ───────── */}
+      {/* ───────── 6. Currículo de educação digital ───────── */}
       <SecaoPlano
-        id="passo-5"
-        numero={5}
+        id="passo-6"
+        numero={6}
         titulo="Currículo de educação digital"
         descricao="Opcional: decida se vai usar e escolha as habilidades aqui mesmo."
       >
@@ -338,88 +446,130 @@ export default function PlanoFormFundamentalAnosIniciais({
         />
       </SecaoPlano>
 
-      {/* ───────── 6. Caminho metodológico ───────── */}
+      {/* ───────── 7. Caminho metodológico ───────── */}
       <SecaoPlano
-        id="passo-6"
-        numero={6}
+        id="passo-7"
+        numero={7}
         titulo="Caminho metodológico"
-        descricao="Passo a passo, por dia/aula, para desenvolver as habilidades selecionadas."
+        descricao="Passo a passo, por componente, para desenvolver as habilidades selecionadas."
       >
         <MetodologiaIA>
-          <div>
-            <label htmlFor="metodologia" className="field-label">
-              Caminho metodológico para desenvolvimento da habilidade
-            </label>
+          <div className="space-y-3">
             <p className="text-xs text-slate-500">
-              A Sequência Didática é a metodologia recomendada; descreva também os recursos usados
-              em cada aula. Se envolver mais de um componente, descreva de forma interdisciplinar.
+              A Sequência Didática é a metodologia recomendada; descreva também os recursos usados em cada aula.
+              Escreva o caminho de cada componente no campo dele.
             </p>
-            <EditorTextoRico
-              id="metodologia"
-              name="metodologia"
-              valorInicial={plano?.metodologia}
-              linhas={6}
-            />
+            {porComponente((d) => (
+              <div>
+                <label htmlFor={`metodologia-${d.id}`} className="field-label">
+                  Caminho metodológico de {d.nome}
+                </label>
+                <EditorTextoRico
+                  id={`metodologia-${d.id}`}
+                  name={nomeCampoSecao("metodologia", d.id)}
+                  valorInicial={textoSalvo(d.id, "metodologia")}
+                  linhas={5}
+                />
+              </div>
+            ))}
           </div>
         </MetodologiaIA>
       </SecaoPlano>
 
-      {/* ───────── 7. Avaliação ───────── */}
+      {/* ───────── 8. Avaliação ───────── */}
       <SecaoPlano
-        id="passo-7"
-        numero={7}
+        id="passo-8"
+        numero={8}
         titulo="Avaliação"
-        descricao="Instrumentos e critérios — use as sugestões ou escreva livremente."
+        descricao="Critérios e instrumentos de cada componente — use as sugestões ou escreva livremente."
       >
-        <div>
-          <label htmlFor="instrumentos_avaliacao" className="field-label">
-            Instrumentos de Avaliação
-          </label>
-          <p className="text-xs text-slate-500">
-            Ex.: prova, lista de exercícios, portfólio, trabalho, seminário, produções orais.
-          </p>
-          <EditorTextoRico
-            id="instrumentos_avaliacao"
-            name="instrumentos_avaliacao"
-            valorInicial={plano?.instrumentos_avaliacao}
-            textoAntigoComoLista
-            editorRef={refInstrumentos}
-            linhas={4}
-          />
-          <SugestoesPanel
-            rotulo="instrumentos"
-            itens={INSTRUMENTOS_AVALIACAO}
-            editorRef={refInstrumentos}
-          />
-        </div>
+        {porComponente((d) => (
+          <div className="space-y-4">
+            <div>
+              <label htmlFor={`criterios-${d.id}`} className="field-label">
+                Critérios de Avaliação — {d.nome}
+              </label>
+              <p className="text-xs text-slate-500">
+                De acordo com as habilidades desenvolvidas — vira lista com marcadores no PDF.
+              </p>
+              <EditorTextoRico
+                id={`criterios-${d.id}`}
+                name={nomeCampoSecao("criterios", d.id)}
+                valorInicial={textoSalvo(d.id, "criterios")}
+                textoAntigoComoLista
+                editorRef={refCriteriosDe(d.id)}
+                linhas={4}
+              />
+              <SugestoesPanel rotulo={`critérios de ${d.nome}`} itens={CRITERIOS_AVALIACAO} editorRef={refCriteriosDe(d.id)} />
+            </div>
 
-        <div>
-          <label htmlFor="avaliacao" className="field-label">
-            Critérios de Avaliação
-          </label>
-          <p className="text-xs text-slate-500">
-            De acordo com as habilidades desenvolvidas — vira lista com marcadores no PDF.
-          </p>
-          <EditorTextoRico
-            id="avaliacao"
-            name="avaliacao"
-            valorInicial={plano?.avaliacao}
-            textoAntigoComoLista
-            editorRef={refAvaliacao}
-            linhas={5}
-          />
-          <SugestoesPanel
-            rotulo="critérios"
-            itens={CRITERIOS_AVALIACAO}
-            editorRef={refAvaliacao}
-          />
-        </div>
+            <div>
+              <label htmlFor={`instrumentos-${d.id}`} className="field-label">
+                Instrumentos de Avaliação — {d.nome}
+              </label>
+              <p className="text-xs text-slate-500">
+                Ex.: prova, lista de exercícios, portfólio, trabalho, seminário, produções orais.
+              </p>
+              <EditorTextoRico
+                id={`instrumentos-${d.id}`}
+                name={nomeCampoSecao("instrumentos", d.id)}
+                valorInicial={textoSalvo(d.id, "instrumentos")}
+                textoAntigoComoLista
+                editorRef={refInstrumentosDe(d.id)}
+                linhas={4}
+              />
+              <SugestoesPanel
+                rotulo={`instrumentos de ${d.nome}`}
+                itens={INSTRUMENTOS_AVALIACAO}
+                editorRef={refInstrumentosDe(d.id)}
+              />
+            </div>
+          </div>
+        ))}
+      </SecaoPlano>
+
+      {/* ───────── 9. Recomposição das aprendizagens ───────── */}
+      <SecaoPlano
+        id="passo-9"
+        numero={9}
+        titulo="Recomposição das aprendizagens (opcional)"
+        descricao="Se precisar retomar conteúdos de anos anteriores, preencha por componente. Deixe em branco se não for usar."
+      >
+        {porComponente((d) => (
+          <div className="space-y-3">
+            <div>
+              <label htmlFor={`recomp-objetos-${d.id}`} className="field-label">
+                Recomposição das aprendizagens — {d.nome}
+              </label>
+              <p className="text-xs text-slate-500">Objetos/conteúdos que serão retomados.</p>
+              <EditorTextoRico
+                id={`recomp-objetos-${d.id}`}
+                name={nomeCampoSecao("recomposicao_objetos", d.id)}
+                valorInicial={textoSalvo(d.id, "recomposicao_objetos")}
+                textoAntigoComoLista
+                linhas={3}
+              />
+            </div>
+            <div>
+              <label htmlFor={`recomp-habilidades-${d.id}`} className="field-label">
+                Habilidades trabalhadas — {d.nome}
+              </label>
+              <EditorTextoRico
+                id={`recomp-habilidades-${d.id}`}
+                name={nomeCampoSecao("recomposicao_habilidades", d.id)}
+                valorInicial={textoSalvo(d.id, "recomposicao_habilidades")}
+                textoAntigoComoLista
+                linhas={3}
+              />
+            </div>
+          </div>
+        ))}
       </SecaoPlano>
 
       {/* ───────── 8. Referências e finalização ───────── */}
       <SecaoPlano
-        id="passo-8"
-        numero={8}
+        id="passo-10"
+        numero={10}
         titulo="Referências e finalização"
         descricao="Última etapa: referências extras e situação do plano."
       >
