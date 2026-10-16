@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Public_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const fonteCorpo = Public_Sans({
+// O nome da variável (--font-inter) é mantido de propósito: assim a fonte funciona
+// mesmo que o tailwind.config.ts do projeto ainda seja o antigo.
+const fonteCorpo = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-corpo",
+  variable: "--font-inter",
   display: "swap",
 });
 

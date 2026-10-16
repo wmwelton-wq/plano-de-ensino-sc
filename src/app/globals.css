@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  --font-corpo: var(--font-inter);
   --background: #f3f5f8;
   --foreground: #0f1b2d;
 
@@ -24,6 +25,7 @@
 }
 
 body {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
   color: var(--foreground);
   background: var(--background);
 }
