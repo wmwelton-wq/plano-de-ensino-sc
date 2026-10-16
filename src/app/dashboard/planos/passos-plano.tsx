@@ -37,7 +37,7 @@ export default function PassosPlano({ passos }: { passos: PassoPlano[] }) {
   return (
     <nav
       aria-label="Passos do plano"
-      className="sticky top-[4.25rem] z-[5] -mx-1 overflow-x-auto rounded-2xl border border-primary-200/70 bg-white/85 px-2 py-2 shadow-md shadow-primary-900/[0.06] backdrop-blur print:hidden"
+      className="sticky top-[4.25rem] z-[5] -mx-1 overflow-x-auto rounded-xl border border-slate-300 bg-white px-2 py-2 shadow-sm print:hidden"
     >
       <ol className="flex min-w-max items-center gap-1">
         {passos.map((p, i) => {
@@ -47,9 +47,9 @@ export default function PassosPlano({ passos }: { passos: PassoPlano[] }) {
               <a
                 href={`#${p.id}`}
                 aria-current={atual ? "step" : undefined}
-                className={`flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                   atual
-                    ? "bg-gradient-to-r from-primary-700 to-sky-500 text-white shadow-sm"
+                    ? "bg-primary-800 text-white"
                     : "text-slate-600 hover:bg-primary-50 hover:text-primary-700"
                 }`}
               >

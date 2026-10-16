@@ -9,6 +9,8 @@ import PlanoFormFundamentalAnosIniciais from "../plano-form-fundamental-anos-ini
 import { atualizarPlano, excluirPlano } from "../actions";
 import ExcluirButton from "./excluir-button";
 import AcoesRapidas from "./acoes-rapidas";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
+import { Icone } from "@/components/icones";
 import VoltarLink from "../voltar-link";
 
 const DISCIPLINA_ETAPA: Record<Exclude<EtapaPlano, "educacao_infantil">, string> = {
@@ -52,46 +54,38 @@ export default async function EditarPlanoPage({
   const cabecalho = (
     <>
       <VoltarLink href="/dashboard/meus-planos" rotulo="Voltar aos meus planos" />
-      <div className="mt-2 overflow-hidden rounded-2xl border border-primary-200/70 bg-gradient-to-r from-primary-800 via-primary-700 to-sky-600 p-5 text-white shadow-glow">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Editar plano de ensino</h1>
-            <p className="text-sm text-primary-100">{ROTULOS_ETAPA[etapa]}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href={`/dashboard/planos/${id}/visualizar`}
-              className="btn-azul-suave !border-white/40 !bg-white !text-primary-700"
-            >
-              Visualizar plano
-            </Link>
-            <Link
-              href={`/dashboard/planos/${id}/visualizar?auto=salvar`}
-              className="btn-azul !from-primary-500 !via-primary-500 !to-sky-400 !ring-white/40"
-            >
-              Baixar PDF
-            </Link>
-            <Link
-              href={`/dashboard/planos/${id}/visualizar?auto=word`}
-              className="btn-azul !from-primary-500 !via-primary-500 !to-sky-400 !ring-white/40"
-            >
-              Baixar Word
-            </Link>
-            <Link
-              href={`/dashboard/planos/${id}/visualizar?auto=imprimir`}
-              className="btn-azul !from-primary-500 !via-primary-500 !to-sky-400 !ring-white/40"
-            >
-              Imprimir
-            </Link>
-            <Link
-              href={`/dashboard/planos/${id}/replicar`}
-              className="btn-azul-suave !border-white/40 !bg-white !text-primary-700"
-            >
-              Replicar para outras escolas
-            </Link>
-            <ExcluirButton excluirAction={excluirComId} />
-          </div>
-        </div>
+      <div className="mt-2">
+        <CabecalhoPagina
+          tom="verde"
+          icone="livro"
+          titulo="Editar plano de ensino"
+          subtitulo={ROTULOS_ETAPA[etapa]}
+          acoes={
+            <>
+              <Link href={`/dashboard/planos/${id}/visualizar`} className="btn-azul-suave">
+                <Icone nome="olho" className="h-4 w-4" />
+                Visualizar plano
+              </Link>
+              <Link href={`/dashboard/planos/${id}/visualizar?auto=salvar`} className="btn-azul">
+                <Icone nome="baixar" className="h-4 w-4" />
+                Baixar PDF
+              </Link>
+              <Link href={`/dashboard/planos/${id}/visualizar?auto=word`} className="btn-azul-suave">
+                <Icone nome="documento" className="h-4 w-4" />
+                Baixar Word
+              </Link>
+              <Link href={`/dashboard/planos/${id}/visualizar?auto=imprimir`} className="btn-azul-suave">
+                <Icone nome="imprimir" className="h-4 w-4" />
+                Imprimir
+              </Link>
+              <Link href={`/dashboard/planos/${id}/replicar`} className="btn-secondary !py-2">
+                <Icone nome="copiar" className="h-4 w-4" />
+                Replicar para outras escolas
+              </Link>
+              <ExcluirButton excluirAction={excluirComId} />
+            </>
+          }
+        />
       </div>
     </>
   );

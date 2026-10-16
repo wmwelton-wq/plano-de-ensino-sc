@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Icone, type NomeIcone } from "@/components/icones";
 
 export const CHAVE_TUTORIAL = "plano-docente:tutorial-visto";
 
 const PASSOS = [
-  { icone: "👋", titulo: "Bem-vindo(a)!", texto: "Em 4 passos rápidos você vê como montar seus planos. Leva menos de um minuto.", href: null as string | null, link: "" },
-  { icone: "🏫", titulo: "1. Cadastre sua escola", texto: "O nome, o município e a logo aparecem no cabeçalho dos planos.", href: "/dashboard/escolas/nova", link: "Cadastrar escola" },
-  { icone: "📅", titulo: "2. Faça o plano anual", texto: "Uma vez por ano: marque habilidades e objetos de conhecimento de cada trimestre.", href: "/dashboard/anual/novo", link: "Cadastrar plano anual" },
-  { icone: "🗓️", titulo: "3. Gere os mensais e baixe", texto: "No plano anual, “Gerar planos mensais” faz o trabalho pesado. Depois é só baixar em PDF ou Word.", href: null, link: "" },
+  { icone: "sparkle" as NomeIcone, tom: "azul", titulo: "Bem-vindo(a)!", texto: "Em 4 passos rápidos você vê como montar seus planos. Leva menos de um minuto.", href: null as string | null, link: "" },
+  { icone: "escola" as NomeIcone, tom: "ambar", titulo: "1. Cadastre sua escola", texto: "O nome, o município e a logo aparecem no cabeçalho dos planos.", href: "/dashboard/escolas/nova", link: "Cadastrar escola" },
+  { icone: "calendario" as NomeIcone, tom: "azul", titulo: "2. Faça o plano anual", texto: "Uma vez por ano: marque habilidades e objetos de conhecimento de cada trimestre.", href: "/dashboard/anual/novo", link: "Cadastrar plano anual" },
+  { icone: "livro" as NomeIcone, tom: "verde", titulo: "3. Gere os mensais e baixe", texto: "No plano anual, “Gerar planos mensais” faz o trabalho pesado. Depois é só baixar em PDF ou Word.", href: null, link: "" },
 ];
 
 /** Passo a passo de primeiro acesso: aparece uma vez; depois pode ser revisto em Ajuda. */
@@ -57,7 +58,7 @@ export default function TutorialInicial() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-4 sm:items-center print:hidden" role="presentation">
-      <div role="dialog" aria-modal="true" aria-labelledby="tutorial-titulo" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+      <div role="dialog" aria-modal="true" aria-labelledby="tutorial-titulo" className="w-full max-w-md rounded-xl border border-slate-300 bg-white p-6 shadow-2xl">
         <div className="flex items-center justify-between">
           <div className="flex gap-1.5" aria-hidden="true">
             {PASSOS.map((_, i) => (
@@ -69,8 +70,8 @@ export default function TutorialInicial() {
           </button>
         </div>
         <div className="mt-5 text-center">
-          <div className="text-5xl" aria-hidden="true">
-            {p.icone}
+          <div data-tom={p.tom} className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl [background:var(--tom-claro)] [color:var(--tom)]" aria-hidden="true">
+            <Icone nome={p.icone} className="h-8 w-8" />
           </div>
           <h2 id="tutorial-titulo" className="mt-3 text-xl font-bold text-slate-900">
             {p.titulo}

@@ -18,6 +18,49 @@ export interface TrimestreAnual {
   unidades: ItemLista[];
   habilidades: ItemLista[];
   objetos: ItemLista[];
+  /** Colunas "Critérios de avaliação" e "Metodologia" ao lado das habilidades e objetos. */
+  criterios: ItemLista[];
+  metodologia: ItemLista[];
+  /** "Conteúdos a serem estudados": só aparece no plano quando o professor liga a opção E marca algo. */
+  conteudosAtivo: boolean;
+  conteudos: ItemLista[];
+  /** "Projetos" do trimestre: só aparece no plano quando o professor liga a opção E escreve algo. */
+  projetoAtivo: boolean;
+  projeto: string;
+  /** Caixa livre (HTML do editor) abaixo do trimestre: colunas, tabelas, texto... */
+  complemento: string;
+}
+
+export function trimestreVazio(): TrimestreAnual {
+  return {
+    unidades: [],
+    habilidades: [],
+    objetos: [],
+    criterios: [],
+    metodologia: [],
+    conteudosAtivo: false,
+    conteudos: [],
+    projetoAtivo: false,
+    projeto: "",
+    complemento: "",
+  };
+}
+
+/** O que o professor escreveu em "Projetos" só vai para o plano se a opção estiver ligada. */
+export function projetoVisivel(t: TrimestreAnual): string {
+  return t.projetoAtivo ? t.projeto.trim() : "";
+}
+
+export function conteudosVisiveis(t: TrimestreAnual): ItemLista[] {
+  return t.conteudosAtivo ? t.conteudos : [];
+}
+
+/** HTML do complemento sem as marcas internas; vazio quando não tem nada visível. */
+export function complementoVisivel(t: TrimestreAnual): string {
+  const html = (t.complemento ?? "").replace(/<!--rt-->/g, "").trim();
+  if (!html) return "";
+  if (/<(img|table|li)[\s>]/i.test(html)) return html;
+  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "" ? "" : html;
 }
 
 export interface CompetenciasGeraisAnual {
@@ -79,6 +122,8 @@ export interface PlanoAnual {
 
 const MAX_ITENS = 600;
 const MAX_TEXTO = 4000;
+const MAX_PROJETO = 8000;
+const MAX_COMPLEMENTO = 1_200_000;
 
 function texto(v: unknown, max: number): string {
   return typeof v === "string" ? v.trim().slice(0, max) : "";
@@ -126,6 +171,13 @@ export function normalizarDados(bruto: {
       unidades: normalizarItens(t.unidades),
       habilidades: normalizarItens(t.habilidades),
       objetos: normalizarItens(t.objetos),
+      criterios: normalizarItens(t.criterios),
+      metodologia: normalizarItens(t.metodologia),
+      conteudosAtivo: t.conteudosAtivo === true,
+      conteudos: normalizarItens(t.conteudos),
+      projetoAtivo: t.projetoAtivo === true,
+      projeto: texto(t.projeto, MAX_PROJETO),
+      complemento: typeof t.complemento === "string" ? t.complemento.slice(0, MAX_COMPLEMENTO) : "",
     };
   });
 
@@ -153,6 +205,8 @@ export interface ComponenteAnual {
   disciplina_id: string;
   nome: string;
   ementa: ItemLista[];
+  /** Cada componente tem as suas competências gerais (planos antigos: iguais às do plano todo). */
+  competenciasGerais: CompetenciasGeraisAnual;
   competenciasEspecificas: CompetenciasEspecificasAnual;
   trimestres: TrimestreAnual[];
 }
@@ -160,7 +214,7 @@ export interface ComponenteAnual {
 const UUID_ANUAL = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Valida/limpa a lista de componentes vinda do navegador ou do banco (sem repetidos, ids válidos). */
-export function normalizarComponentes(v: unknown): ComponenteAnual[] {
+export function normalizarComponentes(v: unknown, gerais?: unknown): ComponenteAnual[] {
   if (!Array.isArray(v)) return [];
   const vistos = new Set<string>();
   const saida: ComponenteAnual[] = [];
@@ -172,6 +226,7 @@ export function normalizarComponentes(v: unknown): ComponenteAnual[] {
     vistos.add(id);
     const d = normalizarDados({
       ementa: o.ementa,
+      competencias_gerais: o.competencias_gerais ?? gerais,
       competencias_especificas: o.competencias_especificas,
       trimestres: o.trimestres,
     });
@@ -179,6 +234,7 @@ export function normalizarComponentes(v: unknown): ComponenteAnual[] {
       disciplina_id: id,
       nome: texto(o.nome, 200),
       ementa: d.ementa,
+      competenciasGerais: d.competenciasGerais,
       competenciasEspecificas: d.competenciasEspecificas,
       trimestres: d.trimestres,
     });
@@ -192,6 +248,7 @@ export function componentesParaJson(lista: ComponenteAnual[]) {
     disciplina_id: c.disciplina_id,
     nome: c.nome,
     ementa: c.ementa,
+    competencias_gerais: c.competenciasGerais,
     competencias_especificas: c.competenciasEspecificas,
     trimestres: c.trimestres,
   }));
@@ -214,20 +271,28 @@ function itensUnicos(itens: ItemLista[]): ItemLista[] {
  */
 export function juntarComponentes(lista: ComponenteAnual[]): {
   ementa: ItemLista[];
+  competenciasGerais: CompetenciasGeraisAnual;
   competenciasEspecificas: CompetenciasEspecificasAnual;
   trimestres: TrimestreAnual[];
 } {
   return {
     ementa: itensUnicos(lista.flatMap((c) => c.ementa)),
+    competenciasGerais: {
+      numeros: Array.from(new Set(lista.flatMap((c) => c.competenciasGerais.numeros))).sort((a, b) => a - b),
+      manuais: Array.from(new Set(lista.flatMap((c) => c.competenciasGerais.manuais))),
+    },
     competenciasEspecificas: {
       bncc: itensUnicos(lista.flatMap((c) => c.competenciasEspecificas.bncc)),
       curriculo: itensUnicos(lista.flatMap((c) => c.competenciasEspecificas.curriculo)),
       manuais: itensUnicos(lista.flatMap((c) => c.competenciasEspecificas.manuais)),
     },
     trimestres: [0, 1, 2].map((i) => ({
+      ...trimestreVazio(),
       unidades: itensUnicos(lista.flatMap((c) => c.trimestres[i].unidades)),
       habilidades: itensUnicos(lista.flatMap((c) => c.trimestres[i].habilidades)),
       objetos: itensUnicos(lista.flatMap((c) => c.trimestres[i].objetos)),
+      criterios: itensUnicos(lista.flatMap((c) => c.trimestres[i].criterios)),
+      metodologia: itensUnicos(lista.flatMap((c) => c.trimestres[i].metodologia)),
     })),
   };
 }
@@ -253,6 +318,31 @@ export function anoCombina(anoSerie: string | null | undefined, n: number): bool
   }
   const numeros = (t.match(/\d{1,2}/g) ?? []).map(Number);
   return numeros.length === 0 ? true : numeros.includes(n);
+}
+
+/**
+ * Abre "1º ao 5º ano", "1º e 2º anos", "3º a 5º ano" em anos individuais ("1º ano", "2º ano"...).
+ * Assim o filtro por ano mostra TODOS os itens do ano escolhido, sem botões de faixa misturados.
+ * `limites` restringe aos anos que existem na etapa (Anos Iniciais 1–5, Anos Finais 6–9, Médio 1–3).
+ */
+export function expandirAnos(anoSerie: string | null | undefined, limites?: [number, number], serie = false): string[] {
+  const t = (anoSerie ?? "").trim();
+  if (!t) return [];
+  const rotulo = (n: number) => (serie || /s[eé]rie/i.test(t) ? `${n}ª série` : `${n}º ano`);
+  const numeros = (t.match(/\d{1,2}/g) ?? []).map(Number);
+  if (numeros.length === 0) return [t];
+  let anos: number[];
+  const intervalo = /(\d{1,2})\s*[º°ª]?\s*(?:ao|a|até|-|–)\s*(\d{1,2})/i.exec(t);
+  if (intervalo) {
+    const a = Number(intervalo[1]);
+    const b = Number(intervalo[2]);
+    anos = [];
+    for (let n = Math.min(a, b); n <= Math.max(a, b); n++) anos.push(n);
+  } else {
+    anos = Array.from(new Set(numeros));
+  }
+  if (limites) anos = anos.filter((n) => n >= limites[0] && n <= limites[1]);
+  return anos.map(rotulo);
 }
 
 /** Quebra o texto "objeto de conhecimento" do banco em itens individuais. */

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
 import VoltarLink from "../../voltar-link";
 import { replicarPlano } from "../../actions";
 import ReplicarForm from "./replicar-form";
@@ -31,13 +32,19 @@ export default async function ReplicarPlanoPage({
   return (
     <div>
       <VoltarLink href={`/dashboard/planos/${id}`} rotulo="Voltar ao plano" />
-      <div className="mt-2 overflow-hidden rounded-2xl bg-gradient-to-r from-primary-800 via-primary-700 to-sky-600 p-5 text-white shadow-glow">
-        <h1 className="text-2xl font-semibold">Replicar plano para outras escolas</h1>
-        <p className="mt-1 text-sm text-primary-100">
-          Plano de origem: <strong>{plano.titulo}</strong>
-          {plano.turma ? ` · ${plano.turma}` : ""}
-          {escolaOrigem ? ` · ${escolaOrigem.nome}` : ""}
-        </p>
+      <div className="mt-2">
+        <CabecalhoPagina
+          tom="violeta"
+          icone="copiar"
+          titulo="Replicar plano para outras escolas"
+          subtitulo={
+            <>
+              Plano de origem: <strong>{plano.titulo}</strong>
+              {plano.turma ? ` · ${plano.turma}` : ""}
+              {escolaOrigem ? ` · ${escolaOrigem.nome}` : ""}
+            </>
+          }
+        />
       </div>
       <div className="mt-6">
         <ReplicarForm

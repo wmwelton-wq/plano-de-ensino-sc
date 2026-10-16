@@ -188,12 +188,12 @@ export default async function VisualizarPlanoPage({
         {ehAnosIniciais ? (
           <div className="mb-4 flex items-start gap-3">
             {temLogos && (
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center">
+              <div className="flex h-20 w-32 shrink-0 items-center justify-center">
                 {mostrarBrasaoEstado && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src="/brasao-santa-catarina.jpg"
-                    alt="Brasão do Estado de Santa Catarina"
+                    src="/logo-governo-sc.png"
+                    alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
                     className="max-h-20 max-w-full object-contain"
                   />
                 )}
@@ -206,7 +206,7 @@ export default async function VisualizarPlanoPage({
               <p>GERÊNCIA DO ENSINO FUNDAMENTAL</p>
             </div>
             {temLogos && (
-              <div className="flex h-20 w-20 shrink-0 items-center justify-center">
+              <div className="flex h-20 w-32 shrink-0 items-center justify-center">
                 {mostrarLogoEscola && escola?.logo_url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={escola.logo_url} alt={`Logo de ${escola.nome}`} className="max-h-20 max-w-full object-contain" />
@@ -219,13 +219,13 @@ export default async function VisualizarPlanoPage({
             <tbody>
               <tr className="break-inside-avoid">
                 {temLogos && (
-                  <td className="w-32 border border-black p-2 align-middle text-center">
+                  <td className="w-40 border border-black p-2 align-middle text-center">
                     {mostrarBrasaoEstado && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src="/brasao-santa-catarina.jpg"
-                        alt="Brasão do Estado de Santa Catarina"
-                        className="mx-auto max-h-20 max-w-full object-contain"
+                        src="/logo-governo-sc.png"
+                        alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
+                        className="mx-auto max-h-24 max-w-full object-contain"
                       />
                     )}
                   </td>
@@ -238,13 +238,13 @@ export default async function VisualizarPlanoPage({
                   <p>PROFESSOR (A): {(professor?.nome ?? "").toUpperCase()}</p>
                 </td>
                 {temLogos && (
-                  <td className="w-32 border border-black p-2 align-middle text-center">
+                  <td className="w-40 border border-black p-2 align-middle text-center">
                     {mostrarLogoEscola && escola?.logo_url && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={escola.logo_url}
                         alt={`Logo de ${escola.nome}`}
-                        className="mx-auto max-h-20 max-w-full object-contain"
+                        className="mx-auto max-h-24 max-w-full object-contain"
                       />
                     )}
                   </td>

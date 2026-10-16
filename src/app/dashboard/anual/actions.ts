@@ -10,6 +10,7 @@ import {
   normalizarComponentes,
   normalizarDados,
   type EtapaAnual,
+  type TrimestreAnual,
 } from "@/lib/plano-anual";
 import { MARCADOR_HTML } from "@/lib/texto-rico";
 import { ordenarComponentes, type SecaoComponente } from "@/lib/secoes-componentes";
@@ -62,14 +63,26 @@ function lerFormulario(formData: FormData): { erro: string } | { valores: Record
     }
   }
   const dados = normalizarDados((bruto ?? {}) as Record<string, unknown>);
+  // A caixa livre de cada trimestre passa pelo mesmo filtro de segurança do texto livre.
+  const higienizar = (trimestres: TrimestreAnual[]) =>
+    trimestres.forEach((t) => {
+      t.complemento = prepararCampoParaSalvar(t.complemento) ?? "";
+    });
+  higienizar(dados.trimestres);
 
   // Anos Iniciais com várias disciplinas: um bloco por componente. As colunas antigas (ementa, competências
   // específicas e trimestres) recebem todos os componentes juntos, para o resto do sistema continuar funcionando.
   const componentes =
     etapa === "fundamental_anos_iniciais"
-      ? ordenarComponentes(normalizarComponentes((bruto as Record<string, unknown> | null)?.componentes))
+      ? ordenarComponentes(
+          normalizarComponentes(
+            (bruto as Record<string, unknown> | null)?.componentes,
+            (bruto as Record<string, unknown> | null)?.competencias_gerais
+          )
+        )
       : [];
   const multi = componentes.length > 0;
+  componentes.forEach((c) => higienizar(c.trimestres));
   const juntos = multi ? juntarComponentes(componentes) : null;
   if (multi) {
     const nomes = componentes.map((c) => c.nome).filter(Boolean);
@@ -107,7 +120,7 @@ function lerFormulario(formData: FormData): { erro: string } | { valores: Record
       incluir_logo_estado: formData.get("incluir_logo_estado") === "on",
       incluir_logo_escola: formData.get("incluir_logo_escola") === "on",
       ementa: juntos ? juntos.ementa : dados.ementa,
-      competencias_gerais: dados.competenciasGerais,
+      competencias_gerais: juntos ? juntos.competenciasGerais : dados.competenciasGerais,
       competencias_especificas: juntos ? juntos.competenciasEspecificas : dados.competenciasEspecificas,
       trimestres: juntos ? juntos.trimestres : dados.trimestres,
       componentes: multi ? componentesParaJson(componentes) : null,

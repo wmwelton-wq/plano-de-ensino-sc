@@ -13,7 +13,7 @@ export default function BarraSalvar({ pendente, textoBotao, erro }: BarraSalvarP
           {erro}
         </p>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary-200/70 bg-white/90 px-4 py-3 shadow-lg shadow-primary-900/10 backdrop-blur">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white/95 px-4 py-3 shadow-md backdrop-blur">
         <p className="text-sm text-slate-600">Terminou os passos? Salve o plano — dá para editar depois.</p>
         <button type="submit" disabled={pendente} className="btn-azul">
           {pendente ? "Salvando..." : textoBotao}

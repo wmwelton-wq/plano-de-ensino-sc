@@ -10,11 +10,15 @@ import { ehHtml, sanitizarHtml } from "@/lib/texto-rico";
 import { COMPETENCIAS_GERAIS_BNCC } from "@/lib/competencias-gerais";
 import {
   TRIMESTRES_ROTULOS,
+  complementoVisivel,
+  conteudosVisiveis,
+  projetoVisivel,
   ementaEmTexto,
   normalizarComponentes,
   normalizarDados,
   ordenarHabilidades,
   type CompetenciasEspecificasAnual,
+  type CompetenciasGeraisAnual,
   type ItemLista,
   type PlanoAnual,
   type TrimestreAnual,
@@ -42,7 +46,7 @@ function ListaNumerada({ itens }: { itens: ItemLista[] }) {
 }
 
 /** Título de seção: "3. Competências..." com o texto em negrito e sublinhado, como no modelo. */
-function Titulo({ numero, children }: { numero: number; children: React.ReactNode }) {
+function Titulo({ numero, children }: { numero: number | string; children: React.ReactNode }) {
   return (
     <p className="mb-1 mt-4">
       {numero}. <b>
@@ -53,7 +57,7 @@ function Titulo({ numero, children }: { numero: number; children: React.ReactNod
 }
 
 /** Seção solta (sem borda): título + conteúdo na mesma tabela; o título nunca fica sozinho no fim da página. */
-function Secao({ numero, titulo, reservar = 140, children }: { numero: number; titulo: React.ReactNode; reservar?: number; children: React.ReactNode }) {
+function Secao({ numero, titulo, reservar = 140, children }: { numero: number | string; titulo: React.ReactNode; reservar?: number; children: React.ReactNode }) {
   return (
     <table className="w-full border-collapse">
       <tbody>
@@ -99,91 +103,168 @@ function CompetenciasEspecificas({ competencias }: { competencias: CompetenciasE
   );
 }
 
-/** As três tabelas de trimestre (unidades, habilidades e objetos) de um componente. */
+/** Lista com marcadores (objetos, critérios, metodologia, conteúdos) ou um parágrafo vazio. */
+function ListaMarcada({ itens }: { itens: ItemLista[] }) {
+  if (itens.length === 0) return <p>&nbsp;</p>;
+  return (
+    <ul className="list-disc pl-5">
+      {itens.map((o, k) => (
+        <li key={`${o.id}-${k}`} className="mb-1" style={JUSTIFICADO}>
+          {o.texto}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** As três tabelas de trimestre de um componente: unidades, habilidades, objetos, critérios e metodologia (+ o que for opcional). */
 function TabelasTrimestres({ trimestres }: { trimestres: TrimestreAnual[] }) {
   return (
     <>
       {trimestres.map((t, i) => {
         const habilidades = ordenarHabilidades(t.habilidades);
+        const conteudos = conteudosVisiveis(t);
+        const projeto = projetoVisivel(t);
+        const complemento = complementoVisivel(t);
         return (
-          <table key={i} className="mt-3 w-full table-fixed border-collapse border border-black">
-            <colgroup>
-              <col style={{ width: "22%" }} />
-              <col style={{ width: "48%" }} />
-              <col style={{ width: "30%" }} />
-            </colgroup>
-            <tbody>
-              <tr data-reservar={260} className="break-inside-avoid">
-                <td colSpan={3} className="border border-black p-2 font-bold">
-                  {TRIMESTRES_ROTULOS[i]}
-                </td>
-              </tr>
-              <tr className="break-inside-avoid">
-                <td className="border border-black p-2 align-top font-bold">
-                  UNIDADES TEMÁTICAS
-                  <br />
-                  (UNIDADE DO LIVRO E/OU OUTRAS FONTES)
-                </td>
-                <td className="border border-black p-2 align-top font-bold">HABILIDADES</td>
-                <td className="border border-black p-2 align-top font-bold">OBJETO DO CONHECIMENTO</td>
-              </tr>
-              <tr>
-                <td className="border border-black p-2 align-top">
-                  {t.unidades.length > 0 ? (
-                    t.unidades.map((u, k) => (
-                      <p key={`${u.id}-${k}`} className="mb-2 font-bold" style={JUSTIFICADO}>
-                        {MAIUSCULO(u.texto)}
-                      </p>
-                    ))
-                  ) : (
-                    <p>&nbsp;</p>
-                  )}
-                </td>
-                <td className="border border-black p-2 align-top">
-                  {habilidades.length > 0 ? (
-                    habilidades.map((h, k) => (
-                      <p key={`${h.id}-${k}`} className="mb-2" style={JUSTIFICADO}>
-                        {h.codigo ? (
-                          <>
-                            <b>({h.codigo})</b> - {h.texto}
-                          </>
-                        ) : (
-                          h.texto
-                        )}
-                      </p>
-                    ))
-                  ) : (
-                    <p>&nbsp;</p>
-                  )}
-                </td>
-                <td className="border border-black p-2 align-top">
-                  {t.objetos.length > 0 ? (
-                    <ul className="list-disc pl-5">
-                      {t.objetos.map((o, k) => (
-                        <li key={`${o.id}-${k}`}>{o.texto}</li>
+          // Sem <div> em volta: a divisão em páginas só quebra tabelas que estão soltas no plano.
+          <Fragment key={i}>
+            <table className="mt-3 w-full table-fixed border-collapse border border-black">
+              <colgroup>
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "32%" }} />
+                <col style={{ width: "18%" }} />
+                <col style={{ width: "18%" }} />
+                <col style={{ width: "18%" }} />
+              </colgroup>
+              <tbody>
+                <tr data-reservar={260} className="break-inside-avoid">
+                  <td colSpan={5} className="border border-black p-2 font-bold">
+                    {TRIMESTRES_ROTULOS[i]}
+                  </td>
+                </tr>
+                <tr className="break-inside-avoid">
+                  <td className="border border-black p-2 align-top font-bold">
+                    UNIDADES TEMÁTICAS
+                    <br />
+                    (UNIDADE DO LIVRO E/OU OUTRAS FONTES)
+                  </td>
+                  <td className="border border-black p-2 align-top font-bold">HABILIDADES</td>
+                  <td className="border border-black p-2 align-top font-bold">OBJETO DO CONHECIMENTO</td>
+                  <td className="border border-black p-2 align-top font-bold">CRITÉRIOS DE AVALIAÇÃO</td>
+                  <td className="border border-black p-2 align-top font-bold">METODOLOGIA</td>
+                </tr>
+                <tr>
+                  <td className="border border-black p-2 align-top">
+                    {t.unidades.length > 0 ? (
+                      t.unidades.map((u, k) => (
+                        <p key={`${u.id}-${k}`} className="mb-2 font-bold" style={JUSTIFICADO}>
+                          {MAIUSCULO(u.texto)}
+                        </p>
+                      ))
+                    ) : (
+                      <p>&nbsp;</p>
+                    )}
+                  </td>
+                  <td className="border border-black p-2 align-top">
+                    {habilidades.length > 0 ? (
+                      habilidades.map((h, k) => (
+                        <p key={`${h.id}-${k}`} className="mb-2" style={JUSTIFICADO}>
+                          {h.codigo ? (
+                            <>
+                              <b>({h.codigo})</b> - {h.texto}
+                            </>
+                          ) : (
+                            h.texto
+                          )}
+                        </p>
+                      ))
+                    ) : (
+                      <p>&nbsp;</p>
+                    )}
+                  </td>
+                  <td className="border border-black p-2 align-top">
+                    <ListaMarcada itens={t.objetos} />
+                  </td>
+                  <td className="border border-black p-2 align-top">
+                    <ListaMarcada itens={t.criterios} />
+                  </td>
+                  <td className="border border-black p-2 align-top">
+                    <ListaMarcada itens={t.metodologia} />
+                  </td>
+                </tr>
+                {conteudos.length > 0 && (
+                  <tr>
+                    <td colSpan={5} className="border border-black p-2 align-top">
+                      <p className="mb-1 font-bold">CONTEÚDOS A SEREM ESTUDADOS</p>
+                      <ListaMarcada itens={conteudos} />
+                    </td>
+                  </tr>
+                )}
+                {projeto && (
+                  <tr>
+                    <td colSpan={5} className="border border-black p-2 align-top">
+                      <p className="mb-1 font-bold">PROJETO</p>
+                      {projeto.split(/\n+/).map((par, k) => (
+                        <p key={k} className="mb-1" style={JUSTIFICADO}>
+                          {par}
+                        </p>
                       ))}
-                    </ul>
-                  ) : (
-                    <p>&nbsp;</p>
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+            {complemento && (
+              <table className="mt-2 w-full border-collapse">
+                <tbody>
+                  <tr>
+                    <td className="p-0">
+                      <div className="texto-rico" dangerouslySetInnerHTML={{ __html: sanitizarHtml(ehHtml(complemento) ? complemento : `<p>${complemento.replace(/\n/g, "<br>")}</p>`) }} />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
+          </Fragment>
         );
       })}
     </>
   );
 }
 
-/** Nome do componente que antecede cada bloco quando o plano tem várias disciplinas (Anos Iniciais). */
-function NomeComponente({ nome, reservar = 330 }: { nome: string; reservar?: number }) {
+/** Competências gerais da BNCC de um componente (ou do plano todo). */
+function CompetenciasGerais({ competencias }: { competencias: CompetenciasGeraisAnual }) {
+  const lista = competencias.numeros
+    .map((n) => COMPETENCIAS_GERAIS_BNCC.find((c) => c.numero === n))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c));
+  if (lista.length + competencias.manuais.length === 0) return <p>&nbsp;</p>;
   return (
-    <table className="mt-3 w-full border-collapse">
+    <>
+      {lista.map((c) => (
+        <p key={c.numero} style={JUSTIFICADO} className="mb-1">
+          {c.numero}. {c.texto}
+        </p>
+      ))}
+      {competencias.manuais.map((t, i) => (
+        <p key={`m-${i}`} style={JUSTIFICADO} className="mb-1">
+          {t}
+        </p>
+      ))}
+    </>
+  );
+}
+
+/** Faixa que abre cada disciplina nos planos com várias (Anos Iniciais). */
+function FaixaDisciplina({ numero, nome }: { numero: number; nome: string }) {
+  return (
+    <table className="mt-6 w-full border-collapse">
       <tbody>
-        <tr data-reservar={reservar} className="break-inside-avoid">
-          <td className="p-0">
-            <p className="mb-1 font-bold">{MAIUSCULO(nome)}</p>
+        <tr data-reservar={220} className="break-inside-avoid">
+          <td className="border-y-2 border-black px-1 py-1">
+            <p className="font-bold">
+              {numero}. COMPONENTE CURRICULAR: {MAIUSCULO(nome)}
+            </p>
           </td>
         </tr>
       </tbody>
@@ -219,18 +300,13 @@ export default async function VisualizarPlanoAnualPage({
 
   // Anos Iniciais com várias disciplinas: ementa, competências e trimestres vêm separados por componente.
   const componentes =
-    plano.etapa === "fundamental_anos_iniciais" ? ordenarComponentes(normalizarComponentes(plano.componentes)) : [];
+    plano.etapa === "fundamental_anos_iniciais" ? ordenarComponentes(normalizarComponentes(plano.componentes, plano.competencias_gerais)) : [];
   const multi = componentes.length >= 2;
 
   const paisagem = true;
   const mostrarBrasaoEstado = plano.incluir_logo_estado !== false;
   const mostrarLogoEscola = plano.incluir_logo_escola !== false;
   const medio = plano.etapa === "ensino_medio";
-
-  const gerais = dados.competenciasGerais.numeros
-    .map((n) => COMPETENCIAS_GERAIS_BNCC.find((c) => c.numero === n))
-    .filter((c): c is NonNullable<typeof c> => Boolean(c));
-  const geraisManuais = dados.competenciasGerais.manuais;
 
   const { bncc, curriculo, manuais } = dados.competenciasEspecificas;
   const temEspecificas = bncc.length + curriculo.length + manuais.length > 0;
@@ -265,13 +341,13 @@ export default async function VisualizarPlanoAnualPage({
           <table className="w-full border-collapse border border-black">
             <tbody>
               <tr className="break-inside-avoid">
-                <td className="w-24 border border-black p-1 text-center align-middle">
+                <td className="w-40 border border-black p-1 text-center align-middle">
                   {mostrarBrasaoEstado && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src="/brasao-santa-catarina.jpg"
-                      alt="Brasão do Estado de Santa Catarina"
-                      className="mx-auto max-h-20 max-w-full object-contain"
+                      src="/logo-governo-sc.png"
+                      alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
+                      className="mx-auto max-h-24 max-w-full object-contain"
                     />
                   )}
                 </td>
@@ -282,7 +358,7 @@ export default async function VisualizarPlanoAnualPage({
                   <p>{escola?.nome ? MAIUSCULO(escola.nome) : "_______________"}</p>
                   <p>{escola?.municipio ? `${MAIUSCULO(escola.municipio)} – SC` : "_______________ – SC"}</p>
                 </td>
-                <td className="w-24 border border-black p-1 text-center align-middle">
+                <td className="w-40 border border-black p-1 text-center align-middle">
                   {mostrarLogoEscola && escola?.logo_url && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={escola.logo_url} alt={`Logo de ${escola.nome}`} className="mx-auto max-h-20 max-w-full object-contain" />
@@ -292,7 +368,7 @@ export default async function VisualizarPlanoAnualPage({
             </tbody>
           </table>
 
-          <h1 className="my-5 text-center text-sm font-bold underline">PLANO DE ENSINO {plano.ano_letivo}</h1>
+          <h1 className="my-5 text-center text-sm font-bold underline">PLANO DE ENSINO ANUAL {plano.ano_letivo}</h1>
 
           {/* 1. Identificação */}
           <table className="w-full border-collapse">
@@ -357,83 +433,64 @@ export default async function VisualizarPlanoAnualPage({
             </tbody>
           </table>
 
-          {/* 2. Ementa */}
-          <Secao numero={2} titulo="Ementa:">
-            {multi ? (
-              componentes.map((c) => (
-                <div key={c.disciplina_id} className="mb-2">
-                  <p className="mb-1 font-bold">{MAIUSCULO(c.nome)}:</p>
-                  {c.ementa.length > 0 ? (
-                    <p style={{ ...JUSTIFICADO, textIndent: "1.25cm" }}>{ementaEmTexto(c.ementa)}</p>
-                  ) : (
-                    <p>&nbsp;</p>
-                  )}
-                </div>
-              ))
-            ) : dados.ementa.length > 0 ? (
-              <p style={{ ...JUSTIFICADO, textIndent: "1.25cm" }}>{ementaEmTexto(dados.ementa)}</p>
-            ) : (
-              <p>&nbsp;</p>
-            )}
-          </Secao>
-
-          {/* 3. Competências gerais */}
-          <Secao numero={3} titulo="Competências gerais da BNCC:">
-            {gerais.length + geraisManuais.length > 0 ? (
-              <>
-                {gerais.map((c) => (
-                  <p key={c.numero} style={JUSTIFICADO} className="mb-1">
-                    {c.numero}. {c.texto}
-                  </p>
-                ))}
-                {geraisManuais.map((t, i) => (
-                  <p key={`m-${i}`} style={JUSTIFICADO} className="mb-1">
-                    {t}
-                  </p>
-                ))}
-              </>
-            ) : (
-              <p>&nbsp;</p>
-            )}
-          </Secao>
-
-          {/* 4. Competências específicas */}
-          <Secao numero={4} titulo={tituloEspecificas}>
-            {multi ? (
-              componentes.map((c) => (
-                <div key={c.disciplina_id} className="mb-2">
-                  <p className="mb-1 font-bold">{MAIUSCULO(c.nome)}:</p>
-                  <CompetenciasEspecificas competencias={c.competenciasEspecificas} />
-                </div>
-              ))
-            ) : temEspecificas ? (
-              <CompetenciasEspecificas competencias={dados.competenciasEspecificas} />
-            ) : (
-              <p>&nbsp;</p>
-            )}
-          </Secao>
-
-          {/* 5. Componente curricular */}
-          <table className="w-full border-collapse">
-            <tbody>
-              <tr data-reservar={320} className="break-inside-avoid">
-                <td className="p-0">
-                  <Titulo numero={5}>Componente Curricular:</Titulo>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
           {multi ? (
-            componentes.map((c) => (
-              // Sem <div> em volta: a divisão em páginas só quebra tabelas que estão soltas no plano.
-              <Fragment key={c.disciplina_id}>
-                <NomeComponente nome={c.nome} />
-                <TabelasTrimestres trimestres={c.trimestres} />
-              </Fragment>
-            ))
+            // Uma disciplina de cada vez: ementa → competências gerais → competências específicas → os 3 trimestres.
+            componentes.map((c, idx) => {
+              const n = idx + 2;
+              return (
+                <Fragment key={c.disciplina_id}>
+                  <FaixaDisciplina numero={n} nome={c.nome} />
+                  <Secao numero={`${n}.1`} titulo="Ementa:">
+                    {c.ementa.length > 0 ? <p style={{ ...JUSTIFICADO, textIndent: "1.25cm" }}>{ementaEmTexto(c.ementa)}</p> : <p>&nbsp;</p>}
+                  </Secao>
+                  <Secao numero={`${n}.2`} titulo="Competências gerais da BNCC:">
+                    <CompetenciasGerais competencias={c.competenciasGerais} />
+                  </Secao>
+                  <Secao numero={`${n}.3`} titulo={tituloEspecificas}>
+                    <CompetenciasEspecificas competencias={c.competenciasEspecificas} />
+                  </Secao>
+                  <table className="w-full border-collapse">
+                    <tbody>
+                      <tr data-reservar={320} className="break-inside-avoid">
+                        <td className="p-0">
+                          <Titulo numero={`${n}.4`}>Planejamento trimestral:</Titulo>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <TabelasTrimestres trimestres={c.trimestres} />
+                </Fragment>
+              );
+            })
           ) : (
-            <TabelasTrimestres trimestres={dados.trimestres} />
+            <>
+              {/* 2. Ementa */}
+              <Secao numero={2} titulo="Ementa:">
+                {dados.ementa.length > 0 ? <p style={{ ...JUSTIFICADO, textIndent: "1.25cm" }}>{ementaEmTexto(dados.ementa)}</p> : <p>&nbsp;</p>}
+              </Secao>
+
+              {/* 3. Competências gerais */}
+              <Secao numero={3} titulo="Competências gerais da BNCC:">
+                <CompetenciasGerais competencias={dados.competenciasGerais} />
+              </Secao>
+
+              {/* 4. Competências específicas */}
+              <Secao numero={4} titulo={tituloEspecificas}>
+                {temEspecificas ? <CompetenciasEspecificas competencias={dados.competenciasEspecificas} /> : <p>&nbsp;</p>}
+              </Secao>
+
+              {/* 5. Componente curricular */}
+              <table className="w-full border-collapse">
+                <tbody>
+                  <tr data-reservar={320} className="break-inside-avoid">
+                    <td className="p-0">
+                      <Titulo numero={5}>Componente Curricular:</Titulo>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <TabelasTrimestres trimestres={dados.trimestres} />
+            </>
           )}
 
           {/* Do item 6 em diante: texto livre do professor (sem títulos prontos) */}

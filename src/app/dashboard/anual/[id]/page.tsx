@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
+import { Icone } from "@/components/icones";
 import VoltarLink from "../../planos/voltar-link";
 import ExcluirButton from "../../planos/[id]/excluir-button";
 import PlanoAnualComRascunho from "../form-com-rascunho";
@@ -31,42 +33,51 @@ export default async function EditarPlanoAnualPage({
   const atualizarComId = atualizarPlanoAnual.bind(null, id);
   const excluirComId = excluirPlanoAnual.bind(null, id);
   const base = `/dashboard/anual/${id}/visualizar`;
-  const botao = "btn-azul !from-primary-500 !via-primary-500 !to-sky-400 !ring-white/40";
 
   return (
     <div>
       <VoltarLink href="/dashboard/meus-planos" rotulo="Voltar aos meus planos" />
-      <div className="mt-2 overflow-hidden rounded-2xl border border-primary-200/70 bg-gradient-to-r from-primary-800 via-primary-700 to-sky-600 p-5 text-white shadow-glow">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Editar plano anual</h1>
-            <p className="text-sm text-primary-100">{plano.titulo}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href={base} className="btn-azul-suave !border-white/40 !bg-white !text-primary-700">
-              Visualizar plano
-            </Link>
-            <Link href={`${base}?auto=salvar`} className={botao}>
-              Baixar PDF
-            </Link>
-            <Link href={`${base}?auto=word`} className={botao}>
-              Baixar Word
-            </Link>
-            <Link href={`${base}?auto=imprimir`} className={botao}>
-              Imprimir
-            </Link>
-            <ExcluirButton excluirAction={excluirComId} />
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/20 pt-4">
-          <EstrelaFavorito tipo="anuais" planoId={id} favorito={!!plano.favorito} rotulo />
-          <Link href={`/dashboard/anual/${id}/duplicar`} className="btn-azul-suave !border-white/40 !bg-white !text-primary-700">
-            Duplicar para outra turma
-          </Link>
-          <Link href={`/dashboard/anual/${id}/mensal`} className="btn-azul-suave !border-white/40 !bg-white !text-primary-700">
-            Gerar planos mensais deste plano
-          </Link>
-        </div>
+      <div className="mt-2">
+        <CabecalhoPagina
+          tom="azul"
+          icone="calendario"
+          titulo="Editar plano anual"
+          subtitulo={plano.titulo}
+          acoes={
+            <>
+              <Link href={base} className="btn-azul-suave">
+                <Icone nome="olho" className="h-4 w-4" />
+                Visualizar plano
+              </Link>
+              <Link href={`${base}?auto=salvar`} className="btn-azul">
+                <Icone nome="baixar" className="h-4 w-4" />
+                Baixar PDF
+              </Link>
+              <Link href={`${base}?auto=word`} className="btn-azul-suave">
+                <Icone nome="documento" className="h-4 w-4" />
+                Baixar Word
+              </Link>
+              <Link href={`${base}?auto=imprimir`} className="btn-azul-suave">
+                <Icone nome="imprimir" className="h-4 w-4" />
+                Imprimir
+              </Link>
+              <ExcluirButton excluirAction={excluirComId} />
+            </>
+          }
+          rodape={
+            <>
+              <EstrelaFavorito tipo="anuais" planoId={id} favorito={!!plano.favorito} rotulo />
+              <Link href={`/dashboard/anual/${id}/duplicar`} className="btn-secondary !py-2">
+                <Icone nome="copiar" className="h-4 w-4" />
+                Duplicar para outra turma
+              </Link>
+              <Link href={`/dashboard/anual/${id}/mensal`} className="btn-secondary !py-2">
+                <Icone nome="calendario" className="h-4 w-4" />
+                Gerar planos mensais deste plano
+              </Link>
+            </>
+          }
+        />
       </div>
 
       {salvo && (

@@ -8,6 +8,7 @@ import {
   dividirConteudos,
   dividirObjetos,
   eixoDoObjeto,
+  expandirAnos,
   type ItemLista,
 } from "./plano-anual";
 
@@ -69,6 +70,15 @@ interface LinhaHabilidade {
 const COLUNAS_HAB = "id, codigo, descricao, fonte, ano_serie, unidade_tematica, objeto_conhecimento, conteudos";
 
 const ehMedio = (etapa: string | null | undefined) => (etapa ?? "").toLowerCase().includes("médio");
+
+/** Anos que existem em cada etapa (para abrir "1º ao 5º ano" só dentro da etapa certa). */
+function limitesDaEtapa(etapa: string | null | undefined): [number, number] | undefined {
+  const e = (etapa ?? "").toLowerCase();
+  if (e.includes("iniciais")) return [1, 5];
+  if (e.includes("finais")) return [6, 9];
+  if (e.includes("médio")) return [1, 3];
+  return undefined;
+}
 
 function ordemAno(a: string): number {
   const m = /\d+/.exec(a);
@@ -174,15 +184,21 @@ export async function carregarDadosComponente(
   }
 
   const anosSet = new Set<string>();
+  const limites = limitesDaEtapa(disciplina.etapa);
+  /** Cada item vale para vários anos? Repete em todos eles (nada de "1º ao 5º ano" como botão). */
+  const anosDe = (anoSerie: string | null | undefined): string[] => {
+    const lista = expandirAnos(anoSerie, limites, medio);
+    for (const a of lista) anosSet.add(a);
+    return lista;
+  };
 
   const habilidades: OpcaoLista[] = habilidadesBrutas.map((h) => {
-    if (h.ano_serie) anosSet.add(h.ano_serie.trim());
     return {
       id: h.id,
       texto: h.descricao.trim(),
       codigo: h.codigo,
       fonte: h.fonte,
-      anos: h.ano_serie ? [h.ano_serie.trim()] : [],
+      anos: anosDe(h.ano_serie),
       relacionados:
         h.fonte === "curriculo_educacao_digital"
           ? []
@@ -199,7 +215,7 @@ export async function carregarDadosComponente(
 
   for (const h of habilidadesBrutas) {
     if (h.fonte === "curriculo_educacao_digital") continue;
-    const anos = h.ano_serie ? [h.ano_serie.trim()] : [];
+    const anos = anosDe(h.ano_serie);
     for (const t of dividirObjetos(h.objeto_conhecimento)) {
       objetosBrutos.push({ id: `obj:${chaveTexto(t)}`, texto: t, grupo: "Objeto de conhecimento", anos });
     }

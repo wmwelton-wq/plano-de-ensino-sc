@@ -6,31 +6,57 @@ import { Suspense } from "react";
 import { CartaoPlano, type PlanoLista } from "./meus-planos/dados";
 import { normalizarDados } from "@/lib/plano-anual";
 import { TRIMESTRES_ROTULOS } from "@/lib/plano-anual";
+import { Icone, type NomeIcone } from "@/components/icones";
+
+type Tom = "azul" | "verde" | "violeta" | "ambar" | "ciano" | "ardosia" | "rosa";
 
 interface Atalho {
   href: string;
-  icone: string;
+  icone: NomeIcone;
+  tom: Tom;
   titulo: string;
   texto: string;
-  destaque?: boolean;
 }
 
-function Cartao({ href, icone, titulo, texto, destaque }: Atalho) {
+/** Atalho com a cor do assunto: anual = azul, mensal = verde, escolas = âmbar, ajuda = ciano, opinião = rosa. */
+function Cartao({ href, icone, tom, titulo, texto }: Atalho) {
   return (
     <Link
       href={href}
-      className={`card card-interactive flex items-start gap-4 p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
-        destaque ? "border-2 border-primary-400 bg-primary-50/50" : ""
-      }`}
+      data-tom={tom}
+      className="card card-interactive group flex items-start gap-4 border-l-4 p-5 [border-left-color:var(--tom)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
     >
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-2xl" aria-hidden="true">
-        {icone}
+      <span
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]"
+        aria-hidden="true"
+      >
+        <Icone nome={icone} className="h-6 w-6" />
       </span>
       <span>
-        <span className="block text-lg font-bold text-slate-900">{titulo}</span>
-        <span className="mt-0.5 block text-sm text-slate-500">{texto}</span>
+        <span className="block text-base font-bold text-slate-900">{titulo}</span>
+        <span className="mt-0.5 block text-sm text-slate-600">{texto}</span>
       </span>
     </Link>
+  );
+}
+
+function Indicador({ rotulo, valor, tom }: { rotulo: string; valor: number; tom: Tom }) {
+  return (
+    <div data-tom={tom} className="card border-t-4 p-5 [border-top-color:var(--tom)]">
+      <p className="text-sm text-slate-600">{rotulo}</p>
+      <p className="mt-1 text-2xl font-bold [color:var(--tom)]">{valor}</p>
+    </div>
+  );
+}
+
+function Titulo2({ id, icone, tom, children }: { id?: string; icone: NomeIcone; tom: Tom; children: React.ReactNode }) {
+  return (
+    <h2 id={id} data-tom={tom} className="flex items-center gap-2 text-lg font-bold text-slate-900">
+      <span className="flex h-7 w-7 items-center justify-center rounded-md [background:var(--tom-claro)] [color:var(--tom)]" aria-hidden="true">
+        <Icone nome={icone} className="h-4 w-4" />
+      </span>
+      {children}
+    </h2>
   );
 }
 
@@ -102,8 +128,8 @@ export default async function InicioPage() {
       <Suspense fallback={null}>
         <TutorialInicial />
       </Suspense>
-      <h1 className="text-2xl font-semibold text-slate-900">Início</h1>
-      <p className="mt-1 text-sm text-slate-500">
+      <h1 className="text-2xl font-bold text-slate-900">Início</h1>
+      <p className="mt-1 text-sm text-slate-600">
         Tudo o que você precisa está aqui. Você também pode usar o menu no topo da página.
       </p>
 
@@ -115,39 +141,27 @@ export default async function InicioPage() {
 
       {total > 0 && (
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="card p-5">
-            <p className="text-sm text-slate-500">Total de planos</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">{total}</p>
-          </div>
-          <div className="card p-5">
-            <p className="text-sm text-slate-500">Finalizados</p>
-            <p className="mt-1 text-2xl font-semibold text-green-700">{finalizados}</p>
-          </div>
-          <div className="card p-5">
-            <p className="text-sm text-slate-500">Em rascunho</p>
-            <p className="mt-1 text-2xl font-semibold text-amber-700">{total - finalizados}</p>
-          </div>
-          <div className="card p-5">
-            <p className="text-sm text-slate-500">Escolas cadastradas</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">{escolas?.length ?? 0}</p>
-          </div>
+          <Indicador rotulo="Total de planos" valor={total} tom="azul" />
+          <Indicador rotulo="Finalizados" valor={finalizados} tom="verde" />
+          <Indicador rotulo="Em rascunho" valor={total - finalizados} tom="ambar" />
+          <Indicador rotulo="Escolas cadastradas" valor={escolas?.length ?? 0} tom="ardosia" />
         </div>
       )}
 
       <section className="mt-8" aria-labelledby="pendencias">
-        <h2 id="pendencias" className="text-lg font-bold text-slate-900">
+        <Titulo2 id="pendencias" icone="alerta" tom="ambar">
           Pendências
-        </h2>
+        </Titulo2>
         {total === 0 ? (
           <p className="mt-2 text-sm text-slate-500">Quando você criar planos, as pendências aparecem aqui.</p>
         ) : rascunhos + semEscola + turmasSemAnual.size + trimestresVazios.length === 0 ? (
-          <p className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <p className="mt-2 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
             Tudo em dia. Nenhuma pendência no momento.
           </p>
         ) : (
           <ul className="mt-2 space-y-2">
             {rascunhos > 0 && (
-              <li className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <li className="rounded-lg border border-amber-300 border-l-4 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 <strong>{rascunhos}</strong> {rascunhos === 1 ? "plano está" : "planos estão"} em rascunho.{" "}
                 <Link href="/dashboard/meus-planos" className="font-semibold underline">
                   Ver meus planos
@@ -155,7 +169,7 @@ export default async function InicioPage() {
               </li>
             )}
             {semEscola > 0 && (
-              <li className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <li className="rounded-lg border border-amber-300 border-l-4 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 <strong>{semEscola}</strong> {semEscola === 1 ? "plano está" : "planos estão"} sem escola definida (ficam na pasta &quot;Sem escola
                 definida&quot;).
               </li>
@@ -163,7 +177,7 @@ export default async function InicioPage() {
             {Array.from(turmasSemAnual.values())
               .slice(0, 5)
               .map((nome) => (
-                <li key={nome} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <li key={nome} className="rounded-lg border border-amber-300 border-l-4 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   A turma <strong>{nome}</strong> tem plano mensal, mas ainda não tem plano anual.{" "}
                   <Link href="/dashboard/anual/novo" className="font-semibold underline">
                     Criar plano anual
@@ -171,7 +185,7 @@ export default async function InicioPage() {
                 </li>
               ))}
             {trimestresVazios.slice(0, 5).map((t, i) => (
-              <li key={`${t.id}-${i}`} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <li key={`${t.id}-${i}`} className="rounded-lg border border-amber-300 border-l-4 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 No plano anual <strong>{t.titulo}</strong>, o <strong>{t.rotulo.toLowerCase()}</strong> está vazio.{" "}
                 <Link href={`/dashboard/anual/${t.id}`} className="font-semibold underline">
                   Abrir plano
@@ -184,9 +198,9 @@ export default async function InicioPage() {
 
       {favoritos.length > 0 && (
         <section className="mt-8" aria-labelledby="favoritos">
-          <h2 id="favoritos" className="text-lg font-bold text-slate-900">
-            ★ Favoritos (em uso)
-          </h2>
+          <Titulo2 id="favoritos" icone="estrela" tom="ambar">
+            Favoritos (em uso)
+          </Titulo2>
           <ul className="mt-2 space-y-3">
             {favoritos.slice(0, 6).map((p) => {
               const anual = anuais.some((a) => a.id === p.id);
@@ -203,25 +217,37 @@ export default async function InicioPage() {
         </section>
       )}
 
-      <h2 className="mt-8 text-lg font-bold text-slate-900">Planos</h2>
+      <div className="mt-8">
+        <Titulo2 icone="pasta" tom="azul">
+          Planos
+        </Titulo2>
+      </div>
       <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Cartao href="/dashboard/meus-planos" icone="📚" titulo="Meus planos" texto="Veja todos os planos, organizados por escola e turma." destaque />
-        <Cartao href="/dashboard/meus-planos/anuais" icone="📅" titulo="Planos anuais" texto={`${anuais.length} plano(s) — por escola e turma.`} />
-        <Cartao href="/dashboard/meus-planos/mensais" icone="🗓️" titulo="Planos mensais" texto={`${mensais.length} plano(s) — por escola e turma.`} />
-        <Cartao href="/dashboard/anual/novo" icone="➕" titulo="Cadastrar plano anual" texto="Comece um plano anual novo." />
-        <Cartao href="/dashboard/planos/novo" icone="➕" titulo="Cadastrar plano mensal" texto="Comece um plano mensal novo." />
+        <Cartao href="/dashboard/meus-planos" icone="pasta" tom="ardosia" titulo="Meus planos" texto="Veja todos os planos, organizados por escola e turma." />
+        <Cartao href="/dashboard/meus-planos/anuais" icone="calendario" tom="azul" titulo="Planos anuais" texto={`${anuais.length} plano(s) — por escola e turma.`} />
+        <Cartao href="/dashboard/meus-planos/mensais" icone="livro" tom="verde" titulo="Planos mensais" texto={`${mensais.length} plano(s) — por escola e turma.`} />
+        <Cartao href="/dashboard/anual/novo" icone="mais" tom="azul" titulo="Cadastrar plano anual" texto="Comece um plano anual novo." />
+        <Cartao href="/dashboard/planos/novo" icone="mais" tom="verde" titulo="Cadastrar plano mensal" texto="Comece um plano mensal novo." />
       </div>
 
-      <h2 className="mt-8 text-lg font-bold text-slate-900">Ajuda e opinião</h2>
+      <div className="mt-8">
+        <Titulo2 icone="ajuda" tom="ciano">
+          Ajuda e opinião
+        </Titulo2>
+      </div>
       <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Cartao href="/dashboard/ajuda" icone="💡" titulo="Ajuda" texto="Passo a passo, dicas e vídeos curtos." />
-        <Cartao href="/dashboard/opiniao" icone="💬" titulo="Dar minha opinião" texto="3 perguntas rápidas para melhorarmos o app." />
+        <Cartao href="/dashboard/ajuda" icone="lampada" tom="ciano" titulo="Ajuda" texto="Passo a passo, dicas e vídeos curtos." />
+        <Cartao href="/dashboard/opiniao" icone="balao" tom="rosa" titulo="Dar minha opinião" texto="3 perguntas rápidas para melhorarmos o app." />
       </div>
 
-      <h2 className="mt-8 text-lg font-bold text-slate-900">Escolas</h2>
+      <div className="mt-8">
+        <Titulo2 icone="escola" tom="ambar">
+          Escolas
+        </Titulo2>
+      </div>
       <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Cartao href="/dashboard/escolas" icone="🏫" titulo="Minhas escolas" texto="Veja e edite as escolas cadastradas." />
-        <Cartao href="/dashboard/escolas/nova" icone="➕" titulo="Cadastrar escola" texto="Cadastre o nome, o município e a logo." />
+        <Cartao href="/dashboard/escolas" icone="escola" tom="ambar" titulo="Minhas escolas" texto="Veja e edite as escolas cadastradas." />
+        <Cartao href="/dashboard/escolas/nova" icone="mais" tom="ambar" titulo="Cadastrar escola" texto="Cadastre o nome, o município e a logo." />
       </div>
     </div>
   );

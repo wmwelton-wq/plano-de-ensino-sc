@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Public_Sans } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const fonteCorpo = Public_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-corpo",
   display: "swap",
 });
 
@@ -24,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    <html lang="pt-BR" className={fonteCorpo.variable}>
       <body className="min-h-screen bg-[var(--background)] font-sans antialiased">{children}</body>
     </html>
   );

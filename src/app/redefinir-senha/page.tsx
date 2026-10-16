@@ -1,5 +1,6 @@
 "use client";
 
+import { Icone } from "@/components/icones";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -69,8 +70,7 @@ export default function RedefinirSenhaPage() {
 
   if (!sessaoValida) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-6 py-12">
-        <div className="absolute inset-0 bg-grid-slate opacity-60 [mask-image:radial-gradient(ellipse_55%_45%_at_50%_0%,#000_60%,transparent_100%)]" />
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
         <div className="card relative w-full max-w-sm p-8 text-center">
           <h1 className="text-xl font-semibold text-slate-900">Link inválido ou expirado</h1>
           <p className="mt-2 text-sm text-slate-600">
@@ -87,11 +87,10 @@ export default function RedefinirSenhaPage() {
 
   if (sucesso) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-6 py-12">
-        <div className="absolute inset-0 bg-grid-slate opacity-60 [mask-image:radial-gradient(ellipse_55%_45%_at_50%_0%,#000_60%,transparent_100%)]" />
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
         <div className="card relative w-full max-w-sm p-8 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-xl">
-            ✅
+          <div data-tom="verde" className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
+            <Icone nome="check" className="h-6 w-6" />
           </div>
           <h1 className="mt-4 text-xl font-semibold text-slate-900">Senha redefinida!</h1>
           <p className="mt-2 text-sm text-slate-600">Encaminhando você para seus planos...</p>
@@ -101,9 +100,7 @@ export default function RedefinirSenhaPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-6 py-12">
-      <div className="absolute inset-0 bg-grid-slate opacity-60 [mask-image:radial-gradient(ellipse_55%_45%_at_50%_0%,#000_60%,transparent_100%)]" />
-      <div className="absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary-200/50 blur-3xl" />
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
 
       <div className="card relative w-full max-w-sm p-8">
         <h1 className="text-xl font-semibold text-slate-900">Nova senha</h1>

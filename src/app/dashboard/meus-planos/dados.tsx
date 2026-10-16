@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EtapaPlano, PlanoDeEnsino } from "@/lib/database.types";
 import EstrelaFavorito from "./estrela-favorito";
+import { Icone, type NomeIcone } from "@/components/icones";
 
 export type TipoPlano = "mensais" | "anuais";
 
@@ -146,12 +147,14 @@ export function Migalhas({ itens }: { itens: { rotulo: string; href?: string }[]
 export function CartaoPasta({
   href,
   icone,
+  tom = "ardosia",
   titulo,
   detalhe,
   contagem,
 }: {
   href: string;
-  icone: string;
+  icone: NomeIcone;
+  tom?: "azul" | "verde" | "violeta" | "ambar" | "ciano" | "ardosia" | "rosa";
   titulo: string;
   detalhe?: string;
   contagem: number;
@@ -159,16 +162,17 @@ export function CartaoPasta({
   return (
     <Link
       href={href}
-      className="card card-interactive flex items-center gap-4 px-5 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+      data-tom={tom}
+      className="card card-interactive flex items-center gap-4 border-l-4 px-5 py-5 [border-left-color:var(--tom)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
     >
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-2xl" aria-hidden="true">
-        {icone}
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]" aria-hidden="true">
+        <Icone nome={icone} className="h-6 w-6" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-lg font-bold text-slate-900">{titulo}</span>
         {detalhe && <span className="block truncate text-sm text-slate-500">{detalhe}</span>}
       </span>
-      <span className="shrink-0 rounded-full bg-primary-600 px-3 py-1 text-sm font-bold text-white">
+      <span className="shrink-0 rounded-md px-2.5 py-1 text-sm font-bold [background:var(--tom-claro)] [color:var(--tom)]">
         {contagem} {contagem === 1 ? "plano" : "planos"}
       </span>
     </Link>

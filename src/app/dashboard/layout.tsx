@@ -1,3 +1,4 @@
+import { Icone } from "@/components/icones";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -52,16 +53,16 @@ export default async function DashboardLayout({
   const inicial = nomeExibido.trim().charAt(0).toUpperCase() || "P";
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/80 backdrop-blur print:hidden">
+    <div className="min-h-screen bg-[var(--background)]">
+      <header className="sticky top-0 z-10 border-b border-slate-300 bg-white print:hidden">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-y-2 px-4 py-2.5 sm:px-6 sm:py-3.5">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
             <Link
               href="/dashboard"
               className="flex items-center gap-2 rounded font-semibold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary-600 to-primary-800 text-sm font-bold text-white shadow-sm">
-                SC
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-800 text-white">
+                <Icone nome="livro" className="h-5 w-5" />
               </span>
               <span className="hidden sm:inline">Planos de Ensino</span>
             </Link>

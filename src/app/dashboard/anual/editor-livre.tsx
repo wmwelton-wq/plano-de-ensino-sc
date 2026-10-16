@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { MouseEvent as MouseEventReact, PointerEvent as PointerEventReact, ReactNode } from "react";
 import { MARCADOR_HTML, sanitizarHtml, valorGravadoParaHtml } from "@/lib/texto-rico";
 import { FAMILIA_FONTE } from "@/lib/estilo-plano";
+import { Icone } from "@/components/icones";
 
 /**
  * Editor de texto "estilo Word" para o restante do plano anual (a partir do item 6).
@@ -24,6 +25,10 @@ interface EditorLivreProps {
   referencias?: string[];
   /** Grupos de frases prontas (avaliação, metodologia...) que o botão "Sugestões" insere no texto. */
   sugestoes?: { titulo: string; itens: string[] }[];
+  /** Chamado com o HTML gravado sempre que o conteúdo é sincronizado (digitação, troca de passo, envio). */
+  onSincronizar?: (valor: string) => void;
+  /** Altura mínima da área de escrita (px). */
+  alturaMinima?: number;
 }
 
 const FONTES = [
@@ -171,7 +176,7 @@ function Sep() {
   return <span className="mx-1 h-6 w-px bg-primary-200" aria-hidden="true" />;
 }
 
-export default function EditorLivre({ id, name, valorInicial, referencias = [], sugestoes = [] }: EditorLivreProps) {
+export default function EditorLivre({ id, name, valorInicial, referencias = [], sugestoes = [], onSincronizar, alturaMinima }: EditorLivreProps) {
   const areaRef = useRef<HTMLDivElement>(null);
   const campoRef = useRef<HTMLInputElement>(null);
   const arquivoRef = useRef<HTMLInputElement>(null);
@@ -184,6 +189,8 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [], 
   const idEstilo = useId();
 
   const [htmlInicial] = useState(() => valorGravadoParaHtml(valorInicial, false));
+  // O mesmo objeto em toda renderização: se for um objeto novo, o React reescreve o conteúdo da área e apaga o que foi digitado.
+  const htmlProp = useMemo(() => ({ __html: htmlInicial }), [htmlInicial]);
   const [painel, setPainel] = useState<null | "cor" | "destaque" | "sombra" | "simbolos" | "formas" | "figuras" | "tabela" | "sugestoes">(null);
   const [aba, setAba] = useState(0);
   const [naTabela, setNaTabela] = useState(false);
@@ -219,6 +226,9 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [], 
   }, [medirImagem, tamanhoAtual]);
 
   /** Grava no campo escondido o HTML higienizado do que está na área. */
+  const aoSincronizar = useRef(onSincronizar);
+  aoSincronizar.current = onSincronizar;
+
   const sincronizar = useCallback(() => {
     const area = areaRef.current;
     const campo = campoRef.current;
@@ -233,11 +243,13 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [], 
       campo.value = "";
       setTamanhoAtual(0);
       if (area.innerHTML !== "") area.innerHTML = "";
+      aoSincronizar.current?.("");
       return;
     }
     const valor = MARCADOR_HTML + sanitizarHtml(area.innerHTML);
     campo.value = valor;
     setTamanhoAtual(valor.length);
+    aoSincronizar.current?.(valor);
   }, []);
 
   const agendarSincronizacao = useCallback(() => {
@@ -263,7 +275,12 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [], 
       sincronizar();
     };
     form?.addEventListener("submit", aoEnviar, true);
-    return () => form?.removeEventListener("submit", aoEnviar, true);
+    // O formulário avisa antes de trocar de passo, para nada do que foi digitado ficar para trás.
+    form?.addEventListener("plano:sincronizar", aoEnviar);
+    return () => {
+      form?.removeEventListener("submit", aoEnviar, true);
+      form?.removeEventListener("plano:sincronizar", aoEnviar);
+    };
   }, [htmlInicial, sincronizar]);
 
   // Guarda a seleção para os botões/menus funcionarem mesmo depois de o foco sair da área.
@@ -765,7 +782,8 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [], 
 
   function inserirReferencias() {
     if (referencias.length === 0) return;
-    const html = referencias.map((r) => `<p style="text-align: justify">${escaparHtml(r)}</p>`).join("");
+    const titulo = `<p style="text-align: left"><b><u>Referências bibliográficas</u></b></p>`;
+    const html = titulo + referencias.map((r) => `<p style="text-align: justify">${escaparHtml(r)}</p>`).join("");
     inserirHtml(html);
   }
 
@@ -825,7 +843,7 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [], 
 
   return (
     <div ref={caixaRef} className="relative rounded-xl border border-primary-300 bg-white shadow-sm focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/25">
-      <div role="toolbar" aria-label="Formatação do texto" className="space-y-1 rounded-t-xl border-b border-primary-200 bg-gradient-to-b from-primary-50 to-white px-2 py-2">
+      <div role="toolbar" aria-label="Formatação do texto" className="space-y-1 rounded-t-xl border-b border-primary-200 bg-slate-50 px-2 py-2">
         {/* ── Fonte ── */}
         <div className="flex flex-wrap items-center gap-1">
           <B titulo="Desfazer (Ctrl+Z)" onClick={() => comando("undo")}>↶</B>
@@ -963,12 +981,12 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [], 
           <B titulo="Figuras (ícones e emojis)" onClick={() => abrir("figuras")} ativo={painel === "figuras"}>☺ Figuras</B>
           {sugestoes.length > 0 && (
             <B titulo="Frases prontas de avaliação e metodologia, montadas com o que você marcou" onClick={() => abrir("sugestoes")} ativo={painel === "sugestoes"}>
-              💡 Sugestões
+              <span className="inline-flex items-center gap-1"><Icone nome="lampada" className="h-4 w-4" /> Sugestões</span>
             </B>
           )}
           {referencias.length > 0 && (
-            <B titulo="Inserir as referências oficiais (BNCC, Currículo Base, portarias...) no ponto do cursor" onClick={inserirReferencias}>
-              📚 Referências
+            <B titulo="Inserir o título “Referências bibliográficas” e as referências oficiais (BNCC, Currículo Base, portarias...) no ponto do cursor" onClick={inserirReferencias}>
+              <span className="inline-flex items-center gap-1"><Icone nome="livro" className="h-4 w-4" /> Referências bibliográficas</span>
             </B>
           )}
           <input
@@ -1228,9 +1246,9 @@ export default function EditorLivre({ id, name, valorInicial, referencias = [], 
             void inserirImagem(arquivo);
           }
         }}
-        className="texto-rico editor-rico editor-livre max-h-[70vh] min-h-[26rem] max-w-none overflow-y-auto rounded-b-xl px-5 py-4 text-slate-900 focus:outline-none"
-        style={{ fontFamily: FAMILIA_FONTE, fontSize: "14px", lineHeight: "20px", textAlign: "justify", resize: "vertical" }}
-        dangerouslySetInnerHTML={{ __html: htmlInicial }}
+        className="texto-rico editor-rico editor-livre max-h-[70vh] max-w-none overflow-y-auto rounded-b-xl px-5 py-4 text-slate-900 focus:outline-none"
+        style={{ fontFamily: FAMILIA_FONTE, fontSize: "14px", lineHeight: "20px", textAlign: "justify", resize: "vertical", minHeight: alturaMinima ?? 416 }}
+        dangerouslySetInnerHTML={htmlProp}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-primary-100 px-3 py-1.5 text-xs text-slate-500">

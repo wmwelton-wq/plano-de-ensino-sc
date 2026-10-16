@@ -3,18 +3,39 @@
 @tailwind utilities;
 
 :root {
-  --background: #f6f8fc;
-  --foreground: #0f172a;
+  --background: #f3f5f8;
+  --foreground: #0f1b2d;
+
+  /* Cores por função: cada tipo de passo/bloco tem o seu tom, sempre o mesmo em todo o sistema. */
+  --tom-azul: #204a7c;
+  --tom-azul-claro: #e9f0f8;
+  --tom-verde: #1d6b4f;
+  --tom-verde-claro: #e7f4ed;
+  --tom-violeta: #5a3e8a;
+  --tom-violeta-claro: #f1ecf8;
+  --tom-ambar: #9a5906;
+  --tom-ambar-claro: #fcf2de;
+  --tom-ciano: #0e6a85;
+  --tom-ciano-claro: #e4f2f7;
+  --tom-ardosia: #3b4658;
+  --tom-ardosia-claro: #eef0f4;
+  --tom-rosa: #9d2f4f;
+  --tom-rosa-claro: #fbebf0;
 }
 
 body {
   color: var(--foreground);
-  background:
-    radial-gradient(60rem 28rem at 85% -10%, rgba(56, 189, 248, 0.10), transparent 60%),
-    radial-gradient(48rem 24rem at -10% 0%, rgba(37, 99, 235, 0.08), transparent 60%),
-    var(--background);
-  background-attachment: fixed;
+  background: var(--background);
 }
+
+/* Tons: [data-tom="verde"] etc. definem --tom e --tom-claro para tudo que está dentro. */
+[data-tom="azul"] { --tom: var(--tom-azul); --tom-claro: var(--tom-azul-claro); }
+[data-tom="verde"] { --tom: var(--tom-verde); --tom-claro: var(--tom-verde-claro); }
+[data-tom="violeta"] { --tom: var(--tom-violeta); --tom-claro: var(--tom-violeta-claro); }
+[data-tom="ambar"] { --tom: var(--tom-ambar); --tom-claro: var(--tom-ambar-claro); }
+[data-tom="ciano"] { --tom: var(--tom-ciano); --tom-claro: var(--tom-ciano-claro); }
+[data-tom="ardosia"] { --tom: var(--tom-ardosia); --tom-claro: var(--tom-ardosia-claro); }
+[data-tom="rosa"] { --tom: var(--tom-rosa); --tom-claro: var(--tom-rosa-claro); }
 
 @layer base {
   h1,
@@ -29,20 +50,20 @@ body {
      app: borda suave, sombra leve e anel de foco mais generoso que o padrão
      do navegador. */
   .input-field {
-    @apply mt-1 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm shadow-slate-900/[0.02] transition placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/25;
+    @apply mt-1 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600/25;
   }
 
   .field-label {
-    @apply block text-sm font-bold text-slate-800;
+    @apply block text-sm font-semibold text-slate-800;
   }
 
   .field-hint {
-    @apply mt-1 text-xs text-slate-400;
+    @apply mt-1 text-xs text-slate-500;
   }
 
   /* Botões */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-b from-primary-600 to-primary-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-primary-900/20 transition hover:from-primary-500 hover:to-primary-600 hover:shadow-md active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
   }
 
   .btn-secondary {
@@ -112,63 +133,77 @@ body {
 
   /* Botões azuis de destaque (ações principais do formulário e do plano) */
   .btn-azul {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-700 via-primary-600 to-sky-500 px-5 py-3 text-sm font-semibold text-white shadow-glow ring-1 ring-inset ring-white/15 transition hover:brightness-110 hover:shadow-lg active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
   }
 
   .btn-azul-suave {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-primary-300 bg-primary-50 px-4 py-2.5 text-sm font-semibold text-primary-700 shadow-sm transition hover:border-primary-400 hover:bg-primary-100 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-primary-300 bg-white px-4 py-2 text-sm font-semibold text-primary-800 transition hover:border-primary-500 hover:bg-primary-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
   }
 
   /* Botões verdes: abrir listas de sugestões e adicionar itens ao plano (diferentes dos azuis de navegação/salvar). */
   .btn-verde {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-500 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/25 ring-1 ring-inset ring-white/15 transition hover:brightness-110 hover:shadow-lg active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
   }
 
   .btn-verde-suave {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-100 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:border-emerald-500 hover:bg-emerald-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
   }
 
-  /* Nome do componente curricular (disciplina) nos planos dos Anos Iniciais: botão vermelho fácil de achar. */
+  /* Nome do componente curricular (disciplina) nos planos dos Anos Iniciais: etiqueta escura fácil de achar. */
   .etiqueta-disciplina {
-    @apply inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-red-700 to-red-600 px-3 py-1.5 text-sm font-bold text-white shadow-sm shadow-red-900/25 ring-1 ring-inset ring-white/15;
+    @apply inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-sm font-bold text-white;
+    background: var(--tom-ardosia);
   }
 
   .btn-perigo-suave {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
   }
 
   /* Seções do formulário do plano: cada etapa tem um título em caixa azul. */
   .secao-plano {
-    @apply scroll-mt-28 overflow-hidden rounded-2xl border border-primary-200/70 bg-white shadow-md shadow-primary-900/[0.06];
+    @apply scroll-mt-28 overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm;
+    --tom: var(--tom-azul);
+    --tom-claro: var(--tom-azul-claro);
+    border-top: 4px solid var(--tom);
   }
 
   .secao-cabecalho {
-    @apply relative flex items-center gap-3 bg-gradient-to-r from-primary-800 via-primary-600 to-sky-500 px-5 py-3.5 text-white;
-  }
-
-  .secao-cabecalho::after {
-    content: "";
-    pointer-events: none;
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(40rem 8rem at 100% 0%, rgba(255, 255, 255, 0.18), transparent 60%);
+    @apply flex items-center gap-3 px-5 py-3.5;
+    background: var(--tom-claro);
+    color: var(--tom);
+    border-bottom: 1px solid color-mix(in srgb, var(--tom) 22%, white);
   }
 
   .secao-numero {
-    @apply relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-bold ring-1 ring-inset ring-white/50 backdrop-blur;
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white;
+    background: var(--tom);
   }
 
   .secao-corpo {
-    @apply space-y-5 bg-gradient-to-b from-primary-50/40 to-white p-5;
+    @apply space-y-5 bg-white p-5;
+  }
+
+  /* Cabeçalho das páginas internas (ver components/cabecalho-pagina.tsx). */
+  .cabecalho-pagina {
+    @apply overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm;
+    --tom: var(--tom-azul);
+    --tom-claro: var(--tom-azul-claro);
+    border-left: 5px solid var(--tom);
+  }
+
+  .cabecalho-icone {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg;
+    background: var(--tom-claro);
+    color: var(--tom);
   }
 
   /* Cartões */
   .card {
-    @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-900/[0.03];
+    @apply rounded-xl border border-slate-300 bg-white shadow-sm;
   }
 
   .card-interactive {
-    @apply transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-lg hover:shadow-slate-900/[0.06];
+    @apply transition hover:border-primary-400 hover:shadow-md;
   }
 
   /* Selos de status */

@@ -88,12 +88,12 @@ export default function PlanoAnosIniciais({ dados }: { dados: DadosPlanoAnosInic
 
       <div className="mb-4 flex items-start gap-4">
         {temLogos && (
-          <div className="flex h-24 w-24 shrink-0 items-center justify-center">
+          <div className="flex h-24 w-40 shrink-0 items-center justify-center">
             {dados.mostrarBrasaoEstado && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src="/brasao-santa-catarina.jpg"
-                alt="Brasão do Estado de Santa Catarina"
+                src="/logo-governo-sc.png"
+                alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
                 className="max-h-24 max-w-full object-contain"
               />
             )}
@@ -118,7 +118,7 @@ export default function PlanoAnosIniciais({ dados }: { dados: DadosPlanoAnosInic
           <p className="font-bold">Anos iniciais</p>
         </div>
         {temLogos && (
-          <div className="flex h-24 w-24 shrink-0 items-center justify-center">
+          <div className="flex h-24 w-40 shrink-0 items-center justify-center">
             {dados.mostrarLogoEscola && escola?.logo_url && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={escola.logo_url} alt={`Logo de ${escola.nome}`} className="max-h-24 max-w-full object-contain" />

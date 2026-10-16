@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Icone } from "@/components/icones";
 import { alternarFavorito } from "./actions";
 
 /** Estrela de "favorito / em uso": favoritos aparecem primeiro nas listas. */
@@ -35,16 +36,14 @@ export default function EstrelaFavorito({
       disabled={pendente}
       aria-pressed={ativo}
       title={ativo ? "Tirar dos favoritos" : "Marcar como favorito (em uso)"}
-      className={`flex shrink-0 items-center justify-center gap-1.5 rounded-xl border-2 px-3 text-lg font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
+      className={`flex shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
         ativo
-          ? "border-amber-400 bg-amber-50 text-amber-500"
-          : "border-slate-200 bg-white text-slate-300 hover:border-amber-300 hover:text-amber-400"
-      } ${rotulo ? "py-2 text-sm" : ""}`}
+          ? "border-amber-400 bg-amber-50 text-amber-700"
+          : "border-slate-300 bg-white text-slate-500 hover:border-amber-300 hover:text-amber-600"
+      }`}
     >
-      <span aria-hidden="true" className="text-xl leading-none">
-        {ativo ? "★" : "☆"}
-      </span>
-      {rotulo ? <span className="text-slate-700">{ativo ? "Favorito (em uso)" : "Marcar como favorito"}</span> : <span className="sr-only">Favorito</span>}
+      <Icone nome="estrela" className={`h-5 w-5 ${ativo ? "[&_path]:fill-amber-400 text-amber-500" : ""}`} />
+      {rotulo ? <span>{ativo ? "Favorito (em uso)" : "Marcar como favorito"}</span> : <span className="sr-only">Favorito</span>}
     </button>
   );
 }

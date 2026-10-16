@@ -1,31 +1,36 @@
 import Link from "next/link";
 import { VIDEOS_AJUDA, VIDEOS_SUGERIDOS, enderecoIncorporado } from "@/lib/ajuda-videos";
+import { Icone, type NomeIcone } from "@/components/icones";
 import ReiniciarTutorial from "./reiniciar-tutorial";
 
 const PASSOS = [
   {
-    icone: "🏫",
+    icone: "escola" as NomeIcone,
+    tom: "ambar",
     titulo: "1. Cadastre sua escola",
     texto: "Em Escolas → Cadastrar escola, informe o nome, o município e (se quiser) a logo. Ela aparece no cabeçalho dos seus planos.",
     href: "/dashboard/escolas/nova",
     link: "Cadastrar escola",
   },
   {
-    icone: "📅",
+    icone: "calendario" as NomeIcone,
+    tom: "azul",
     titulo: "2. Faça o plano anual",
     texto: "Feito uma vez por ano: escolha o componente, a turma e marque habilidades e objetos de conhecimento de cada trimestre.",
     href: "/dashboard/anual/novo",
     link: "Cadastrar plano anual",
   },
   {
-    icone: "🗓️",
+    icone: "livro" as NomeIcone,
+    tom: "verde",
     titulo: "3. Gere os planos mensais",
     texto: "Dentro do plano anual, use “Gerar planos mensais deste plano”. O app sugere os meses e já distribui os conteúdos.",
     href: "/dashboard/meus-planos/anuais",
     link: "Ver planos anuais",
   },
   {
-    icone: "⬇️",
+    icone: "baixar" as NomeIcone,
+    tom: "violeta",
     titulo: "4. Baixe ou imprima",
     texto: "Em cada plano há PDF, Word e Imprimir. Nas pastas de escola e turma você baixa vários planos de uma vez, em um único PDF.",
     href: "/dashboard/meus-planos",
@@ -35,7 +40,7 @@ const PASSOS = [
 
 const DICAS = [
   "Seu trabalho é guardado como rascunho neste aparelho enquanto você digita no plano anual; se a página fechar sem querer, o app oferece restaurar.",
-  "Use a ★ para marcar os planos que você está usando agora: eles aparecem em destaque na página Início.",
+  "Use a estrela para marcar os planos que você está usando agora: eles aparecem em destaque na página Início.",
   "Na página Início, a caixa de busca encontra planos pelo título, pela escola ou pela turma.",
   "O botão “Conferir agora” do plano anual avisa o que está faltando antes de finalizar. Ele só avisa — não muda o formato do plano.",
 ];
@@ -48,10 +53,10 @@ export default function AjudaPage() {
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {PASSOS.map((p) => (
-          <div key={p.titulo} className="card p-5">
+          <div key={p.titulo} data-tom={p.tom} className="card border-l-4 p-5 [border-left-color:var(--tom)]">
             <div className="flex items-start gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-100 text-2xl" aria-hidden="true">
-                {p.icone}
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]" aria-hidden="true">
+                <Icone nome={p.icone} className="h-6 w-6" />
               </span>
               <div>
                 <h2 className="text-base font-bold text-slate-900">{p.titulo}</h2>

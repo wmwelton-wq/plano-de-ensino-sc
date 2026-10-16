@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
 import VoltarLink from "../../../planos/voltar-link";
 import MensalForm from "./mensal-form";
 import { gerarMensaisDoAnual } from "../../actions";
@@ -16,11 +17,17 @@ export default async function MensalDoAnualPage({ params }: { params: Promise<{ 
   return (
     <div>
       <VoltarLink href={`/dashboard/anual/${id}`} rotulo="Voltar ao plano" />
-      <div className="mt-2 overflow-hidden rounded-2xl bg-gradient-to-r from-primary-800 via-primary-700 to-sky-600 p-5 text-white shadow-glow">
-        <h1 className="text-2xl font-semibold">Gerar planos mensais a partir deste plano anual</h1>
-        <p className="mt-1 text-sm text-primary-100">
-          Plano anual: <strong>{plano.titulo}</strong>
-        </p>
+      <div className="mt-2">
+        <CabecalhoPagina
+          tom="verde"
+          icone="calendario"
+          titulo="Gerar planos mensais a partir deste plano anual"
+          subtitulo={
+            <>
+              Plano anual: <strong>{plano.titulo}</strong>
+            </>
+          }
+        />
       </div>
       <div className="mt-6">
         <MensalForm

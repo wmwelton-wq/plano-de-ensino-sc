@@ -1,4 +1,7 @@
 import type { ReactNode } from "react";
+import { Icone, type NomeIcone } from "@/components/icones";
+
+export type TomSecao = "azul" | "verde" | "violeta" | "ambar" | "ciano" | "ardosia" | "rosa";
 
 interface SecaoPlanoProps {
   /** Âncora usada pela barra de passos (ex.: "passo-3"). */
@@ -7,25 +10,29 @@ interface SecaoPlanoProps {
   titulo: string;
   /** Frase curta que explica o que fazer neste passo. */
   descricao?: string;
+  /** Cor do bloco (cada tipo de passo tem a sua, sempre a mesma). */
+  tom?: TomSecao;
+  /** Ícone no lugar do número. */
+  icone?: NomeIcone;
   children: ReactNode;
 }
 
 /**
- * Uma etapa do formulário do plano: o título fica numa caixa azul (fácil de
+ * Uma etapa do formulário do plano: o título fica numa faixa colorida (fácil de
  * achar e não se mistura com os campos) e os campos ficam logo abaixo dela.
  */
-export default function SecaoPlano({ id, numero, titulo, descricao, children }: SecaoPlanoProps) {
+export default function SecaoPlano({ id, numero, titulo, descricao, tom = "azul", icone, children }: SecaoPlanoProps) {
   return (
-    <section id={id} aria-labelledby={`${id}-titulo`} className="secao-plano">
+    <section id={id} aria-labelledby={`${id}-titulo`} className="secao-plano" data-tom={tom}>
       <header className="secao-cabecalho">
         <span className="secao-numero" aria-hidden="true">
-          {numero}
+          {icone ? <Icone nome={icone} className="h-5 w-5" /> : <span className="text-sm font-bold">{numero}</span>}
         </span>
-        <div className="relative z-10">
-          <h2 id={`${id}-titulo`} className="text-base font-semibold leading-tight">
+        <div>
+          <h2 id={`${id}-titulo`} className="text-base font-bold leading-tight">
             {titulo}
           </h2>
-          {descricao && <p className="mt-0.5 text-xs text-primary-100">{descricao}</p>}
+          {descricao && <p className="mt-0.5 text-xs font-normal text-slate-600">{descricao}</p>}
         </div>
       </header>
       <div className="secao-corpo">{children}</div>

@@ -84,7 +84,8 @@ export default async function TurmasDaEscolaPage({
           <li key={t.chave}>
             <CartaoPasta
               href={`${urlEscola}?turma=${encodeURIComponent(t.chave)}`}
-              icone={t.chave === "sem-turma" ? "📂" : "👥"}
+              icone={t.chave === "sem-turma" ? "pasta" : "usuarios"}
+              tom={t.chave === "sem-turma" ? "ardosia" : "violeta"}
               titulo={t.nome}
               contagem={t.planos.length}
             />

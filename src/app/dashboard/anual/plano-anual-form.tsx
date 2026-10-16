@@ -1,45 +1,47 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Escola } from "@/lib/database.types";
 import type { EstadoFormulario } from "../planos/actions";
-import SecaoPlano from "../planos/secao-plano";
-import PassosPlano from "../planos/passos-plano";
-import BarraSalvar from "../planos/barra-salvar";
+import SecaoPlano, { type TomSecao } from "../planos/secao-plano";
 import TurmaSelector, { separarTurma } from "../planos/turma-selector";
 import { createClient } from "@/lib/supabase/client";
-import { COMPETENCIAS_GERAIS_BNCC } from "@/lib/competencias-gerais";
+import { Icone, type NomeIcone } from "@/components/icones";
 import {
   carregarDadosComponente,
   DADOS_VAZIOS,
   type DadosComponente,
   type DisciplinaBasica,
-  type OpcaoLista,
 } from "@/lib/dados-anuais";
 import {
   ETAPAS_ANUAIS,
   TEXTO_LIVRE_INICIAL,
+  TRIMESTRES_ROTULOS,
+  complementoVisivel,
   normalizarComponentes,
   normalizarDados,
   numeroDaSerie,
   referenciasSugeridas,
   type EtapaAnual,
-  type ItemLista,
   type PlanoAnual,
 } from "@/lib/plano-anual";
 import { ordenarComponentes } from "@/lib/secoes-componentes";
-import SeletorItens from "./seletor-itens";
+import { metodologiaDosObjetos } from "@/lib/sugestoes-anual";
 import {
   BlocoEmenta,
   BlocoEspecificas,
-  BlocoTrimestres,
+  BlocoGerais,
+  geraisParaItens,
+  itensParaGerais,
   listasVazias,
   montarInfo,
   type Atualizar,
   type InfoComp,
   type ListasComp,
 } from "./blocos-componente";
+import PassoTrimestre, { TOM_TRIMESTRE } from "./passo-trimestre";
+import FluxoPassos, { type GrupoFluxo } from "./fluxo-passos";
 import { CRITERIOS_AVALIACAO, INSTRUMENTOS_AVALIACAO } from "../planos/sugestoes-avaliacao";
 import EditorLivre from "./editor-livre";
 
@@ -52,15 +54,6 @@ export interface PlanoAnualFormProps {
   textoBotao: string;
 }
 
-const PASSOS = [
-  { id: "passo-1", rotulo: "Identificação" },
-  { id: "passo-2", rotulo: "Ementa" },
-  { id: "passo-3", rotulo: "Competências gerais" },
-  { id: "passo-4", rotulo: "Competências específicas" },
-  { id: "passo-5", rotulo: "Componente curricular" },
-  { id: "passo-6", rotulo: "Item 6 em diante" },
-];
-
 const OUTRO = "__outro__";
 /** Chave das listas quando o plano tem um componente só (Ensino Médio, Anos Finais). */
 const UNICO = "__unico__";
@@ -68,40 +61,85 @@ const ANOS_INICIAIS: EtapaAnual = "fundamental_anos_iniciais";
 const LISTAS_VAZIAS: ListasComp = listasVazias();
 const LIMITE_ENVIO = 3_800_000;
 
-const GERAIS_OPCOES: OpcaoLista[] = COMPETENCIAS_GERAIS_BNCC.map((c) => ({
-  id: `cg:${c.numero}`,
-  codigo: String(c.numero),
-  texto: `${c.nome}: ${c.texto}`,
-  anos: [],
-}));
+type TipoPasso = "ident" | "ementa" | "gerais" | "esp" | "tri" | "livre" | "revisar";
 
-function geraisParaItens(numeros: number[], manuais: string[]): ItemLista[] {
-  const oficiais = numeros.map((n) => {
-    const o = GERAIS_OPCOES.find((g) => g.id === `cg:${n}`);
-    return { id: `cg:${n}`, codigo: String(n), texto: o?.texto ?? "" };
-  });
-  const digitadas = manuais.map((t, i) => ({ id: `manual:cg-${i}`, texto: t, manual: true, fonte: "manual" }));
-  return [...oficiais, ...digitadas];
+interface Passo {
+  chave: string;
+  tipo: TipoPasso;
+  /** Chave das listas do componente (id da disciplina ou UNICO). */
+  comp?: string;
+  /** Id da disciplina cujos dados do currículo aparecem. */
+  idDados?: string | null;
+  nomeComp?: string;
+  tri?: number;
+  rotulo: string;
 }
 
-function itensParaGerais(itens: ItemLista[]): { numeros: number[]; manuais: string[] } {
-  const numeros: number[] = [];
-  const manuais: string[] = [];
-  for (const i of itens) {
-    const m = /^cg:(\d+)$/.exec(i.id);
-    if (m) numeros.push(Number(m[1]));
-    else manuais.push(i.texto);
+const TOM_DO_TIPO: Record<TipoPasso, TomSecao> = {
+  ident: "ardosia",
+  ementa: "azul",
+  gerais: "ciano",
+  esp: "violeta",
+  tri: "verde",
+  livre: "azul",
+  revisar: "ardosia",
+};
+
+const tomDe = (p: Passo): TomSecao => (p.tipo === "tri" ? TOM_TRIMESTRE[p.tri ?? 0] : TOM_DO_TIPO[p.tipo]);
+
+const ICONE_DO_TIPO: Record<TipoPasso, NomeIcone> = {
+  ident: "escola",
+  ementa: "documento",
+  gerais: "globo",
+  esp: "alvo",
+  tri: "calendario",
+  livre: "lapis",
+  revisar: "check",
+};
+
+/** Monta o JSON que vai para o servidor a partir das listas mais recentes. */
+function montarDados(multi: boolean, componentes: DisciplinaBasica[], listas: Record<string, ListasComp>): string {
+  if (multi) {
+    const lista = componentes.map((d) => {
+      const l = listas[d.id] ?? LISTAS_VAZIAS;
+      return {
+        disciplina_id: d.id,
+        nome: d.nome,
+        ementa: l.ementa,
+        competencias_gerais: itensParaGerais(l.gerais),
+        competencias_especificas: { bncc: l.compBncc, curriculo: l.compCurr, manuais: l.compManuais },
+        trimestres: l.trimestres,
+      };
+    });
+    const numeros = Array.from(new Set(lista.flatMap((c) => c.competencias_gerais.numeros))).sort((a, b) => a - b);
+    const manuais = Array.from(new Set(lista.flatMap((c) => c.competencias_gerais.manuais)));
+    return JSON.stringify({ competencias_gerais: { numeros, manuais }, componentes: lista });
   }
-  return { numeros: numeros.sort((a, b) => a - b), manuais };
+  const l = listas[UNICO] ?? LISTAS_VAZIAS;
+  return JSON.stringify({
+    ementa: l.ementa,
+    competencias_gerais: itensParaGerais(l.gerais),
+    competencias_especificas: { bncc: l.compBncc, curriculo: l.compCurr, manuais: l.compManuais },
+    trimestres: l.trimestres,
+  });
+}
+
+function feitoTrimestre(l: ListasComp, i: number): boolean {
+  const t = l.trimestres[i];
+  return t.unidades.length > 0 && t.habilidades.length > 0 && t.objetos.length > 0;
 }
 
 export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, plano, action, textoBotao }: PlanoAnualFormProps) {
   const [estado, formAction, pendente] = useActionState(action, {});
   const [erroLocal, setErroLocal] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const topoRef = useRef<HTMLDivElement>(null);
+  const dadosRef = useRef<HTMLInputElement>(null);
+  const livreRef = useRef<HTMLInputElement>(null);
   const ignorarPendencias = useRef(false);
   const [conferencia, setConferencia] = useState<string[] | null>(null);
   const [pedindoConfirmacao, setPedindoConfirmacao] = useState(false);
+  const [statusPlano, setStatusPlano] = useState<"rascunho" | "finalizado">(plano?.status ?? "rascunho");
 
   const inicial = useMemo(
     () =>
@@ -113,7 +151,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
       }),
     [plano]
   );
-  const componentesSalvos = useMemo(() => normalizarComponentes(plano?.componentes), [plano]);
+  const componentesSalvos = useMemo(() => normalizarComponentes(plano?.componentes, plano?.competencias_gerais), [plano]);
   // Plano antigo dos Anos Iniciais com "outro componente" digitado (sem disciplina do sistema): segue no formato de um componente só.
   const formatoUnico = !!plano && plano.etapa === ANOS_INICIAIS && componentesSalvos.length === 0 && !plano.disciplina_id;
 
@@ -133,7 +171,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
     return disciplinas.filter((d) => d.etapa === alvo);
   }, [disciplinas, etapa]);
 
-  // Anos Iniciais: o mesmo professor dá várias disciplinas, então o plano pode ter vários componentes, cada um com o seu bloco.
+  // Anos Iniciais: o mesmo professor dá várias disciplinas, então o plano pode ter vários componentes, cada um com o seu fluxo.
   const multi = etapa === ANOS_INICIAIS && !formatoUnico;
   const [componentesSel, setComponentesSel] = useState<string[]>(() =>
     componentesSalvos.length > 0
@@ -152,13 +190,11 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
   const nomeComponente = multi ? componentes.map((d) => d.nome).join(", ") : disciplinaSel === OUTRO ? componenteLivre : disciplina?.nome ?? "";
 
   // ── Listas escolhidas ──
-  const [gerais, setGerais] = useState<ItemLista[]>(
-    geraisParaItens(inicial.competenciasGerais.numeros, inicial.competenciasGerais.manuais)
-  );
-  // Ementa, competências específicas e trimestres de cada componente (chave: id da disciplina; UNICO = plano de um componente só).
+  // Ementa, competências e trimestres de cada componente (chave: id da disciplina; UNICO = plano de um componente só).
   const [listas, setListas] = useState<Record<string, ListasComp>>(() => {
     const doPlano: ListasComp = {
       ementa: inicial.ementa,
+      gerais: geraisParaItens(inicial.competenciasGerais.numeros, inicial.competenciasGerais.manuais),
       compBncc: inicial.competenciasEspecificas.bncc,
       compCurr: inicial.competenciasEspecificas.curriculo,
       compManuais: inicial.competenciasEspecificas.manuais,
@@ -170,6 +206,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
           c.disciplina_id,
           {
             ementa: c.ementa,
+            gerais: geraisParaItens(c.competenciasGerais.numeros, c.competenciasGerais.manuais),
             compBncc: c.competenciasEspecificas.bncc,
             compCurr: c.competenciasEspecificas.curriculo,
             compManuais: c.competenciasEspecificas.manuais,
@@ -181,14 +218,25 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
     if (plano?.etapa === ANOS_INICIAIS && plano.disciplina_id) return { [plano.disciplina_id]: doPlano };
     return { [UNICO]: doPlano };
   });
+  // Espelho sempre atual das listas: o envio e a troca de passo leem daqui (nunca de um valor antigo).
+  const listasRef = useRef(listas);
   const atualizarDe =
     (chave: string): Atualizar =>
-    (fn) =>
-      setListas((todas) => {
-        const atual = todas[chave] ?? listasVazias();
-        return { ...todas, [chave]: { ...atual, ...fn(atual) } };
-      });
+    (fn) => {
+      const atual = listasRef.current[chave] ?? listasVazias();
+      listasRef.current = { ...listasRef.current, [chave]: { ...atual, ...fn(atual) } };
+      setListas(listasRef.current);
+    };
   const listasDe = (chave: string): ListasComp => listas[chave] ?? LISTAS_VAZIAS;
+
+  // Texto livre (item 6 em diante): guardado aqui para não se perder ao trocar de passo.
+  const textoLivreInicial = plano?.texto_livre ?? TEXTO_LIVRE_INICIAL;
+  const [textoLivre, setTextoLivre] = useState<string>(textoLivreInicial ?? "");
+  const textoLivreRef = useRef(textoLivre);
+  const guardarTextoLivre = (v: string) => {
+    textoLivreRef.current = v;
+    setTextoLivre(v);
+  };
 
   // ── Dados oficiais dos componentes escolhidos (carregados no navegador, uma vez por componente) ──
   const [carregados, setCarregados] = useState<Record<string, { dados: DadosComponente; carregando: boolean; erro: string | null }>>({});
@@ -230,7 +278,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
 
   const vazioDe = (id: string | null | undefined) =>
     !id
-      ? "Escolha o componente curricular no passo 1 para ver as opções do currículo — ou digite à mão no quadro abaixo."
+      ? "Escolha o componente curricular no passo de identificação para ver as opções do currículo — ou digite à mão no quadro abaixo."
       : !infos[id] || infos[id].carregando
       ? "Carregando as opções do currículo..."
       : "Não há itens cadastrados para este componente. Digite à mão no quadro abaixo.";
@@ -244,69 +292,91 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
     vazioPadrao: vazioDe(idDados),
   });
 
-  /** Repete o bloco para cada componente marcado, com o nome em destaque vermelho. */
-  function porComponente(renderizar: (d: DisciplinaBasica) => ReactNode) {
-    if (componentes.length === 0) {
-      return (
-        <p className="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
-          Marque ao menos um componente curricular no passo 1.
-        </p>
-      );
-    }
-    return componentes.map((d) => (
-      <div key={d.id} className="space-y-3 rounded-xl border border-red-100 bg-red-50/30 p-3">
-        <span className="etiqueta-disciplina">{d.nome}</span>
-        {renderizar(d)}
-      </div>
-    ));
-  }
-
   function alternarComponente(id: string) {
     setComponentesSel((atual) => (atual.includes(id) ? atual.filter((x) => x !== id) : [...atual, id]));
   }
 
-  const dadosJson = useMemo(() => {
-    const competenciasGerais = itensParaGerais(gerais);
-    if (multi) {
-      return JSON.stringify({
-        competencias_gerais: competenciasGerais,
-        componentes: componentes.map((d) => {
-          const l = listas[d.id] ?? LISTAS_VAZIAS;
-          return {
-            disciplina_id: d.id,
-            nome: d.nome,
-            ementa: l.ementa,
-            competencias_especificas: { bncc: l.compBncc, curriculo: l.compCurr, manuais: l.compManuais },
-            trimestres: l.trimestres,
-          };
-        }),
-      });
-    }
-    const l = listas[UNICO] ?? LISTAS_VAZIAS;
-    return JSON.stringify({
-      ementa: l.ementa,
-      competencias_gerais: competenciasGerais,
-      competencias_especificas: { bncc: l.compBncc, curriculo: l.compCurr, manuais: l.compManuais },
-      trimestres: l.trimestres,
-    });
-  }, [gerais, listas, multi, componentes]);
+  const dadosJson = useMemo(() => montarDados(multi, componentes, listas), [multi, componentes, listas]);
 
-  const textoLivreInicial = plano?.texto_livre ?? TEXTO_LIVRE_INICIAL;
+  // ── O fluxo: identificação → (para cada componente: ementa, gerais, específicas, 3 trimestres) → texto livre → revisão ──
+  const passos = useMemo<Passo[]>(() => {
+    const lista: Passo[] = [{ chave: "ident", tipo: "ident", rotulo: "Identificação" }];
+    const unidades = multi
+      ? componentes.map((d) => ({ chave: d.id, idDados: d.id as string | null, nome: d.nome }))
+      : [{ chave: UNICO, idDados: (disciplina?.id ?? null) as string | null, nome: nomeComponente || "Componente curricular" }];
+    for (const u of unidades) {
+      const base = { comp: u.chave, idDados: u.idDados, nomeComp: u.nome };
+      lista.push({ chave: `ementa|${u.chave}`, tipo: "ementa", rotulo: "Ementa", ...base });
+      lista.push({ chave: `gerais|${u.chave}`, tipo: "gerais", rotulo: "Competências gerais", ...base });
+      lista.push({ chave: `esp|${u.chave}`, tipo: "esp", rotulo: "Competências específicas", ...base });
+      for (let i = 0; i < 3; i++) lista.push({ chave: `tri${i}|${u.chave}`, tipo: "tri", tri: i, rotulo: TRIMESTRES_ROTULOS[i].replace("TRIMESTRE", "trimestre"), ...base });
+    }
+    lista.push({ chave: "livre", tipo: "livre", rotulo: "Texto livre" });
+    lista.push({ chave: "revisar", tipo: "revisar", rotulo: "Revisar e salvar" });
+    return lista;
+  }, [multi, componentes, disciplina, nomeComponente]);
+
+  const [passoChave, setPassoChave] = useState("ident");
+  const indice = Math.max(0, passos.findIndex((p) => p.chave === passoChave));
+  const passo = passos[indice];
+  const erroIdentificacao = (): string | null => {
+    if (multi && componentes.length === 0) return "Marque pelo menos um componente curricular.";
+    if (!multi && !disciplinaSel) return "Escolha o componente curricular (disciplina).";
+    if (!multi && disciplinaSel === OUTRO && !componenteLivre.trim()) return "Digite o nome do componente.";
+    return null;
+  };
+
+  function irPara(chave: string) {
+    // Passa o que está no editor para as listas antes de trocar de tela.
+    formRef.current?.dispatchEvent(new Event("plano:sincronizar"));
+    if (chave !== "ident" && passoChave === "ident") {
+      const erro = erroIdentificacao();
+      if (erro) {
+        setErroLocal(erro);
+        return;
+      }
+    }
+    setErroLocal(null);
+    setPassoChave(chave);
+    requestAnimationFrame(() => topoRef.current?.scrollIntoView({ block: "start" }));
+  }
+  const avancar = () => indice < passos.length - 1 && irPara(passos[indice + 1].chave);
+  const voltar = () => indice > 0 && irPara(passos[indice - 1].chave);
+
+  /** O passo já tem o essencial? (só para os marcadores do topo) */
+  function passoFeito(p: Passo): boolean {
+    if (p.tipo === "ident") return !erroIdentificacao() && !!p.chave;
+    if (p.tipo === "livre") return textoLivre.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() !== "" || textoLivre.includes("<img");
+    if (p.tipo === "revisar") return false;
+    const l = listasDe(p.comp ?? UNICO);
+    if (p.tipo === "ementa") return l.ementa.length > 0;
+    if (p.tipo === "gerais") return l.gerais.length > 0;
+    if (p.tipo === "esp") return l.compBncc.length + l.compCurr.length + l.compManuais.length > 0;
+    return feitoTrimestre(l, p.tri ?? 0);
+  }
+
+  const grupos = useMemo<GrupoFluxo[]>(() => {
+    const out: GrupoFluxo[] = [];
+    const g = (id: string, rotulo: string, tom: TomSecao, icone: NomeIcone, doGrupo: Passo[]) =>
+      out.push({ id, rotulo, tom, icone, passos: doGrupo.map((p) => ({ chave: p.chave, rotulo: p.rotulo, feito: passoFeito(p), tom: tomDe(p) })) });
+    g("ident", "Identificação", "ardosia", "escola", passos.filter((p) => p.tipo === "ident"));
+    const ordem: string[] = [];
+    for (const p of passos) if (p.comp && !ordem.includes(p.comp)) ordem.push(p.comp);
+    for (const c of ordem) {
+      const doComp = passos.filter((p) => p.comp === c);
+      g(`comp|${c}`, doComp[0].nomeComp ?? "Componente", "ardosia", "livro", doComp);
+    }
+    g("fim", "Fechamento", "azul", "check", passos.filter((p) => p.tipo === "livre" || p.tipo === "revisar"));
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [passos, listas, textoLivre, multi, componentes, disciplinaSel, componenteLivre]);
 
   /** Frases prontas para o texto livre: avaliação e metodologia, montadas com os objetos marcados. */
   const sugestoesTexto = useMemo(() => {
     const trimestresAtivos = multi
       ? componentes.flatMap((d) => (listas[d.id] ?? LISTAS_VAZIAS).trimestres)
       : (listas[UNICO] ?? LISTAS_VAZIAS).trimestres;
-    const objetos = Array.from(new Set(trimestresAtivos.flatMap((t) => t.objetos.map((o) => o.texto.trim())).filter(Boolean))).slice(0, 8);
-    const modelos = [
-      (o: string) => `Aula expositiva dialogada e problematização inicial sobre ${o}.`,
-      (o: string) => `Atividades práticas, em duplas ou grupos, para explorar ${o}.`,
-      (o: string) => `Pesquisa orientada e socialização dos resultados sobre ${o}.`,
-      (o: string) => `Resolução de situações-problema envolvendo ${o}.`,
-      (o: string) => `Uso de recursos digitais e audiovisuais para aprofundar ${o}.`,
-    ];
-    const metodologia = objetos.map((o, i) => modelos[i % modelos.length](o));
+    const metodologia = metodologiaDosObjetos(trimestresAtivos.flatMap((t) => t.objetos.map((o) => o.texto))).map((o) => `${o.texto}.`);
     metodologia.push(
       "Leitura e interpretação de textos, imagens, gráficos e esquemas relacionados aos conteúdos estudados.",
       "Retomada dos conteúdos e recuperação paralela ao longo do trimestre, conforme as necessidades dos estudantes."
@@ -327,54 +397,243 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
     if (!nomeComponente.trim()) p.push(multi ? "Nenhum componente curricular marcado." : "Componente curricular não informado.");
     if (!campo("turma")) p.push("Turma não informada.");
     if (!campo("docente")) p.push("Nome do docente não informado.");
-    if (gerais.length === 0) p.push("Nenhuma competência geral marcada.");
     const conferirListas = (l: ListasComp, prefixo: string) => {
       if (l.ementa.length === 0) p.push(`${prefixo}Ementa vazia.`);
+      if (l.gerais.length === 0) p.push(`${prefixo}Nenhuma competência geral marcada.`);
       if (l.compBncc.length + l.compCurr.length + l.compManuais.length === 0) p.push(`${prefixo}Nenhuma competência específica marcada.`);
       l.trimestres.forEach((t, i) => {
         const n = `${prefixo}${i + 1}º trimestre`;
         if (t.unidades.length === 0) p.push(`${n}: nenhuma unidade temática.`);
         if (t.habilidades.length === 0) p.push(`${n}: nenhuma habilidade.`);
         if (t.objetos.length === 0) p.push(`${n}: nenhum objeto de conhecimento.`);
+        if (t.criterios.length === 0) p.push(`${n}: nenhum critério de avaliação.`);
+        if (t.metodologia.length === 0) p.push(`${n}: nenhuma metodologia.`);
       });
     };
-    if (multi) componentes.forEach((d) => conferirListas(listasDe(d.id), `${d.nome} — `));
-    else conferirListas(listasDe(UNICO), "");
-    const livre = campo("texto_livre");
+    if (multi) componentes.forEach((d) => conferirListas(listasRef.current[d.id] ?? LISTAS_VAZIAS, `${d.nome} — `));
+    else conferirListas(listasRef.current[UNICO] ?? LISTAS_VAZIAS, "");
+    const livre = textoLivreRef.current;
     if (!livre.includes("<img") && livre.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "") {
       p.push("O texto livre (item 6 em diante) está vazio.");
     }
     return p;
   }
 
+  /** Copia as competências gerais do componente anterior (evita marcar as mesmas várias vezes). */
+  function copiarGeraisDoAnterior(chave: string) {
+    const ordem = componentes.map((d) => d.id);
+    const pos = ordem.indexOf(chave);
+    if (pos <= 0) return;
+    const doAnterior = listasRef.current[ordem[pos - 1]]?.gerais ?? [];
+    atualizarDe(chave)(() => ({ gerais: doAnterior }));
+  }
+
+  // ── O que cada passo mostra ──
+  function conteudoDoPasso(p: Passo) {
+    const chave = p.comp ?? UNICO;
+    const pilula = multi ? (
+      <div>
+        <span className="etiqueta-disciplina">{p.nomeComp}</span>
+      </div>
+    ) : null;
+    const idPasso = `passo-${indice}`;
+
+    if (p.tipo === "ementa") {
+      return (
+        <SecaoPlano id={idPasso} numero={indice} titulo={multi ? `Ementa — ${p.nomeComp}` : "Ementa"} tom={tomDe(p)} icone={ICONE_DO_TIPO.ementa}
+          descricao="Marque os temas que farão parte da ementa — e acrescente os seus.">
+          {pilula}
+          <BlocoEmenta {...propsDe(chave, p.idDados)} />
+        </SecaoPlano>
+      );
+    }
+    if (p.tipo === "gerais") {
+      const posicao = componentes.findIndex((d) => d.id === chave);
+      return (
+        <SecaoPlano id={idPasso} numero={indice} titulo={multi ? `Competências gerais da BNCC — ${p.nomeComp}` : "Competências gerais da BNCC"} tom={tomDe(p)} icone={ICONE_DO_TIPO.gerais}
+          descricao="São as mesmas para qualquer plano: marque as que quiser e acrescente outras.">
+          {pilula}
+          {multi && posicao > 0 && (
+            <button type="button" onClick={() => copiarGeraisDoAnterior(chave)} className="btn-azul-suave">
+              <Icone nome="copiar" className="h-4 w-4" />
+              Usar as mesmas de {componentes[posicao - 1].nome}
+            </button>
+          )}
+          <BlocoGerais valor={listasDe(chave)} atualizar={atualizarDe(chave)} />
+        </SecaoPlano>
+      );
+    }
+    if (p.tipo === "esp") {
+      return (
+        <SecaoPlano id={idPasso} numero={indice} titulo={multi ? `Competências específicas — ${p.nomeComp}` : "Competências específicas"} tom={tomDe(p)} icone={ICONE_DO_TIPO.esp}
+          descricao="Da BNCC e do Currículo Catarinense, em listas separadas — marque as que quiser.">
+          {pilula}
+          <div className="space-y-4">
+            <BlocoEspecificas {...propsDe(chave, p.idDados)} />
+          </div>
+        </SecaoPlano>
+      );
+    }
+    if (p.tipo === "tri") {
+      const i = p.tri ?? 0;
+      return (
+        <SecaoPlano id={idPasso} numero={indice} titulo={multi ? `${TRIMESTRES_ROTULOS[i]} — ${p.nomeComp}` : TRIMESTRES_ROTULOS[i]} tom={tomDe(p)} icone={ICONE_DO_TIPO.tri}
+          descricao="Preencha por partes, nas abas: unidades, habilidades, objetos, critérios de avaliação e metodologia (e, se quiser, conteúdos, projeto e caixa livre).">
+          {pilula}
+          <PassoTrimestre key={p.chave} {...propsDe(chave, p.idDados)} indice={i} chaveEditor={`${chave}-${i}`} />
+        </SecaoPlano>
+      );
+    }
+    if (p.tipo === "livre") {
+      return (
+        <SecaoPlano id={idPasso} numero={indice} titulo="Do item 6 em diante: texto livre" tom={tomDe(p)} icone={ICONE_DO_TIPO.livre}
+          descricao="Aqui o plano continua do jeito que você escrever — avaliação, metodologias, referências bibliográficas, o que quiser.">
+          <EditorLivre
+            id="texto_livre_editor"
+            name="texto_livre_editor"
+            valorInicial={textoLivre}
+            referencias={referenciasSugeridas(etapa)}
+            sugestoes={sugestoesTexto}
+            onSincronizar={guardarTextoLivre}
+          />
+        </SecaoPlano>
+      );
+    }
+    // revisar
+    const unidades = multi ? componentes.map((d) => ({ chave: d.id, nome: d.nome })) : [{ chave: UNICO, nome: nomeComponente || "Componente curricular" }];
+    return (
+      <SecaoPlano id={idPasso} numero={indice} titulo="Revisar e salvar" tom={tomDe(p)} icone={ICONE_DO_TIPO.revisar}
+        descricao="Veja o resumo, escolha a situação do plano e salve. Dá para editar depois.">
+        <div className="overflow-x-auto rounded-lg border border-slate-300">
+          <table className="w-full min-w-[34rem] border-collapse text-sm">
+            <thead>
+              <tr className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
+                <th className="px-3 py-2">{multi ? "Componente" : "Plano"}</th>
+                <th className="px-3 py-2">Trimestre</th>
+                <th className="px-3 py-2 text-center">Unid.</th>
+                <th className="px-3 py-2 text-center">Hab.</th>
+                <th className="px-3 py-2 text-center">Obj.</th>
+                <th className="px-3 py-2 text-center">Crit.</th>
+                <th className="px-3 py-2 text-center">Metod.</th>
+                <th className="px-3 py-2 text-center">Extras</th>
+              </tr>
+            </thead>
+            <tbody>
+              {unidades.flatMap((u) =>
+                listasDe(u.chave).trimestres.map((t, i) => {
+                  const extras = [t.conteudosAtivo && t.conteudos.length > 0, t.projetoAtivo && t.projeto.trim() !== "", complementoVisivel(t) !== ""].filter(Boolean).length;
+                  return (
+                    <tr key={`${u.chave}-${i}`} className="border-t border-slate-200">
+                      <td className="px-3 py-1.5 font-semibold text-slate-800">{i === 0 ? u.nome : ""}</td>
+                      <td className="px-3 py-1.5">{i + 1}º</td>
+                      <td className="px-3 py-1.5 text-center">{t.unidades.length}</td>
+                      <td className="px-3 py-1.5 text-center">{t.habilidades.length}</td>
+                      <td className="px-3 py-1.5 text-center">{t.objetos.length}</td>
+                      <td className="px-3 py-1.5 text-center">{t.criterios.length}</td>
+                      <td className="px-3 py-1.5 text-center">{t.metodologia.length}</td>
+                      <td className="px-3 py-1.5 text-center">{extras}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="status_sel" className="field-label">
+              Situação do plano
+            </label>
+            <select id="status_sel" value={statusPlano} onChange={(e) => setStatusPlano(e.target.value as "rascunho" | "finalizado")} className="input-field">
+              <option value="rascunho">Rascunho (ainda estou preenchendo)</option>
+              <option value="finalizado">Finalizado</option>
+            </select>
+          </div>
+        </div>
+
+        <section aria-labelledby="conferencia" className="rounded-lg border border-slate-300 bg-slate-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 id="conferencia" className="text-sm font-bold text-slate-900">
+              Conferir antes de finalizar
+            </h3>
+            <button type="button" className="btn-azul-suave" onClick={() => formRef.current && setConferencia(conferir(formRef.current))}>
+              Conferir agora
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-slate-600">A conferência só avisa o que está faltando. Ela não altera nada no plano.</p>
+          {conferencia !== null &&
+            (conferencia.length === 0 ? (
+              <p role="status" className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+                Tudo preenchido. Pode finalizar.
+              </p>
+            ) : (
+              <div role="status" className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p className="font-semibold">Ainda falta preencher ({conferencia.length}):</p>
+                <ul className="mt-1 max-h-60 list-disc space-y-0.5 overflow-y-auto pl-5">
+                  {conferencia.map((c) => (
+                    <li key={c}>{c}</li>
+                  ))}
+                </ul>
+                {pedindoConfirmacao && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn-azul"
+                      onClick={() => {
+                        ignorarPendencias.current = true;
+                        formRef.current?.requestSubmit();
+                      }}
+                    >
+                      Finalizar mesmo assim
+                    </button>
+                    <button type="button" className="btn-azul-suave" onClick={() => setPedindoConfirmacao(false)}>
+                      Voltar e completar
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+        </section>
+      </SecaoPlano>
+    );
+  }
+
+  const ultimo = indice === passos.length - 1;
+  const mensagemErro = erroLocal ?? estado.erro;
+
   return (
     <form
       ref={formRef}
       action={formAction}
-      className="space-y-6"
+      className="space-y-4"
       onSubmit={(e) => {
-        if (multi && componentes.length === 0) {
+        const erro = erroIdentificacao();
+        if (erro) {
           e.preventDefault();
-          setErroLocal("Marque pelo menos um componente curricular no passo 1.");
+          setPassoChave("ident");
+          setErroLocal(erro);
           return;
         }
-        const finalizando = (e.currentTarget.elements.namedItem("status") as HTMLSelectElement | null)?.value === "finalizado";
-        if (finalizando && !ignorarPendencias.current) {
+        // O envio usa sempre o que há de mais recente (inclusive o que estava sendo digitado nos editores).
+        const dadosFinais = montarDados(multi, componentes, listasRef.current);
+        if (dadosRef.current) dadosRef.current.value = dadosFinais;
+        if (livreRef.current) livreRef.current.value = textoLivreRef.current;
+        if (statusPlano === "finalizado" && !ignorarPendencias.current) {
           const faltas = conferir(e.currentTarget);
           if (faltas.length > 0) {
             e.preventDefault();
             setConferencia(faltas);
             setPedindoConfirmacao(true);
+            setPassoChave("revisar");
             return;
           }
         }
         ignorarPendencias.current = false;
         setPedindoConfirmacao(false);
-        const campo = e.currentTarget.elements.namedItem("texto_livre") as HTMLInputElement | null;
-        const total = dadosJson.length + (campo?.value.length ?? 0);
-        if (total > LIMITE_ENVIO) {
+        if (dadosFinais.length + textoLivreRef.current.length > LIMITE_ENVIO) {
           e.preventDefault();
-          setErroLocal("O plano ficou grande demais para salvar (provavelmente por causa das imagens). Reduza ou remova algumas imagens do texto livre.");
+          setErroLocal("O plano ficou grande demais para salvar (provavelmente por causa das imagens). Reduza ou remova algumas imagens dos textos livres.");
         } else {
           setErroLocal(null);
         }
@@ -383,12 +642,16 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
       <input type="hidden" name="etapa" value={etapa} />
       <input type="hidden" name="disciplina_id" value={multi ? componentes[0]?.id ?? "" : disciplina?.id ?? ""} />
       <input type="hidden" name="componente" value={nomeComponente} />
-      <input type="hidden" name="dados" value={dadosJson} />
+      <input type="hidden" name="dados" value={dadosJson} ref={dadosRef} readOnly />
+      <input type="hidden" name="texto_livre" value={textoLivre} ref={livreRef} readOnly />
+      <input type="hidden" name="status" value={statusPlano} />
 
-      <PassosPlano passos={PASSOS} />
+      <div ref={topoRef} className="scroll-mt-20" />
+      <FluxoPassos grupos={grupos} atual={passo.chave} aoIr={irPara} />
 
-      {/* ───────── 1. Identificação ───────── */}
-      <SecaoPlano id="passo-1" numero={1} titulo="Identificação" descricao="Escola, componente, turma e docente — vai para o cabeçalho do plano.">
+      {/* A identificação fica sempre montada (só escondida) para os campos irem junto no envio. */}
+      <div hidden={passo.tipo !== "ident"}>
+      <SecaoPlano id="passo-ident" numero={1} titulo="Identificação" tom="ardosia" icone="escola" descricao="Escola, componente, turma e docente — vai para o cabeçalho do plano.">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label htmlFor="escola_id" className="field-label">
@@ -438,8 +701,8 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
             <fieldset className="sm:col-span-2">
               <legend className="field-label">Componentes curriculares</legend>
               <p className="field-hint">
-                Marque todos os componentes que você leciona nesta turma. Cada um ganha o seu bloco (ementa, competências e os três
-                trimestres), tudo separado por componente, com o nome em destaque.
+                Marque todos os componentes que você leciona nesta turma. Depois desta tela, cada componente abre uma vez, um de cada vez:
+                ementa, competências e os três trimestres, tudo separado por componente.
               </p>
               {disciplinasDaEtapa.length === 0 ? (
                 <p className="mt-2 rounded-xl border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
@@ -454,7 +717,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
                         key={d.id}
                         className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition ${
                           marcado
-                            ? "border-primary-500 bg-primary-50 font-medium text-primary-800"
+                            ? "border-primary-600 bg-primary-50 font-semibold text-primary-900"
                             : "border-slate-200 bg-white text-slate-700 hover:border-primary-300"
                         }`}
                       >
@@ -479,7 +742,6 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
             </label>
             <select
               id="disciplina_sel"
-              required
               value={disciplinaSel}
               onChange={(e) => {
                 const v = e.target.value;
@@ -529,7 +791,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
             <label htmlFor="ano_letivo" className="field-label">
               Ano letivo
             </label>
-            <input id="ano_letivo" name="ano_letivo" type="number" required defaultValue={plano?.ano_letivo ?? new Date().getFullYear()} className="input-field" />
+            <input id="ano_letivo" name="ano_letivo" type="number" defaultValue={plano?.ano_letivo ?? new Date().getFullYear()} className="input-field" />
           </div>
 
           <TurmaSelector
@@ -581,11 +843,11 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
             <input id="titulo" name="titulo" type="text" defaultValue={plano?.titulo ?? ""} placeholder="Se deixar em branco, o sistema cria um nome" className="input-field" />
           </div>
 
-          <fieldset className="rounded-xl border border-primary-100 bg-white p-4 shadow-sm">
-            <legend className="px-1 text-sm font-bold text-slate-800">Brasões do cabeçalho</legend>
+          <fieldset className="rounded-lg border border-slate-300 bg-white p-4">
+            <legend className="px-1 text-sm font-bold text-slate-800">Logos do cabeçalho</legend>
             <label className="mt-1 flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" name="incluir_logo_estado" defaultChecked={plano?.incluir_logo_estado ?? true} className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
-              Brasão do Estado de Santa Catarina
+              Logo do Governo de Santa Catarina (Secretaria de Estado da Educação)
             </label>
             <label className="mt-2 flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" name="incluir_logo_escola" defaultChecked={plano?.incluir_logo_escola ?? true} className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
@@ -593,15 +855,6 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
             </label>
           </fieldset>
 
-          <div>
-            <label htmlFor="status" className="field-label">
-              Situação
-            </label>
-            <select id="status" name="status" defaultValue={plano?.status ?? "rascunho"} className="input-field">
-              <option value="rascunho">Rascunho</option>
-              <option value="finalizado">Finalizado</option>
-            </select>
-          </div>
         </div>
         {erroDados && (
           <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
@@ -610,137 +863,39 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
         )}
       </SecaoPlano>
 
-      {/* ───────── 2. Ementa ───────── */}
-      <SecaoPlano
-        id="passo-2"
-        numero={2}
-        titulo="Ementa"
-        descricao={multi ? "Marque os temas da ementa de cada componente — e acrescente os seus." : "Marque os temas que farão parte da ementa — e acrescente os seus."}
-      >
-        {multi ? (
-          porComponente((d) => <BlocoEmenta {...propsDe(d.id, d.id)} />)
-        ) : (
-          <BlocoEmenta {...propsDe(UNICO, disciplina?.id)} />
+      </div>
+
+      {passo.tipo !== "ident" && conteudoDoPasso(passo)}
+
+      {/* Barra de navegação do fluxo */}
+      <div className="sticky bottom-3 z-[5] space-y-2">
+        {mensagemErro && (
+          <p role="alert" className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 shadow-sm">
+            <Icone nome="alerta" className="mt-0.5 h-4 w-4 shrink-0" />
+            {mensagemErro}
+          </p>
         )}
-      </SecaoPlano>
-
-      {/* ───────── 3. Competências gerais ───────── */}
-      <SecaoPlano id="passo-3" numero={3} titulo="Competências gerais da BNCC" descricao="São as mesmas para qualquer plano: marque as que quiser e acrescente outras.">
-        <SeletorItens
-          opcoes={GERAIS_OPCOES}
-          valor={gerais}
-          onChange={setGerais}
-          vazio=""
-          alturaRem={26}
-          rotuloManual="Acrescentar uma competência geral"
-          placeholderManual="Digite a competência"
-        />
-      </SecaoPlano>
-
-      {/* ───────── 4. Competências específicas ───────── */}
-      <SecaoPlano
-        id="passo-4"
-        numero={4}
-        titulo="Competências específicas"
-        descricao={
-          multi
-            ? "Da BNCC e do Currículo Catarinense, em listas separadas, para cada componente — marque as que quiser."
-            : "Da BNCC e do Currículo Catarinense, em listas separadas — marque as que quiser."
-        }
-      >
-        {multi ? (
-          porComponente((d) => (
-            <div className="space-y-4">
-              <BlocoEspecificas {...propsDe(d.id, d.id)} />
-            </div>
-          ))
-        ) : (
-          <BlocoEspecificas {...propsDe(UNICO, disciplina?.id)} />
-        )}
-      </SecaoPlano>
-
-      {/* ───────── 5. Componente curricular ───────── */}
-      <SecaoPlano
-        id="passo-5"
-        numero={5}
-        titulo="Componente curricular"
-        descricao={
-          multi
-            ? "Preencha os trimestres de cada componente: o botão azul diz o que está sendo preenchido, a etiqueta vermelha com o nome diz de qual componente e a outra, de qual trimestre."
-            : "Preencha cada trimestre: o botão azul diz o que está sendo preenchido e a etiqueta vermelha, em qual trimestre."
-        }
-      >
-        {multi ? (
-          porComponente((d) => (
-            <div className="space-y-4">
-              <BlocoTrimestres {...propsDe(d.id, d.id)} nomeComponente={d.nome} />
-            </div>
-          ))
-        ) : (
-          <BlocoTrimestres {...propsDe(UNICO, disciplina?.id)} />
-        )}
-      </SecaoPlano>
-
-      {/* ───────── 6. Texto livre ───────── */}
-      <SecaoPlano
-        id="passo-6"
-        numero={6}
-        titulo="Do item 6 em diante: texto livre"
-        descricao="Aqui o plano continua do jeito que você escrever — títulos, avaliação, metodologias, bibliografia, o que quiser."
-      >
-        <EditorLivre id="texto_livre_editor" name="texto_livre" valorInicial={textoLivreInicial} referencias={referenciasSugeridas(etapa)} sugestoes={sugestoesTexto} />
-      </SecaoPlano>
-
-      {/* ───────── Conferência ───────── */}
-      <section aria-labelledby="conferencia" className="rounded-2xl border-2 border-primary-300 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="conferencia" className="text-base font-bold text-slate-900">
-            Conferir antes de finalizar
-          </h2>
-          <button
-            type="button"
-            className="btn-azul-suave !border-2 !border-primary-500 !px-4 !py-2 !text-sm"
-            onClick={() => formRef.current && setConferencia(conferir(formRef.current))}
-          >
-            Conferir agora
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white/95 px-3 py-2.5 shadow-md backdrop-blur">
+          <button type="button" onClick={voltar} disabled={indice === 0} className="btn-azul-suave">
+            <Icone nome="setaEsquerda" className="h-4 w-4" />
+            Voltar
           </button>
+          <p className="order-last w-full text-center text-xs text-slate-600 sm:order-none sm:w-auto">
+            Passo {indice + 1} de {passos.length} · <span className="font-semibold text-slate-800">{multi && passo.nomeComp ? `${passo.nomeComp} · ` : ""}{passo.rotulo}</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <button type="submit" disabled={pendente} className={ultimo ? "btn-azul" : "btn-azul-suave"}>
+              {pendente ? "Salvando..." : ultimo ? textoBotao : "Salvar e continuar depois"}
+            </button>
+            {!ultimo && (
+              <button type="button" onClick={avancar} className="btn-azul">
+                Próximo
+                <Icone nome="setaDireita" className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
-        <p className="mt-1 text-xs text-slate-500">A conferência só avisa o que está faltando. Ela não altera nada no plano.</p>
-        {conferencia !== null &&
-          (conferencia.length === 0 ? (
-            <p role="status" className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
-              Tudo preenchido. Pode finalizar.
-            </p>
-          ) : (
-            <div role="status" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              <p className="font-semibold">Ainda falta preencher ({conferencia.length}):</p>
-              <ul className="mt-1 list-disc space-y-0.5 pl-5">
-                {conferencia.map((c) => (
-                  <li key={c}>{c}</li>
-                ))}
-              </ul>
-              {pedindoConfirmacao && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    className="btn-azul !px-4 !py-2 !text-sm"
-                    onClick={() => {
-                      ignorarPendencias.current = true;
-                      formRef.current?.requestSubmit();
-                    }}
-                  >
-                    Finalizar mesmo assim
-                  </button>
-                  <button type="button" className="btn-azul-suave !border-2 !border-amber-400 !px-4 !py-2 !text-sm" onClick={() => setPedindoConfirmacao(false)}>
-                    Voltar e completar
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-      </section>
-
-      <BarraSalvar pendente={pendente} textoBotao={textoBotao} erro={erroLocal ?? estado.erro} />
+      </div>
     </form>
   );
 }

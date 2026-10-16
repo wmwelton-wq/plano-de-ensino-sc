@@ -1,5 +1,6 @@
 "use client";
 
+import { Icone } from "@/components/icones";
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -52,12 +53,10 @@ export default function RecuperarSenhaPage() {
 
   if (enviado) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-6 py-12">
-        <div className="absolute inset-0 bg-grid-slate opacity-60 [mask-image:radial-gradient(ellipse_55%_45%_at_50%_0%,#000_60%,transparent_100%)]" />
-        <div className="absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary-200/50 blur-3xl" />
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
         <div className="card relative w-full max-w-sm p-8 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-xl">
-            ✉️
+          <div data-tom="azul" className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
+            <Icone nome="envelope" className="h-6 w-6" />
           </div>
           <h1 className="mt-4 text-xl font-semibold text-slate-900">Verifique seu email</h1>
           <p className="mt-2 text-sm text-slate-600">
@@ -73,9 +72,7 @@ export default function RecuperarSenhaPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-6 py-12">
-      <div className="absolute inset-0 bg-grid-slate opacity-60 [mask-image:radial-gradient(ellipse_55%_45%_at_50%_0%,#000_60%,transparent_100%)]" />
-      <div className="absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary-200/50 blur-3xl" />
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
 
       <div className="relative w-full max-w-sm">
         <div className="mb-6 text-center">

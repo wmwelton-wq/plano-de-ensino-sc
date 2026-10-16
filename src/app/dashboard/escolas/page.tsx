@@ -1,3 +1,4 @@
+import { Icone } from "@/components/icones";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
@@ -20,14 +21,14 @@ export default async function EscolasPage() {
           </p>
         </div>
         <Link href="/dashboard/escolas/nova" className="btn-primary">
-          <span aria-hidden="true">+</span> Nova escola
+          <Icone nome="mais" className="h-4 w-4" /> Nova escola
         </Link>
       </div>
 
       {!escolas || escolas.length === 0 ? (
         <div className="card mt-8 border-dashed p-12 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-xl">
-            🏫
+          <div data-tom="ambar" className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
+            <Icone nome="escola" className="h-6 w-6" />
           </div>
           <p className="mt-4 text-slate-600">Você ainda não cadastrou nenhuma escola.</p>
           <Link href="/dashboard/escolas/nova" className="link-primary mt-4 inline-block">
@@ -50,8 +51,8 @@ export default async function EscolasPage() {
                     className="h-11 w-11 rounded-lg border border-slate-200 bg-white object-contain p-1"
                   />
                 ) : (
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-dashed border-slate-300 text-sm text-slate-400">
-                    🏫
+                  <div data-tom="ambar" className="flex h-11 w-11 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
+                    <Icone nome="escola" className="h-5 w-5" />
                   </div>
                 )}
                 <div>

@@ -60,7 +60,8 @@ export default async function EscolasDoTipoPage({
             <li key={e.chave}>
               <CartaoPasta
                 href={`/dashboard/meus-planos/${tipo}/${e.chave}`}
-                icone={e.chave === SEM_ESCOLA ? "📂" : "🏫"}
+                icone={e.chave === SEM_ESCOLA ? "pasta" : "escola"}
+                tom={e.chave === SEM_ESCOLA ? "ardosia" : "ambar"}
                 titulo={e.nome}
                 contagem={e.planos.length}
               />

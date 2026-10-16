@@ -1,3 +1,4 @@
+import { Icone } from "@/components/icones";
 import Link from "next/link";
 import { DATA_ATUALIZACAO, NOME_SERVICO, VERSAO_DOCUMENTOS_LEGAIS } from "@/lib/legal";
 
@@ -17,14 +18,14 @@ export default function DocumentoLegal({
 }) {
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200/80 bg-white print:hidden">
+      <header className="border-b border-slate-300 bg-white print:hidden">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3.5">
           <Link
             href="/"
             className="flex items-center gap-2 rounded font-semibold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary-600 to-primary-800 text-sm font-bold text-white shadow-sm">
-              PD
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-800 text-white">
+              <Icone nome="livro" className="h-5 w-5" />
             </span>
             {NOME_SERVICO}
           </Link>
