@@ -3,11 +3,234 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --font-corpo: var(--font-inter);
+  --background: #f3f5f8;
+  --foreground: #0f1b2d;
+
+  /* Cores por função: cada tipo de passo/bloco tem o seu tom, sempre o mesmo em todo o sistema. */
+  --tom-azul: #204a7c;
+  --tom-azul-claro: #e9f0f8;
+  --tom-verde: #1d6b4f;
+  --tom-verde-claro: #e7f4ed;
+  --tom-violeta: #5a3e8a;
+  --tom-violeta-claro: #f1ecf8;
+  --tom-ambar: #9a5906;
+  --tom-ambar-claro: #fcf2de;
+  --tom-ciano: #0e6a85;
+  --tom-ciano-claro: #e4f2f7;
+  --tom-ardosia: #3b4658;
+  --tom-ardosia-claro: #eef0f4;
+  --tom-rosa: #9d2f4f;
+  --tom-rosa-claro: #fbebf0;
 }
 
 body {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
   color: var(--foreground);
   background: var(--background);
+}
+
+/* Tons: [data-tom="verde"] etc. definem --tom e --tom-claro para tudo que está dentro. */
+[data-tom="azul"] { --tom: var(--tom-azul); --tom-claro: var(--tom-azul-claro); }
+[data-tom="verde"] { --tom: var(--tom-verde); --tom-claro: var(--tom-verde-claro); }
+[data-tom="violeta"] { --tom: var(--tom-violeta); --tom-claro: var(--tom-violeta-claro); }
+[data-tom="ambar"] { --tom: var(--tom-ambar); --tom-claro: var(--tom-ambar-claro); }
+[data-tom="ciano"] { --tom: var(--tom-ciano); --tom-claro: var(--tom-ciano-claro); }
+[data-tom="ardosia"] { --tom: var(--tom-ardosia); --tom-claro: var(--tom-ardosia-claro); }
+[data-tom="rosa"] { --tom: var(--tom-rosa); --tom-claro: var(--tom-rosa-claro); }
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+  }
+}
+
+@layer components {
+  /* Campos de formulário (input, select, textarea) — visual único em todo o
+     app: borda suave, sombra leve e anel de foco mais generoso que o padrão
+     do navegador. */
+  .input-field {
+    @apply mt-1 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600/25;
+  }
+
+  .field-label {
+    @apply block text-sm font-semibold text-slate-800;
+  }
+
+  .field-hint {
+    @apply mt-1 text-xs text-slate-500;
+  }
+
+  /* Botões */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+
+  .btn-text-danger {
+    @apply rounded text-sm font-medium text-red-600 transition hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
+  }
+
+  .link-primary {
+    @apply rounded font-medium text-primary-600 transition hover:text-primary-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+
+  /* Texto formatado dos campos livres do plano (editor e PDF). O Tailwind
+     zera listas e margens, então restauramos aqui. */
+  .texto-rico p,
+  .texto-rico div {
+    margin: 0 0 0.5rem;
+  }
+  .texto-rico p:last-child,
+  .texto-rico div:last-child {
+    margin-bottom: 0;
+  }
+  .texto-rico ul {
+    list-style: disc;
+    margin: 0 0 0.5rem;
+    padding-left: 1.25rem;
+  }
+  .texto-rico ol {
+    list-style: decimal;
+    margin: 0 0 0.5rem;
+    padding-left: 1.25rem;
+  }
+  .texto-rico li {
+    margin-bottom: 0.125rem;
+  }
+  .texto-rico h1 { font-size: 1.5em; font-weight: 700; margin: 0 0 0.5rem; }
+  .texto-rico h2 { font-size: 1.25em; font-weight: 700; margin: 0 0 0.5rem; }
+  .texto-rico h3 { font-size: 1.1em; font-weight: 700; margin: 0 0 0.5rem; }
+  .texto-rico blockquote {
+    margin: 0 0 0.5rem;
+    padding-left: 0.75rem;
+    border-left: 3px solid #cbd5e1;
+  }
+  .texto-rico table {
+    border-collapse: collapse;
+    margin: 0 0 0.5rem;
+  }
+  .texto-rico td,
+  .texto-rico th {
+    padding: 4px 6px;
+    vertical-align: top;
+  }
+  .texto-rico img {
+    display: inline-block;
+    max-width: 100%;
+    height: auto;
+  }
+  .texto-rico sub { vertical-align: sub; font-size: 0.75em; }
+  .texto-rico sup { vertical-align: super; font-size: 0.75em; }
+  .editor-rico:empty::before {
+    content: attr(data-placeholder);
+    color: #94a3b8;
+    pointer-events: none;
+  }
+
+  /* Botões azuis de destaque (ações principais do formulário e do plano) */
+  .btn-azul {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
+  }
+
+  .btn-azul-suave {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-primary-300 bg-white px-4 py-2 text-sm font-semibold text-primary-800 transition hover:border-primary-500 hover:bg-primary-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
+  }
+
+  /* Botões verdes: abrir listas de sugestões e adicionar itens ao plano (diferentes dos azuis de navegação/salvar). */
+  .btn-verde {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
+  }
+
+  .btn-verde-suave {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:border-emerald-500 hover:bg-emerald-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
+  }
+
+  /* Nome do componente curricular (disciplina) nos planos dos Anos Iniciais: etiqueta escura fácil de achar. */
+  .etiqueta-disciplina {
+    @apply inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-sm font-bold text-white;
+    background: var(--tom-ardosia);
+  }
+
+  .btn-perigo-suave {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
+  }
+
+  /* Seções do formulário do plano: cada etapa tem um título em caixa azul. */
+  .secao-plano {
+    @apply scroll-mt-28 overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm;
+    --tom: var(--tom-azul);
+    --tom-claro: var(--tom-azul-claro);
+    border-top: 4px solid var(--tom);
+  }
+
+  .secao-cabecalho {
+    @apply flex items-center gap-3 px-5 py-3.5;
+    background: var(--tom-claro);
+    color: var(--tom);
+    border-bottom: 1px solid color-mix(in srgb, var(--tom) 22%, white);
+  }
+
+  .secao-numero {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white;
+    background: var(--tom);
+  }
+
+  .secao-corpo {
+    @apply space-y-5 bg-white p-5;
+  }
+
+  /* Cabeçalho das páginas internas (ver components/cabecalho-pagina.tsx). */
+  .cabecalho-pagina {
+    @apply overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm;
+    --tom: var(--tom-azul);
+    --tom-claro: var(--tom-azul-claro);
+    border-left: 5px solid var(--tom);
+  }
+
+  .cabecalho-icone {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg;
+    background: var(--tom-claro);
+    color: var(--tom);
+  }
+
+  /* Cartões */
+  .card {
+    @apply rounded-xl border border-slate-300 bg-white shadow-sm;
+  }
+
+  .card-interactive {
+    @apply transition hover:border-primary-400 hover:shadow-md;
+  }
+
+  /* Selos de status */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+}
+
+/* Impressão dos planos de ensino: página A4 na horizontal, igual ao
+   modelo oficial da Secretaria de Educação (SED/SC). As margens aqui
+   substituem o padding do próprio conteúdo (removido via `print:p-0`
+   nas páginas de visualização), evitando margem dobrada. */
+@page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+/* Quem prefere menos movimento no sistema (acessibilidade) não vê animações nem transições. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
