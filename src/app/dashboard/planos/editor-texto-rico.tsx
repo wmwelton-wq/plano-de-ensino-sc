@@ -102,7 +102,18 @@ export default function EditorTextoRico({
   const linhasAtuais = useCallback((): string[] => {
     const area = areaRef.current;
     if (!area) return [];
-    return (area.innerText || area.textContent || "")
+    // Campo escondido (ex.: passo de outra etapa do plano): o navegador não separa os parágrafos em
+    // innerText; então lemos bloco a bloco para as linhas continuarem certas.
+    let bruto = area.innerText || "";
+    if (!bruto.includes("\n") && area.children.length > 1) {
+      const partes: string[] = [];
+      Array.from(area.children).forEach((el) => {
+        if (el.tagName === "UL" || el.tagName === "OL") el.querySelectorAll("li").forEach((li) => partes.push(li.textContent ?? ""));
+        else partes.push(el.textContent ?? "");
+      });
+      bruto = partes.join("\n");
+    }
+    return (bruto || area.textContent || "")
       .split("\n")
       .map(normalizarLinha)
       .filter((l) => l.length > 0);

@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import EditorTextoRico, { type EditorTextoRicoHandle } from "./editor-texto-rico";
-import { useLinhasDoEditor } from "./linhas-do-editor";
+import { useCaixinhasIndependentes, type ItemCaixinha } from "./linhas-do-editor";
 import { carregarRecomposicao } from "./recomposicao-actions";
 import {
   NIVEIS,
@@ -29,6 +29,10 @@ interface RecomposicaoCampoProps {
   valorObjetos?: string | null;
 }
 
+const chaveHabilidade = (id: string) => `h:${id}`;
+const chaveObjeto = (nivel: NivelRecomposicao, ano: number, objeto: string) => `o:${nivel}-${ano}||${objeto}`;
+const chaveConteudo = (chaveDoObjeto: string, conteudo: string) => `c:${chaveDoObjeto}||${conteudo}`;
+
 /**
  * Recomposição das aprendizagens de Língua Portuguesa ou Matemática: o professor diz se quer recompor (sim/não); se
  * sim, escolhe o nível (Anos Iniciais, Anos Finais ou Ensino Médio), o ano/série e marca as habilidades e os
@@ -53,8 +57,46 @@ export default function RecomposicaoCampo({
 
   const refHab = useRef<EditorTextoRicoHandle>(null);
   const refObj = useRef<EditorTextoRicoHandle>(null);
-  const textoHab = useLinhasDoEditor(refHab);
-  const textoObj = useLinhasDoEditor(refObj);
+  // Cada caixinha guarda a SUA marcação: marcar um conteúdo não marca outro igual que aparece em outro objeto.
+  const caixasHab = useCaixinhasIndependentes(refHab);
+  const caixasObj = useCaixinhasIndependentes(refObj);
+  const semeadosHab = useRef(new Set<NivelRecomposicao>());
+  const semeadosObj = useRef(new Set<NivelRecomposicao>());
+  const { semearMais: semearHab, textoPronto: textoHabPronto } = caixasHab;
+  const { semearMais: semearObj, textoPronto: textoObjPronto } = caixasObj;
+
+  // Plano já salvo: ao carregar a lista de um nível, marca as caixinhas do que já está escrito nos campos (todos os anos de uma vez).
+  useEffect(() => {
+    for (const n of NIVEIS) {
+      const d = dados[n.id];
+      if (!d || d.erro) continue;
+      // Só reconhece o que já veio salvo no plano, e só quando o campo respectivo já leu o seu texto.
+      const fazHab = Boolean(valorHabilidades) && textoHabPronto && !semeadosHab.current.has(n.id);
+      const fazObj = Boolean(valorObjetos) && textoObjPronto && !semeadosObj.current.has(n.id);
+      if (!fazHab && !fazObj) continue;
+      if (fazHab) semeadosHab.current.add(n.id);
+      if (fazObj) semeadosObj.current.add(n.id);
+      const anos = n.id === "medio" ? [n.anos[0]] : n.anos;
+      const candHab = new Map<string, ItemCaixinha>();
+      const candObj: ItemCaixinha[] = [];
+      for (const a of anos) {
+        for (const h of habilidadesDoAno(n.id, a, d)) {
+          const chave = chaveHabilidade(h.id);
+          if (!candHab.has(chave)) candHab.set(chave, { chave, linha: linhaDaHabilidade(h) });
+        }
+      }
+      for (const a of n.anos) {
+        const rotulo = n.rotuloAno(a);
+        for (const o of objetosDoAno(n.id, a, d)) {
+          const k = chaveObjeto(n.id, a, o.objeto);
+          candObj.push({ chave: k, linha: `${o.objeto} (${rotulo})` });
+          for (const c of o.conteudos) candObj.push({ chave: chaveConteudo(k, c), linha: c, pai: k });
+        }
+      }
+      if (fazHab) semearHab(Array.from(candHab.values()));
+      if (fazObj) semearObj(candObj);
+    }
+  }, [dados, textoHabPronto, textoObjPronto]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function escolherNivel(n: NivelRecomposicao) {
     setNivel(n);
@@ -198,15 +240,15 @@ export default function RecomposicaoCampo({
                   </li>
                 )}
                 {habilidadesFiltradas.map((h) => {
-                  const linha = linhaDaHabilidade(h);
-                  const marcado = textoHab.tem(linha);
+                  const item: ItemCaixinha = { chave: chaveHabilidade(h.id), linha: linhaDaHabilidade(h) };
+                  const marcado = caixasHab.marcado(item.chave);
                   return (
                     <li key={h.id}>
                       <label className="flex cursor-pointer items-start gap-2 px-3 py-2 text-sm hover:bg-primary-50/50">
                         <input
                           type="checkbox"
                           checked={marcado}
-                          onChange={() => (marcado ? textoHab.desmarcar([linha]) : textoHab.marcar([linha], "paragrafos"))}
+                          onChange={() => (marcado ? caixasHab.desmarcar([item]) : caixasHab.marcar([item]))}
                           className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                         />
                         <span className="text-slate-600">
@@ -235,12 +277,12 @@ export default function RecomposicaoCampo({
                   <li className="px-3 py-3 text-sm text-slate-500">Não há objetos de conhecimento cadastrados para este ano.</li>
                 )}
                 {objetos.map((o) => {
-                  const linhaObjeto = `${o.objeto} (${rotuloAno})`;
-                  const todas = [linhaObjeto, ...o.conteudos];
-                  const objetoMarcado = textoObj.tem(linhaObjeto);
-                  const conteudosMarcados = o.conteudos.filter((c) => textoObj.tem(c)).length;
+                  const chave = chaveObjeto(nivel, ano, o.objeto);
+                  const itemObjeto: ItemCaixinha = { chave, linha: `${o.objeto} (${rotuloAno})` };
+                  const itensConteudo: ItemCaixinha[] = o.conteudos.map((c) => ({ chave: chaveConteudo(chave, c), linha: c }));
+                  const objetoMarcado = caixasObj.marcado(chave);
+                  const conteudosMarcados = itensConteudo.filter((i) => caixasObj.marcado(i.chave)).length;
                   const parcial = !objetoMarcado ? conteudosMarcados > 0 : conteudosMarcados > 0 && conteudosMarcados < o.conteudos.length;
-                  const chave = `${nivel}-${ano}-${o.objeto}`;
                   const expandido = aberto === chave;
                   return (
                     <li key={chave}>
@@ -254,11 +296,10 @@ export default function RecomposicaoCampo({
                           }}
                           onChange={() => {
                             if (objetoMarcado || conteudosMarcados > 0) {
-                              textoObj.desmarcar(todas);
+                              caixasObj.desmarcar([itemObjeto, ...itensConteudo]);
                               return;
                             }
-                            textoObj.marcar([linhaObjeto], "paragrafos");
-                            if (o.conteudos.length > 0) textoObj.marcar(o.conteudos, "lista");
+                            caixasObj.marcar([itemObjeto, ...itensConteudo]);
                           }}
                           aria-label={`Colocar no plano: ${o.objeto}`}
                           className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 text-primary-600 focus:ring-primary-500"
@@ -280,24 +321,20 @@ export default function RecomposicaoCampo({
                       </div>
                       {expandido && (
                         <div className="space-y-0.5 bg-primary-50/40 px-3 pb-3 pt-1 pl-9">
-                          {o.conteudos.map((c) => {
-                            const marcado = textoObj.tem(c);
+                          {itensConteudo.map((ic) => {
+                            const marcado = caixasObj.marcado(ic.chave);
                             return (
-                              <label key={c} className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-sm text-slate-700 hover:bg-white">
+                              <label key={ic.chave} className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1 text-sm text-slate-700 hover:bg-white">
                                 <input
                                   type="checkbox"
                                   checked={marcado}
                                   onChange={() => {
-                                    if (marcado) {
-                                      textoObj.desmarcar([c]);
-                                    } else {
-                                      if (!objetoMarcado) textoObj.marcar([linhaObjeto], "paragrafos");
-                                      textoObj.marcar([c], "lista");
-                                    }
+                                    if (marcado) caixasObj.desmarcar([ic]);
+                                    else caixasObj.marcar(objetoMarcado ? [ic] : [itemObjeto, ic]);
                                   }}
                                   className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                                 />
-                                <span>{c}</span>
+                                <span>{ic.linha}</span>
                               </label>
                             );
                           })}

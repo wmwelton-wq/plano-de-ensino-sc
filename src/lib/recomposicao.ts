@@ -165,7 +165,57 @@ export function objetosDoAno(nivel: NivelRecomposicao, ano: number, dados: Dados
       for (const p of partes) juntar(nomeDoObjeto(p), itensDeConteudo(h.conteudos));
     }
   }
-  return Array.from(mapa.values()).sort((a, b) => a.objeto.localeCompare(b.objeto, "pt-BR", { sensitivity: "base" }));
+  return reunirObjetosRepetidos(Array.from(mapa.values())).sort((a, b) =>
+    a.objeto.localeCompare(b.objeto, "pt-BR", { sensitivity: "base" })
+  );
+}
+
+/** Texto sem acento/maiúscula e com cada palavra reduzida (singular, 6 letras) para comparar nomes quase iguais. */
+function chaveDeParte(t: string): string {
+  return semAcento(t)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map((w) => w.replace(/s$/, "").slice(0, 6))
+    .join(" ");
+}
+
+/** "A / B / C" (ou "A/ B") -> partes comparáveis [a, b, c]. */
+function partesDoNome(objeto: string): string[] {
+  return objeto.split(/\s*\/\s+|\s+\/\s*/).map(chaveDeParte).filter(Boolean);
+}
+
+/**
+ * O currículo traz, para o mesmo ano, um objeto "reunido" (ex.: "Compreensão em leitura / Pesquisa") e também cada
+ * parte solta ("Compreensão em leitura"), repetindo os mesmos conteúdos. Mostramos só o reunido, com os conteúdos
+ * de todos juntos: nada se perde, mas não há mais itens repetidos nem caixinhas que se confundem.
+ */
+function reunirObjetosRepetidos(objetos: ObjetoRecomposicao[]): ObjetoRecomposicao[] {
+  const info = objetos.map((o) => ({ o, partes: partesDoNome(o.objeto) }));
+  const destino = new Map<number, number>();
+  info.forEach((a, ia) => {
+    if (a.partes.length === 0) return;
+    let melhor = -1;
+    info.forEach((b, ib) => {
+      if (ia === ib || !a.partes.every((p) => b.partes.includes(p))) return;
+      const maior = b.partes.length > a.partes.length;
+      const igualMaisCanonico = b.partes.length === a.partes.length && b.o.objeto < a.o.objeto;
+      if (!maior && !igualMaisCanonico) return;
+      if (melhor === -1 || b.partes.length > info[melhor].partes.length) melhor = ib;
+    });
+    if (melhor !== -1) destino.set(ia, melhor);
+  });
+  if (destino.size === 0) return objetos;
+  // Segue a cadeia até o objeto que fica (um objeto pode apontar para outro que também foi reunido).
+  const final = (i: number): number => (destino.has(i) ? final(destino.get(i) as number) : i);
+  const extras = new Map<number, string[]>();
+  destino.forEach((_, ia) => {
+    const f = final(ia);
+    extras.set(f, [...(extras.get(f) ?? []), ...info[ia].o.conteudos]);
+  });
+  return info
+    .map((x, i) => ({ x, i }))
+    .filter(({ i }) => !destino.has(i))
+    .map(({ x, i }) => ({ objeto: x.o.objeto, conteudos: semRepetidos([...x.o.conteudos, ...(extras.get(i) ?? [])]) }));
 }
 
 /** Linha que a caixinha de uma habilidade escreve no campo de texto. */

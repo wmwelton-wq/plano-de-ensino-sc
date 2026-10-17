@@ -143,5 +143,35 @@ export function useCaixinhasIndependentes(editorRef: RefObject<EditorTextoRicoHa
     atualizar((n) => n + 1);
   }
 
-  return { marcado, marcar, desmarcar, semear, textoPronto: texto.linhas.size > 0, jaDecidiu: () => decidido.current };
+  /**
+   * Como `semear`, mas pode ser chamada várias vezes (ex.: a cada lista nova carregada). Só mexe nas caixinhas que
+   * ainda não têm marcação e nunca desfaz as que o professor já decidiu.
+   */
+  function semearMais(itens: ItemCaixinha[]) {
+    if (texto.linhas.size === 0 || itens.length === 0) return;
+    const contagem = new Map<string, number>();
+    for (const i of itens) {
+      if (i.pai) continue;
+      const n = normalizarLinha(i.linha);
+      contagem.set(n, (contagem.get(n) ?? 0) + 1);
+    }
+    let mudou = false;
+    for (const i of itens) {
+      if (i.pai || selecao.current.has(i.chave)) continue;
+      const n = normalizarLinha(i.linha);
+      if (contagem.get(n) === 1 && texto.linhas.has(n)) {
+        selecao.current.set(i.chave, i.linha);
+        mudou = true;
+      }
+    }
+    for (const i of itens) {
+      if (i.pai && !selecao.current.has(i.chave) && selecao.current.has(i.pai) && texto.linhas.has(normalizarLinha(i.linha))) {
+        selecao.current.set(i.chave, i.linha);
+        mudou = true;
+      }
+    }
+    if (mudou) atualizar((n) => n + 1);
+  }
+
+  return { marcado, marcar, desmarcar, semear, semearMais, textoPronto: texto.linhas.size > 0, jaDecidiu: () => decidido.current };
 }
