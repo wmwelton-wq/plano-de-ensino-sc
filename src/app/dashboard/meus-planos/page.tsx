@@ -1,12 +1,16 @@
 import { Icone } from "@/components/icones";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Migalhas, TIPOS, carregarPlanos, type TipoPlano } from "./dados";
+import { Migalhas, TIPOS, type TipoPlano } from "./dados";
 
 export default async function MeusPlanosPage() {
   const supabase = await createClient();
-  const [mensais, anuais] = await Promise.all([carregarPlanos(supabase, "mensais"), carregarPlanos(supabase, "anuais")]);
-  const total: Record<TipoPlano, number> = { mensais: mensais.length, anuais: anuais.length };
+  // Só os totais: contagem no banco, sem baixar nenhum plano.
+  const [mensais, anuais] = await Promise.all([
+    supabase.from(TIPOS.mensais.tabela).select("id", { count: "exact", head: true }),
+    supabase.from(TIPOS.anuais.tabela).select("id", { count: "exact", head: true }),
+  ]);
+  const total: Record<TipoPlano, number> = { mensais: mensais.count ?? 0, anuais: anuais.count ?? 0 };
 
   return (
     <div>

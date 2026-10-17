@@ -23,6 +23,27 @@ const TIPOS_LOGO_PERMITIDOS: Record<string, string> = {
 
 const TAMANHO_MAXIMO_LOGO = 2 * 1024 * 1024; // 2 MB
 
+/** Confere o conteúdo REAL do arquivo (os primeiros bytes), não só o tipo que o navegador declarou. */
+function conteudoCombinaComTipo(tipo: string, bytes: Uint8Array, texto: string): boolean {
+  const ini = (...b: number[]) => b.every((v, i) => bytes[i] === v);
+  switch (tipo) {
+    case "image/png":
+      return ini(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a);
+    case "image/jpeg":
+      return ini(0xff, 0xd8, 0xff);
+    case "image/webp":
+      return ini(0x52, 0x49, 0x46, 0x46) && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+    case "image/svg+xml": {
+      // SVG é XML e pode carregar scripts: aceita só se for um SVG "limpo".
+      const t = texto.toLowerCase();
+      if (!t.includes("<svg")) return false;
+      return !/<script|<foreignobject|<iframe|<embed|<object|javascript:|\bon[a-z]+\s*=|<!entity|<!doctype[^>]*\[/.test(t);
+    }
+    default:
+      return false;
+  }
+}
+
 type ResultadoUploadLogo =
   | { ok: true; url: string | null }
   | { ok: false; erro: string };
@@ -48,6 +69,12 @@ async function enviarLogo(
     return { ok: false, erro: "A logo deve ter no máximo 2 MB." };
   }
 
+  const bytes = new Uint8Array(await arquivo.arrayBuffer());
+  const texto = arquivo.type === "image/svg+xml" ? new TextDecoder().decode(bytes) : "";
+  if (!conteudoCombinaComTipo(arquivo.type, bytes, texto)) {
+    return { ok: false, erro: "O arquivo não parece ser uma imagem válida. Envie um PNG, JPEG, WEBP ou SVG simples." };
+  }
+
   // Caminho prefixado pelo userId (auth.uid()) — as policies do bucket
   // "logos-escolas" só permitem insert/update/delete dentro da própria pasta,
   // garantindo que um professor nunca sobrescreva o arquivo de outro.
@@ -55,7 +82,7 @@ async function enviarLogo(
 
   const { error } = await supabase.storage
     .from(BUCKET_LOGOS)
-    .upload(caminho, arquivo, { upsert: true, contentType: arquivo.type });
+    .upload(caminho, bytes, { upsert: true, contentType: arquivo.type });
 
   if (error) {
     return { ok: false, erro: "Não foi possível enviar a logo. Tente novamente." };

@@ -12,7 +12,11 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const next = searchParams.get("next") ?? "/dashboard";
+  // Só aceita caminhos internos do próprio site ("/dashboard/..."). Qualquer outra coisa
+  // (ex.: "https://outro-site.com" ou "//outro-site.com") volta para o painel.
+  const nextBruto = searchParams.get("next") ?? "/dashboard";
+  const next =
+    nextBruto.startsWith("/") && !nextBruto.startsWith("//") && !nextBruto.includes("\\") ? nextBruto : "/dashboard";
 
   if (token_hash && type) {
     const supabase = await createClient();
@@ -20,6 +24,7 @@ export async function GET(request: Request) {
 
     if (!error) {
       const url = new URL(next, origin);
+      if (url.origin !== origin) return NextResponse.redirect(new URL("/dashboard", origin));
       return NextResponse.redirect(url);
     }
   }

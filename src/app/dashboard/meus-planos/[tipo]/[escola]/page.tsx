@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -13,15 +14,17 @@ import {
 } from "../../dados";
 import BaixarVarios from "../../baixar-varios";
 
+const PLANOS_POR_PAGINA = 30;
+
 export default async function TurmasDaEscolaPage({
   params,
   searchParams,
 }: {
   params: Promise<{ tipo: string; escola: string }>;
-  searchParams: Promise<{ turma?: string }>;
+  searchParams: Promise<{ turma?: string; pagina?: string }>;
 }) {
   const { tipo: tipoBruto, escola } = await params;
-  const { turma } = await searchParams;
+  const { turma, pagina: paginaBruta } = await searchParams;
   if (!tipoValido(tipoBruto)) notFound();
   const tipo = tipoBruto as TipoPlano;
 
@@ -43,6 +46,11 @@ export default async function TurmasDaEscolaPage({
   if (turma !== undefined) {
     const t = turmas.find((x) => x.chave === turma);
     if (!t) notFound();
+    const totalPaginas = Math.max(1, Math.ceil(t.planos.length / PLANOS_POR_PAGINA));
+    const pedida = Number.parseInt(paginaBruta ?? "1", 10);
+    const pagina = Number.isFinite(pedida) ? Math.min(Math.max(pedida, 1), totalPaginas) : 1;
+    const planosDaPagina = t.planos.slice((pagina - 1) * PLANOS_POR_PAGINA, pagina * PLANOS_POR_PAGINA);
+    const hrefPagina = (n: number) => `${urlEscola}?turma=${encodeURIComponent(t.chave)}&pagina=${n}`;
     return (
       <div>
         <Migalhas itens={[...migalhasBase, { rotulo: grupo.nome, href: urlEscola }, { rotulo: t.nome }]} />
@@ -58,10 +66,31 @@ export default async function TurmasDaEscolaPage({
           />
         </div>
         <ul className="mt-6 space-y-3">
-          {t.planos.map((p) => (
+          {planosDaPagina.map((p) => (
             <CartaoPlano key={p.id} plano={p} base={info.base} tipo={tipo} />
           ))}
         </ul>
+        {totalPaginas > 1 && (
+          <nav aria-label="Páginas de planos" className="mt-6 flex items-center justify-between gap-3 text-sm">
+            {pagina > 1 ? (
+              <Link href={hrefPagina(pagina - 1)} className="btn-azul-suave" aria-label="Página anterior">
+                ← Anterior
+              </Link>
+            ) : (
+              <span />
+            )}
+            <span className="text-slate-600" aria-live="polite">
+              Página {pagina} de {totalPaginas} · {t.planos.length} planos
+            </span>
+            {pagina < totalPaginas ? (
+              <Link href={hrefPagina(pagina + 1)} className="btn-azul-suave" aria-label="Próxima página">
+                Próxima →
+              </Link>
+            ) : (
+              <span />
+            )}
+          </nav>
+        )}
       </div>
     );
   }

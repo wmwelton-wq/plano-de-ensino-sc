@@ -1,5 +1,21 @@
 "use client";
 
+import { useFormStatus } from "react-dom";
+
+function BotaoExcluir() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      aria-busy={pending}
+      className="btn-perigo-suave disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {pending ? "Excluindo…" : "Excluir plano"}
+    </button>
+  );
+}
+
 export default function ExcluirButton({
   excluirAction,
 }: {
@@ -14,12 +30,7 @@ export default function ExcluirButton({
         }
       }}
     >
-      <button
-        type="submit"
-        className="btn-perigo-suave"
-      >
-        Excluir plano
-      </button>
+      <BotaoExcluir />
     </form>
   );
 }
