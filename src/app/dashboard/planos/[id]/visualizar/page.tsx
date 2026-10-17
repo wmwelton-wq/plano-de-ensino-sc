@@ -123,6 +123,15 @@ export default async function VisualizarPlanoPage({
   // Planos dos Anos Iniciais salvos com seções por componente usam o modelo em PDF (uma seção por componente);
   // os salvos antes disso continuam no formato anterior até serem editados e salvos de novo.
   const modeloPorComponente = ehAnosIniciais && lerSecoes(plano.secoes_componentes).length > 0;
+  // Anos Finais e Ensino Médio: a recomposição das aprendizagens (só Língua Portuguesa e Matemática) fica logo
+  // abaixo da competência específica.
+  const secaoRecomposicao = ehAnosIniciais
+    ? null
+    : lerSecoes(plano.secoes_componentes).find((x) => x.disciplina_id === plano.disciplina_id) ?? null;
+  const recomposicaoDoPlano =
+    secaoRecomposicao && (secaoRecomposicao.recomposicao_habilidades || secaoRecomposicao.recomposicao_objetos)
+      ? secaoRecomposicao
+      : null;
   const componentesDoPlano = (planoDisciplinas ?? [])
     .map((p) => {
       const linha = p as unknown as { disciplina_id: string; disciplinas: { nome: string } | null };
@@ -396,6 +405,24 @@ export default async function VisualizarPlanoPage({
                       ))}
                     </div>
                   ) : null}
+                </Linha>
+              )}
+              {recomposicaoDoPlano && (
+                <Linha rotulo="Recomposição das aprendizagens:">
+                  <div className="space-y-2">
+                    {recomposicaoDoPlano.recomposicao_habilidades && (
+                      <div>
+                        <p className="font-bold">Habilidades:</p>
+                        <TextoOuParagrafos texto={recomposicaoDoPlano.recomposicao_habilidades} />
+                      </div>
+                    )}
+                    {recomposicaoDoPlano.recomposicao_objetos && (
+                      <div>
+                        <p className="font-bold">Conteúdos/objetos de conhecimento:</p>
+                        <TextoOuParagrafos texto={recomposicaoDoPlano.recomposicao_objetos} />
+                      </div>
+                    )}
+                  </div>
                 </Linha>
               )}
               <Linha

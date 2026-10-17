@@ -14,6 +14,8 @@ interface SecaoPlanoProps {
   tom?: TomSecao;
   /** Ícone no lugar do número. */
   icone?: NomeIcone;
+  /** Passo que não está na vez no fluxo: continua na página (nada se perde), só fica escondido. */
+  oculto?: boolean;
   children: ReactNode;
 }
 
@@ -21,9 +23,9 @@ interface SecaoPlanoProps {
  * Uma etapa do formulário do plano: o título fica numa faixa colorida (fácil de
  * achar e não se mistura com os campos) e os campos ficam logo abaixo dela.
  */
-export default function SecaoPlano({ id, numero, titulo, descricao, tom = "azul", icone, children }: SecaoPlanoProps) {
+export default function SecaoPlano({ id, numero, titulo, descricao, tom = "azul", icone, oculto = false, children }: SecaoPlanoProps) {
   return (
-    <section id={id} aria-labelledby={`${id}-titulo`} className="secao-plano" data-tom={tom}>
+    <section id={id} aria-labelledby={`${id}-titulo`} className="secao-plano" data-tom={tom} hidden={oculto}>
       <header className="secao-cabecalho">
         <span className="secao-numero" aria-hidden="true">
           {icone ? <Icone nome={icone} className="h-5 w-5" /> : <span className="text-sm font-bold">{numero}</span>}

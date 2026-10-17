@@ -205,6 +205,26 @@ async function lerSecoesComponentes(
   };
 }
 
+/**
+ * Anos Finais e Ensino Médio: o plano tem uma só disciplina, mas Língua Portuguesa e Matemática podem ter
+ * "recomposição das aprendizagens". Ela fica na mesma coluna dos Anos Iniciais (secoes_componentes), numa única
+ * entrada da disciplina do plano. O marcador "tem_recomposicao" avisa que o formulário cuida disso: assim, trocar
+ * de disciplina ou escolher "não" limpa o que havia antes.
+ */
+function lerRecomposicaoSimples(
+  formData: FormData,
+  disciplinaId: string | null
+): { secoes_componentes?: SecaoComponente[] } {
+  if (!formData.has("tem_recomposicao") || formData.has("tem_secoes")) return {};
+  if (!disciplinaId) return { secoes_componentes: [] };
+  const objetos = prepararCampoParaSalvar(formData.get("recomposicao_objetos"));
+  const habilidades = prepararCampoParaSalvar(formData.get("recomposicao_habilidades"));
+  if (!objetos && !habilidades) return { secoes_componentes: [] };
+  return {
+    secoes_componentes: [{ disciplina_id: disciplinaId, recomposicao_objetos: objetos, recomposicao_habilidades: habilidades }],
+  };
+}
+
 export async function criarPlano(
   _estadoAnterior: EstadoFormulario,
   formData: FormData
@@ -269,6 +289,7 @@ export async function criarPlano(
       referencias: (formData.get("referencias") as string) || null,
       status: (formData.get("status") as string) || "rascunho",
       ...(await lerSecoesComponentes(supabase, formData, disciplinaIds)),
+      ...lerRecomposicaoSimples(formData, disciplina_id),
     })
     .select("id")
     .single();
@@ -346,6 +367,7 @@ export async function atualizarPlano(
       referencias: (formData.get("referencias") as string) || null,
       status: (formData.get("status") as string) || "rascunho",
       ...(await lerSecoesComponentes(supabase, formData, disciplinaIds)),
+      ...lerRecomposicaoSimples(formData, disciplina_id),
     })
     .eq("id", planoId);
 

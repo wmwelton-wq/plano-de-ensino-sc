@@ -30,6 +30,13 @@ interface ObjetosEHabilidadesProps {
   numeroHabilidades: number;
   idObjetos: string;
   idHabilidades: string;
+  /** No fluxo passo a passo, só uma das duas etapas aparece de cada vez. */
+  ocultarObjetos?: boolean;
+  ocultarHabilidades?: boolean;
+  /** Nome do componente, acrescentado aos títulos quando há um conjunto de etapas por componente. */
+  rotuloComponente?: string;
+  /** Cor das duas etapas. */
+  tom?: import("./secao-plano").TomSecao;
 }
 
 const FONTE_CATARINENSE = "curriculo_catarinense";
@@ -333,6 +340,10 @@ export default function ObjetosEHabilidades({
   numeroHabilidades,
   idObjetos,
   idHabilidades,
+  ocultarObjetos = false,
+  ocultarHabilidades = false,
+  rotuloComponente,
+  tom,
 }: ObjetosEHabilidadesProps) {
   const idFonte = useId();
   const idAno = useId();
@@ -580,8 +591,10 @@ export default function ObjetosEHabilidades({
       {/* ───────── Etapa: objetos de conhecimento e conteúdos ───────── */}
       <SecaoPlano
         id={idObjetos}
+        oculto={ocultarObjetos}
         numero={numeroObjetos}
-        titulo="Objetos de conhecimento e conteúdos"
+        tom={tom}
+        titulo={rotuloComponente ? `Objetos de conhecimento e conteúdos — ${rotuloComponente}` : "Objetos de conhecimento e conteúdos"}
         descricao="Marque as caixinhas das sugestões do currículo ou escreva livremente no campo abaixo."
       >
         {vazioLista ? (
@@ -699,8 +712,10 @@ export default function ObjetosEHabilidades({
       {/* ───────── Etapa: selecionar habilidades ───────── */}
       <SecaoPlano
         id={idHabilidades}
+        oculto={ocultarHabilidades}
         numero={numeroHabilidades}
-        titulo="Selecionar habilidades"
+        tom={tom}
+        titulo={rotuloComponente ? `Selecionar habilidades — ${rotuloComponente}` : "Selecionar habilidades"}
         descricao="Escolha, a partir dos objetos de conhecimento, as habilidades que serão trabalhadas."
       >
         {vazioLista ? (

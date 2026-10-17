@@ -15,10 +15,12 @@ import type {
 import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
 import SecaoPlano from "./secao-plano";
-import PassosPlano from "./passos-plano";
 import CurriculoDigitalCampo from "./curriculo-digital-campo";
 import MetodologiaIA from "./metodologia-ia";
-import BarraSalvar from "./barra-salvar";
+import { FluxoRodape, FluxoTopo, aoCampoInvalido, semEnterQueEnvia, useFluxoMensal, type PassoMensal } from "./fluxo-mensal";
+import RecomposicaoCampo from "./recomposicao-campo";
+import { componenteDeRecomposicao } from "@/lib/recomposicao";
+import { lerSecoes } from "@/lib/secoes-componentes";
 import OpcoesLogo from "./opcoes-logo";
 import ReferenciasCampo from "./referencias-campo";
 import { referenciasOficiais } from "@/lib/referencias-oficiais";
@@ -51,16 +53,27 @@ interface PlanoFormProps {
   rotuloGrupoDisciplinas?: string;
 }
 
-const PASSOS = [
-  { id: "passo-1", rotulo: "Identificação" },
-  { id: "passo-2", rotulo: "Competências" },
-  { id: "passo-3", rotulo: "Objetos e conteúdos" },
-  { id: "passo-4", rotulo: "Habilidades" },
-  { id: "passo-5", rotulo: "Educação digital" },
-  { id: "passo-6", rotulo: "Caminho metodológico" },
-  { id: "passo-7", rotulo: "Avaliação" },
-  { id: "passo-8", rotulo: "Referências e salvar" },
-];
+/** Passos do plano (um de cada vez): a recomposição só existe para Língua Portuguesa e Matemática. */
+function montarPassos(comRecomposicao: boolean): PassoMensal[] {
+  const ident = { grupo: "ident", grupoRotulo: "Identificação", grupoTom: "ardosia", grupoIcone: "escola" } as const;
+  const curr = { grupo: "curriculo", grupoRotulo: "Competências e habilidades", grupoTom: "verde", grupoIcone: "livro" } as const;
+  const aula = { grupo: "aula", grupoRotulo: "Metodologia e avaliação", grupoTom: "violeta", grupoIcone: "lapis" } as const;
+  const fim = { grupo: "fim", grupoRotulo: "Fechamento", grupoTom: "azul", grupoIcone: "check" } as const;
+  const lista: PassoMensal[] = [
+    { chave: "ident", rotulo: "Identificação", tom: "ardosia", ...ident },
+    { chave: "comp", rotulo: "Competências", tom: "verde", ...curr },
+  ];
+  if (comRecomposicao) lista.push({ chave: "recomp", rotulo: "Recomposição", tom: "ambar", opcional: true, ...curr });
+  lista.push(
+    { chave: "obj", rotulo: "Objetos e conteúdos", tom: "verde", ...curr },
+    { chave: "hab", rotulo: "Habilidades", tom: "verde", ...curr },
+    { chave: "digital", rotulo: "Educação digital", tom: "ambar", opcional: true, ...curr },
+    { chave: "metod", rotulo: "Caminho metodológico", tom: "violeta", ...aula },
+    { chave: "aval", rotulo: "Avaliação", tom: "violeta", ...aula },
+    { chave: "fim", rotulo: "Referências e salvar", tom: "azul", ...fim }
+  );
+  return lista;
+}
 
 export default function PlanoForm({
   etapa,
@@ -161,6 +174,13 @@ export default function PlanoForm({
     );
   }, [competencias, vinculoTipo, vinculoId, disciplinaSelecionada]);
 
+  const recomposicaoDe = vinculoTipo === "disciplina" ? componenteDeRecomposicao(disciplinaSelecionada?.nome) : null;
+  const passos = useMemo(() => montarPassos(Boolean(recomposicaoDe)), [recomposicaoDe]);
+  const fluxo = useFluxoMensal(passos);
+  const { atual } = fluxo;
+  const numeroDe = (chave: string) => passos.findIndex((p) => p.chave === chave) + 1;
+  const secaoSalva = lerSecoes(plano?.secoes_componentes).find((x) => x.disciplina_id === vinculoId);
+
   const campoConteudos = (
     <div>
       <label htmlFor="conteudos_programaticos" className="field-label">
@@ -180,16 +200,25 @@ export default function PlanoForm({
   );
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form
+      action={formAction}
+      className="space-y-6"
+      onKeyDown={semEnterQueEnvia}
+      onInvalidCapture={aoCampoInvalido(() => fluxo.ir("ident"))}
+    >
       <input type="hidden" name="etapa" value={etapa} />
       <input type="hidden" name="vinculo_tipo" value={vinculoTipo ?? ""} />
       <input type="hidden" name="vinculo_id" value={vinculoId ?? ""} />
+      {/* Avisa o servidor que este formulário cuida da recomposição (assim, trocar de disciplina limpa a anterior). */}
+      <input type="hidden" name="tem_recomposicao" value="1" />
 
-      <PassosPlano passos={PASSOS} />
+      <FluxoTopo passos={passos} atual={atual} vistos={fluxo.vistos} aoIr={fluxo.ir} topo={fluxo.topo} />
 
       {/* ───────── 1. Identificação ───────── */}
       <SecaoPlano
         id="passo-1"
+        tom="ardosia"
+        oculto={atual !== "ident"}
         numero={1}
         titulo="Identificação do plano"
         descricao="Disciplina, turma, período e escola."
@@ -341,7 +370,9 @@ export default function PlanoForm({
       {/* ───────── 2. Competências ───────── */}
       <SecaoPlano
         id="passo-2"
-        numero={2}
+        tom="verde"
+        oculto={atual !== "comp"}
+        numero={numeroDe("comp")}
         titulo="Competência específica do componente curricular"
         descricao="Da BNCC / currículo catarinense, filtradas pela disciplina escolhida no passo 1."
       >
@@ -356,6 +387,29 @@ export default function PlanoForm({
         />
       </SecaoPlano>
 
+      {/* ───────── Recomposição das aprendizagens (só Língua Portuguesa e Matemática) ───────── */}
+      {recomposicaoDe && (
+        <SecaoPlano
+          id="passo-recomposicao"
+          tom="ambar"
+          oculto={atual !== "recomp"}
+          numero={numeroDe("recomp")}
+          titulo="Recomposição das aprendizagens (opcional)"
+          descricao="Para retomar habilidades e conteúdos de anos anteriores em Língua Portuguesa e Matemática."
+        >
+          <RecomposicaoCampo
+            key={vinculoId}
+            idBase={`recomp-${vinculoId}`}
+            nomeComponente={disciplinaSelecionada?.nome ?? ""}
+            componente={recomposicaoDe}
+            nomeCampoHabilidades="recomposicao_habilidades"
+            nomeCampoObjetos="recomposicao_objetos"
+            valorHabilidades={secaoSalva?.recomposicao_habilidades}
+            valorObjetos={secaoSalva?.recomposicao_objetos}
+          />
+        </SecaoPlano>
+      )}
+
       {/* ───────── 3 e 4. Objetos de conhecimento, conteúdos e habilidades ───────── */}
       {etapa === "fundamental_anos_finais" ? (
         <ObjetosEHabilidades
@@ -365,10 +419,12 @@ export default function PlanoForm({
           editorRef={conteudosRef}
           anoSugerido={anoSugerido}
           editorConteudos={campoConteudos}
-          numeroObjetos={3}
-          numeroHabilidades={4}
+          numeroObjetos={numeroDe("obj")}
+          numeroHabilidades={numeroDe("hab")}
           idObjetos="passo-3"
           idHabilidades="passo-4"
+          ocultarObjetos={atual !== "obj"}
+          ocultarHabilidades={atual !== "hab"}
           vazio={
             vinculo
               ? "Ainda não há habilidades cadastradas para esta disciplina no banco de dados."
@@ -379,7 +435,9 @@ export default function PlanoForm({
         <>
           <SecaoPlano
             id="passo-3"
-            numero={3}
+            tom="verde"
+            oculto={atual !== "obj"}
+            numero={numeroDe("obj")}
             titulo="Objetos de conhecimento e conteúdos"
             descricao="Marque as caixinhas das sugestões do currículo ou escreva livremente no campo abaixo."
           >
@@ -403,7 +461,9 @@ export default function PlanoForm({
 
           <SecaoPlano
             id="passo-4"
-            numero={4}
+            tom="verde"
+            oculto={atual !== "hab"}
+            numero={numeroDe("hab")}
             titulo="Selecionar habilidades"
             descricao="Da BNCC / currículo catarinense, filtradas pela disciplina ou curso técnico escolhido."
           >
@@ -424,7 +484,9 @@ export default function PlanoForm({
       {/* ───────── 5. Currículo de educação digital ───────── */}
       <SecaoPlano
         id="passo-5"
-        numero={5}
+        tom="ambar"
+        oculto={atual !== "digital"}
+        numero={numeroDe("digital")}
         titulo="Currículo de educação digital"
         descricao="Opcional: decida se vai usar e escolha as habilidades aqui mesmo."
       >
@@ -444,7 +506,9 @@ export default function PlanoForm({
       {/* ───────── 6. Caminho metodológico ───────── */}
       <SecaoPlano
         id="passo-6"
-        numero={6}
+        tom="violeta"
+        oculto={atual !== "metod"}
+        numero={numeroDe("metod")}
         titulo="Possível caminho metodológico"
         descricao="Como as habilidades serão desenvolvidas — por exemplo, um parágrafo por semana."
       >
@@ -469,7 +533,9 @@ export default function PlanoForm({
       {/* ───────── 7. Avaliação ───────── */}
       <SecaoPlano
         id="passo-7"
-        numero={7}
+        tom="violeta"
+        oculto={atual !== "aval"}
+        numero={numeroDe("aval")}
         titulo="Avaliação"
         descricao="Critérios e instrumentos — use as sugestões ou escreva livremente."
       >
@@ -515,7 +581,9 @@ export default function PlanoForm({
       {/* ───────── 8. Referências e finalização ───────── */}
       <SecaoPlano
         id="passo-8"
-        numero={8}
+        tom="azul"
+        oculto={atual !== "fim"}
+        numero={numeroDe("fim")}
         titulo="Referências e finalização"
         descricao="Última etapa: referências extras e situação do plano."
       >
@@ -547,7 +615,16 @@ export default function PlanoForm({
         </div>
       </SecaoPlano>
 
-      <BarraSalvar pendente={pendente} textoBotao={textoBotao} erro={estado.erro} />
+      <FluxoRodape
+        passos={passos}
+        indice={fluxo.indice}
+        ultimo={fluxo.ultimo}
+        voltar={fluxo.voltar}
+        avancar={fluxo.avancar}
+        pendente={pendente}
+        textoBotao={textoBotao}
+        erro={estado.erro}
+      />
     </form>
   );
 }

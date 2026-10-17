@@ -81,51 +81,70 @@ export default function PlanoAnosIniciais({ dados }: { dados: DadosPlanoAnosInic
       : formatarData(dados.dataInicio || dados.dataFim);
   const escola = dados.escola;
   const linhaEscola = escola ? `${escola.nome} – ${escola.municipio} – SC` : "_______________";
+  const temLogoEscola = dados.mostrarLogoEscola && Boolean(escola?.logo_url);
+  const colunasCabecalho = 1 + (dados.mostrarBrasaoEstado ? 1 : 0) + (temLogoEscola ? 1 : 0);
 
   return (
     <>
-      <h1 className="mb-3 text-center text-base font-bold">Plano de aula</h1>
-
-      <div className="mb-4 flex items-start gap-4">
-        {dados.mostrarBrasaoEstado && (
-          <div className="flex h-24 w-40 shrink-0 items-center justify-center">
+      {/* Cabeçalho: brasão do Estado (se ligado), identificação da escola e logo da escola (se ligado e existir). */}
+      <table className="w-full border-collapse border border-black" style={{ tableLayout: "fixed" }}>
+        <tbody>
+          <tr className="break-inside-avoid">
             {dados.mostrarBrasaoEstado && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoGoverno.src}
-                alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
-                className="max-h-24 max-w-full object-contain"
-              />
+              <td className="w-[22%] border border-black p-2 text-center align-middle">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={logoGoverno.src}
+                  alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
+                  className="mx-auto max-h-20 max-w-full object-contain"
+                />
+              </td>
             )}
-          </div>
-        )}
-        <div className="flex-1 text-sm leading-snug">
-          <p className="font-bold">{linhaEscola.toUpperCase()}</p>
-          <p>
-            <strong>Turma:</strong> {dados.turma ?? ""}
-          </p>
-          <p>
-            <strong>Professor(a):</strong> {dados.professorNome}
-          </p>
-          {dados.segundoProfessor && (
-            <p>
-              <strong>Segundo(a) Professor(a):</strong> {dados.segundoProfessor}
-            </p>
-          )}
-          <p>
-            <strong>Plano de aula:</strong> Período de {periodo}
-          </p>
-          <p className="font-bold">Anos iniciais</p>
-        </div>
-        {dados.mostrarLogoEscola && escola?.logo_url && (
-          <div className="flex h-24 w-40 shrink-0 items-center justify-center">
-            {dados.mostrarLogoEscola && escola?.logo_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={escola.logo_url} alt={`Logo de ${escola.nome}`} className="max-h-24 max-w-full object-contain" />
+            <td className="border border-black p-2 text-center align-middle leading-snug">
+              <p className="font-bold">ESTADO DE SANTA CATARINA</p>
+              <p className="font-bold">SECRETARIA DE ESTADO DA EDUCAÇÃO</p>
+              <p className="font-bold">{linhaEscola.toUpperCase()}</p>
+            </td>
+            {temLogoEscola && escola?.logo_url && (
+              <td className="w-[22%] border border-black p-2 text-center align-middle">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={escola.logo_url} alt={`Logo de ${escola.nome}`} className="mx-auto max-h-20 max-w-full object-contain" />
+              </td>
             )}
-          </div>
-        )}
-      </div>
+          </tr>
+          <tr className="break-inside-avoid">
+            <td colSpan={colunasCabecalho} className="border border-black bg-slate-100 p-2 text-center text-base font-bold print:bg-white">
+              PLANO DE AULA – Anos iniciais do Ensino Fundamental
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table className="mb-4 w-full border-collapse border border-black border-t-0" style={{ tableLayout: "fixed" }}>
+        <tbody>
+          <tr className="break-inside-avoid">
+            <td className="w-1/2 border border-black p-2 align-top">
+              <strong>Turma:</strong> {dados.turma ?? ""}
+            </td>
+            <td className="w-1/2 border border-black p-2 align-top">
+              <strong>Período do plano:</strong> {periodo}
+            </td>
+          </tr>
+          <tr className="break-inside-avoid">
+            <td className="border border-black p-2 align-top">
+              <strong>Professor(a):</strong> {dados.professorNome}
+            </td>
+            <td className="border border-black p-2 align-top">
+              <strong>Segundo(a) Professor(a):</strong> {dados.segundoProfessor ?? ""}
+            </td>
+          </tr>
+          <tr className="break-inside-avoid">
+            <td colSpan={2} className="border border-black p-2 align-top">
+              <strong>Componente(s) Curricular(es):</strong> {componentes.map((c) => c.nome).join(", ")}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <table className="w-full border-collapse border border-black" style={{ tableLayout: "fixed" }}>
         <colgroup>
@@ -145,26 +164,43 @@ export default function PlanoAnosIniciais({ dados }: { dados: DadosPlanoAnosInic
               <Fragment key={comp.id}>
                 {/* data-reservar: o título só começa na página se couber junto com a competência, os cabeçalhos e o início do conteúdo. */}
                 <tr className="break-inside-avoid" data-reservar="300">
-                  <td colSpan={5} className="border border-black px-2 py-1.5 text-base font-bold">
+                  <td colSpan={5} className="border border-black bg-slate-100 px-2 py-1.5 text-base font-bold print:bg-white">
                     Componente Curricular: {comp.nome}
                   </td>
                 </tr>
                 {competencias.length > 0 && (
                   <tr className="break-inside-avoid">
                     <td colSpan={5} className="border border-black px-2 py-1.5 text-justify">
-                      {competencias.map((c, i) => (
-                        <p key={c.id}>
-                          {i === 0 && (
-                            <strong>
-                              {competencias.length > 1
-                                ? "Competências específicas do Componente Curricular: "
-                                : "Competência específica do Componente Curricular: "}
-                            </strong>
-                          )}
+                      <p className="font-bold">
+                        {competencias.length > 1
+                          ? "Competências específicas do Componente Curricular:"
+                          : "Competência específica do Componente Curricular:"}
+                      </p>
+                      {competencias.map((c) => (
+                        <p key={c.id} className="mt-1">
                           {competencias.length > 1 && <strong>({c.numero}) </strong>}
                           {c.descricao}
                         </p>
                       ))}
+                    </td>
+                  </tr>
+                )}
+                {temRecomposicao && (
+                  <tr>
+                    <td colSpan={5} className="border border-black px-2 py-1.5 align-top">
+                      <p className="font-bold">Recomposição das aprendizagens</p>
+                      {secao?.recomposicao_habilidades && (
+                        <div className="mt-1">
+                          <p className="font-bold">Habilidades:</p>
+                          <Texto valor={secao.recomposicao_habilidades} />
+                        </div>
+                      )}
+                      {secao?.recomposicao_objetos && (
+                        <div className="mt-2">
+                          <p className="font-bold">Conteúdos/objetos de conhecimento:</p>
+                          <Texto valor={secao.recomposicao_objetos} />
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )}
@@ -197,24 +233,6 @@ export default function PlanoAnosIniciais({ dados }: { dados: DadosPlanoAnosInic
                     <Texto valor={secao?.instrumentos} />
                   </td>
                 </tr>
-                {temRecomposicao && (
-                  <tr>
-                    <td colSpan={5} className="border border-black px-2 py-1.5 align-top">
-                      {secao?.recomposicao_objetos && (
-                        <div>
-                          <p className="font-bold">Recomposição das aprendizagens:</p>
-                          <Texto valor={secao.recomposicao_objetos} />
-                        </div>
-                      )}
-                      {secao?.recomposicao_habilidades && (
-                        <div className={secao.recomposicao_objetos ? "mt-3" : ""}>
-                          <p className="font-bold">Habilidades trabalhadas:</p>
-                          <Texto valor={secao.recomposicao_habilidades} />
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                )}
               </Fragment>
             );
           })}
