@@ -4,6 +4,7 @@ import { useRef, useState, type ReactNode, type RefObject } from "react";
 import type { EditorTextoRicoHandle } from "./editor-texto-rico";
 import { gerarMetodologia } from "./ia-actions";
 import CalendarioNoPlano from "./calendario-no-plano";
+import { MAX_AULAS, MAX_SEMANAS, type Divisao } from "@/lib/ia/metodologia";
 
 interface MetodologiaIAProps {
   /** Campo de texto formatado do caminho metodológico (aparece logo abaixo do botão). */
@@ -30,6 +31,10 @@ export interface ContextoIA {
   conteudos: string;
   /** Instruções extras digitadas pelo professor (opcional). */
   instrucoes: string;
+  /** Dividir o texto por semana (até 5) ou por aula (até 16). */
+  divisao: Divisao;
+  /** Quantas semanas/aulas escrever; 0 = automático (pelo período ou pela quantidade de aulas do plano). */
+  quantidade: number;
 }
 
 function texto(dados: FormData, nome: string): string {
@@ -38,7 +43,7 @@ function texto(dados: FormData, nome: string): string {
 }
 
 /** Reúne tudo o que o professor já marcou no formulário, para a IA se basear. */
-function montarContexto(form: HTMLFormElement, instrucoes: string): ContextoIA {
+function montarContexto(form: HTMLFormElement, instrucoes: string, divisao: Divisao, quantidade: number): ContextoIA {
   const dados = new FormData(form);
   const codigos = dados.getAll("habilidade_manual_codigo").map(String);
   const descricoes = dados.getAll("habilidade_manual_descricao").map(String);
@@ -62,6 +67,8 @@ function montarContexto(form: HTMLFormElement, instrucoes: string): ContextoIA {
       .filter((t) => t.length > 0)
       .join("\n"),
     instrucoes,
+    divisao,
+    quantidade,
   };
 }
 
@@ -70,6 +77,22 @@ export default function MetodologiaIA({ children, onGerar, editorRef }: Metodolo
   const [instrucoes, setInstrucoes] = useState("");
   const [aviso, setAviso] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
+  const [divisao, setDivisao] = useState<Divisao>("semana");
+  const [quantidadeTexto, setQuantidadeTexto] = useState("");
+  const maximo = divisao === "aula" ? MAX_AULAS : MAX_SEMANAS;
+  const nomePlural = divisao === "aula" ? "aulas" : "semanas";
+
+  function mudarQuantidade(v: string) {
+    const digitos = v.replace(/\D/g, "").slice(0, 2);
+    if (digitos === "") return setQuantidadeTexto("");
+    setQuantidadeTexto(String(Math.min(Math.max(Number(digitos), 1), maximo)));
+  }
+
+  function mudarDivisao(nova: Divisao) {
+    setDivisao(nova);
+    const limite = nova === "aula" ? MAX_AULAS : MAX_SEMANAS;
+    if (quantidadeTexto && Number(quantidadeTexto) > limite) setQuantidadeTexto(String(limite));
+  }
 
   async function gerar() {
     const form = raiz.current?.closest("form");
@@ -81,7 +104,7 @@ export default function MetodologiaIA({ children, onGerar, editorRef }: Metodolo
     setGerando(true);
     setAviso(null);
     try {
-      const contexto = montarContexto(form, instrucoes.trim());
+      const contexto = montarContexto(form, instrucoes.trim(), divisao, quantidadeTexto ? Number(quantidadeTexto) : 0);
       if (onGerar) {
         await onGerar(contexto);
         return;
@@ -92,7 +115,7 @@ export default function MetodologiaIA({ children, onGerar, editorRef }: Metodolo
         return;
       }
       editorRef?.current?.anexar(r.paragrafos, "paragrafos");
-      setAviso("Pronto! Colocamos um rascunho no campo abaixo. Leia, ajuste do seu jeito e salve — a IA pode errar.");
+      setAviso(r.aviso ?? "Pronto! Colocamos um rascunho no campo abaixo. Leia, ajuste do seu jeito e salve — a IA pode errar.");
     } catch {
       setAviso("Não foi possível criar o caminho metodológico agora. Tente novamente.");
     } finally {
@@ -111,6 +134,53 @@ export default function MetodologiaIA({ children, onGerar, editorRef }: Metodolo
           A IA vai se basear em tudo o que você marcou neste plano: disciplina, turma, objetos,
           habilidades e conteúdos.
         </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <span id="divisao_ia_rotulo" className="field-label">
+              Dividir o texto por
+            </span>
+            <div role="radiogroup" aria-labelledby="divisao_ia_rotulo" className="grid grid-cols-2 gap-1 rounded-xl border border-primary-200 bg-primary-50/60 p-1">
+              {(["semana", "aula"] as const).map((op) => (
+                <button
+                  key={op}
+                  type="button"
+                  role="radio"
+                  aria-checked={divisao === op}
+                  onClick={() => mudarDivisao(op)}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                    divisao === op ? "bg-primary-600 text-white shadow-sm" : "text-primary-700 hover:bg-white"
+                  }`}
+                >
+                  {op === "semana" ? "Semana" : "Aula"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label htmlFor="quantidade_ia" className="field-label">
+              Quantas {nomePlural}?{" "}
+              <span className="font-normal text-slate-400">(máximo {maximo})</span>
+            </label>
+            <input
+              id="quantidade_ia"
+              type="text"
+              inputMode="numeric"
+              value={quantidadeTexto}
+              onChange={(e) => mudarQuantidade(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter aqui não pode enviar o formulário do plano.
+                if (e.key === "Enter") e.preventDefault();
+              }}
+              placeholder="Automático"
+              className="input-field"
+            />
+            <p className="field-hint">
+              {divisao === "aula"
+                ? "Em branco: usa a quantidade de aulas do plano (ou 4)."
+                : "Em branco: calcula pelas datas do plano (ou 4)."}
+            </p>
+          </div>
+        </div>
         <div>
           <label htmlFor="instrucoes_ia" className="field-label">
             Adicionar instruções para a IA{" "}
