@@ -1,3 +1,5 @@
+import InstalarApp from "@/components/instalar-app";
+import AlternarTema from "@/components/alternar-tema";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -63,7 +65,7 @@ export default async function DashboardLayout({
       ],
     },
   ];
-  const extras = [{ href: "/dashboard/ajuda", texto: "Ajuda" }, ...(ehAdmin === true ? [{ href: "/dashboard/admin", texto: "Painel de uso" }] : [])];
+  const extras = [{ href: "/dashboard/calendario", texto: "Calendário" }, { href: "/dashboard/colegas", texto: "Colegas" }, { href: "/dashboard/ajuda", texto: "Ajuda" }, ...(ehAdmin === true ? [{ href: "/dashboard/admin", texto: "Painel de uso" }] : [])];
 
   const nomeExibido = professor?.nome ?? user.email ?? "";
   const inicial = nomeExibido.trim().charAt(0).toUpperCase() || "P";
@@ -86,12 +88,17 @@ export default async function DashboardLayout({
               <MenuTopo menus={menus} extras={extras} />
             </div>
             <div className="ml-auto flex items-center gap-2.5">
-              <span className="hidden items-center gap-2.5 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-3.5 text-sm font-semibold text-slate-700 md:flex">
+              <Link
+                href="/dashboard/conta"
+                aria-label={`Configurações da conta de ${nomeExibido}`}
+                title="Configurações da conta"
+                className="flex items-center gap-2.5 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-1 text-sm font-semibold text-slate-700 transition hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+              >
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-indigo-600 text-sm font-bold text-white shadow-sm">
                   {inicial}
                 </span>
-                <span className="max-w-[10rem] truncate">{nomeExibido}</span>
-              </span>
+              </Link>
+              <AlternarTema />
               <LogoutButton />
             </div>
           </div>
@@ -107,6 +114,7 @@ export default async function DashboardLayout({
           <Link href="/privacidade" className="link-primary text-xs">
             Aviso de Privacidade
           </Link>
+          <InstalarApp />
         </footer>
       </div>
     </UsuarioProvider>

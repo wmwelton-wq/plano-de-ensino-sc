@@ -1,0 +1,5 @@
+-- JA APLICADO no Supabase (migration "colegas_e_envio_email"). Guardado aqui apenas como registro.
+-- Tabelas: contatos_professores (colegas de cada professor, max. 50, RLS so do dono),
+--          envios_email (registro dos envios; so leitura para o dono).
+-- Funcoes: email_reservar_envio (limite 20 por dia e 200 por 30 dias), email_finalizar_envio (falha nao conta no limite).
+-- Para o texto completo da migration, veja Supabase > Database > Migrations.

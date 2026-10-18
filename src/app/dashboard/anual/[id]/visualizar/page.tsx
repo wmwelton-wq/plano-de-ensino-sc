@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Icone } from "@/components/icones";
 import { createClient } from "@/lib/supabase/server";
 import logoGoverno from "@/assets/logo-governo-sc.png";
 import BarraAcoesPlano from "@/app/dashboard/planos/[id]/visualizar/barra-acoes-plano";
@@ -374,11 +375,12 @@ export default async function VisualizarPlanoAnualPage({
       <div className="mx-auto mb-4 flex max-w-[297mm] items-center justify-between px-4 print:hidden">
         <Link
           href={`/dashboard/anual/${id}`}
-          className="rounded-lg px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-200/70 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+          className="btn-voltar"
         >
-          <span aria-hidden="true">← </span>Voltar para edição
+          <Icone nome="setaEsquerda" className="h-4 w-4" espessura={2.2} />
+          Voltar para edição
         </Link>
-        <BarraAcoesPlano titulo={plano.titulo} paisagem={paisagem} />
+        <BarraAcoesPlano titulo={plano.titulo} paisagem={paisagem} compartilhar={{ tipo: "anual", planoId: plano.id }} />
       </div>
 
       <style>{`@page { size: A4 landscape; margin: 0; }`}</style>

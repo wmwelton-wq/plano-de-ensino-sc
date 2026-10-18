@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { EtapaPlano, HabilidadeManual } from "@/lib/database.types";
 import { MARCADOR_HTML, prepararCampoParaSalvar } from "@/lib/texto-rico";
+import { tituloParaTurma } from "@/lib/copiar-turma";
 import { CAMPOS_SECAO, nomeCampoSecao, ordenarComponentes, type SecaoComponente } from "@/lib/secoes-componentes";
 
 export interface EstadoFormulario {
@@ -530,6 +531,134 @@ export async function replicarPlano(
       await supabase
         .from("planos_disciplinas")
         .insert(disc.map((d) => ({ plano_id: novo.id, disciplina_id: d.disciplina_id })));
+    }
+  }
+
+  revalidatePath("/dashboard");
+  if (formData.get("abrir_edicao") === "on" && criados.length > 0) {
+    redirect(`/dashboard/planos/${criados[0]}`);
+  }
+  redirect("/dashboard/meus-planos");
+}
+
+/**
+ * Copiar um plano para outras turmas (por padrão da mesma escola e do mesmo ano/série; o professor pode trocar a
+ * série de cada cópia). Cada cópia nasce como rascunho e leva o conteúdo, as habilidades e as competências.
+ */
+export async function replicarParaTurmas(
+  planoId: string,
+  _estadoAnterior: EstadoFormulario,
+  formData: FormData
+): Promise<EstadoFormulario> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { erro: "Sessão expirada. Faça login novamente." };
+  }
+
+  const vistos = new Set<string>();
+  const turmas: string[] = [];
+  for (const v of formData.getAll("turma_destino")) {
+    if (typeof v !== "string") continue;
+    const limpo = v.trim().slice(0, 60);
+    const chave = limpo.toLowerCase();
+    if (!limpo || vistos.has(chave)) continue;
+    vistos.add(chave);
+    turmas.push(limpo);
+  }
+  if (turmas.length === 0) {
+    return { erro: "Escreva o nome de pelo menos uma turma de destino." };
+  }
+  if (turmas.length > 30) {
+    return { erro: "Copie para no máximo 30 turmas por vez." };
+  }
+
+  const { data: origem } = await supabase.from("planos_de_ensino").select("*").eq("id", planoId).single();
+  if (!origem) {
+    return { erro: "Plano de origem não encontrado." };
+  }
+
+  // Escola de destino: a do plano original, a menos que o professor escolha outra (o RLS só mostra as dele).
+  const escolaPedida = formData.get("escola_id");
+  let escolaId: string | null = origem.escola_id ?? null;
+  if (typeof escolaPedida === "string" && escolaPedida !== (origem.escola_id ?? "")) {
+    if (escolaPedida === "") {
+      escolaId = null;
+    } else {
+      const { data: escola } = await supabase.from("escolas").select("id").eq("id", escolaPedida).single();
+      if (!escola) return { erro: "A escola escolhida não foi encontrada. Atualize a página e tente de novo." };
+      escolaId = escola.id;
+    }
+  }
+
+  const texto = (chave: string, padrao: string | null) => {
+    const v = formData.get(chave);
+    if (typeof v !== "string") return padrao;
+    const limpo = v.trim();
+    return limpo.length > 0 ? limpo : null;
+  };
+  const dataInicio = texto("data_inicio", origem.data_inicio ?? null);
+  const dataFim = texto("data_fim", origem.data_fim ?? null);
+  const quantidadeRaw = texto("quantidade_aulas", origem.quantidade_aulas != null ? String(origem.quantidade_aulas) : null);
+  const quantidadeAulas = quantidadeRaw && Number(quantidadeRaw) > 0 ? Number(quantidadeRaw) : null;
+
+  if (origem.etapa === "fundamental_anos_iniciais" && dataInicio && dataFim) {
+    const dias = (new Date(dataFim).getTime() - new Date(dataInicio).getTime()) / 86400000;
+    if (dias < 0) return { erro: "A data de fim não pode ser anterior à data de início." };
+    if (dias > 30) return { erro: "O período do plano não pode ultrapassar 30 dias (modelo oficial dos Anos Iniciais)." };
+  }
+
+  const [{ data: hab }, { data: comp }, { data: disc }] = await Promise.all([
+    supabase.from("planos_habilidades").select("habilidade_id").eq("plano_id", planoId),
+    supabase.from("planos_competencias").select("competencia_id").eq("plano_id", planoId),
+    supabase.from("planos_disciplinas").select("disciplina_id").eq("plano_id", planoId),
+  ]);
+
+  const base: Record<string, unknown> = { ...origem };
+  for (const campo of ["id", "created_at", "updated_at", "pdf_path", "pdf_gerado_em"]) {
+    delete base[campo];
+  }
+
+  const criados: string[] = [];
+  for (const turma of turmas) {
+    const { data: novo, error } = await supabase
+      .from("planos_de_ensino")
+      .insert({
+        ...base,
+        escola_id: escolaId,
+        titulo: tituloParaTurma(origem.titulo, origem.turma ?? null, turma),
+        turma,
+        data_inicio: dataInicio,
+        data_fim: dataFim,
+        quantidade_aulas: quantidadeAulas,
+        status: "rascunho",
+        gerado_por_ia: false,
+        replicado_de_id: planoId,
+      })
+      .select("id")
+      .single();
+
+    if (error || !novo) {
+      return {
+        erro:
+          criados.length > 0
+            ? `Foram criados ${criados.length} plano(s), mas houve falha ao criar o da turma "${turma}". Confira em "Meus planos".`
+            : "Não foi possível copiar o plano. Tente novamente.",
+      };
+    }
+    criados.push(novo.id);
+
+    if (hab && hab.length > 0) {
+      await supabase.from("planos_habilidades").insert(hab.map((h) => ({ plano_id: novo.id, habilidade_id: h.habilidade_id })));
+    }
+    if (comp && comp.length > 0) {
+      await supabase.from("planos_competencias").insert(comp.map((x) => ({ plano_id: novo.id, competencia_id: x.competencia_id })));
+    }
+    if (disc && disc.length > 0) {
+      await supabase.from("planos_disciplinas").insert(disc.map((d) => ({ plano_id: novo.id, disciplina_id: d.disciplina_id })));
     }
   }
 

@@ -1,36 +1,20 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
+import ConfirmarExclusao from "@/components/confirmar-exclusao";
 
-function BotaoExcluir() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      aria-busy={pending}
-      className="btn-text-danger disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {pending ? "Excluindo…" : "Excluir escola"}
-    </button>
-  );
-}
-
+/** Excluir escola: mostra um aviso bem visível antes de apagar. */
 export default function ExcluirButton({
   excluirAction,
 }: {
   excluirAction: () => Promise<void>;
 }) {
   return (
-    <form
-      action={excluirAction}
-      onSubmit={(e) => {
-        if (!confirm("Tem certeza que deseja excluir esta escola?")) {
-          e.preventDefault();
-        }
-      }}
-    >
-      <BotaoExcluir />
-    </form>
+    <ConfirmarExclusao
+      excluirAction={excluirAction}
+      rotulo="Excluir escola"
+      oQue="esta escola"
+      classeBotao="btn-text-danger"
+      detalhe="Os planos que usam esta escola continuam existindo, mas ficam sem escola definida."
+    />
   );
 }

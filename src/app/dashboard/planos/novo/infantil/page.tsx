@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import PlanoFormInfantil from "../../plano-form-infantil";
 import { criarPlano } from "../../actions";
 import VoltarLink from "../../voltar-link";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
 
 export default async function NovoPlanoInfantilPage() {
   const supabase = await createClient();
@@ -15,8 +16,10 @@ export default async function NovoPlanoInfantilPage() {
 
   return (
     <div>
-      <VoltarLink />
-      <h1 className="text-2xl font-semibold text-slate-900">Novo plano — Educação Infantil</h1>
+      <VoltarLink href="/dashboard/planos/novo" rotulo="Voltar à escolha da etapa" />
+      <div className="mt-2">
+        <CabecalhoPagina tom="rosa" ilustracao="infantil" compacto titulo="Novo plano — Educação Infantil" subtitulo="Campos de experiência, por grupo etário. Preencha por etapas; o plano pode ser salvo como rascunho." />
+      </div>
       <div className="mt-6">
         <PlanoFormInfantil
           camposExperiencia={camposExperiencia ?? []}

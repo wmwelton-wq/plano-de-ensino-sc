@@ -536,7 +536,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
     return (
       <SecaoPlano id={idPasso} numero={indice} titulo="Revisar e salvar" tom={tomDe(p)} icone={ICONE_DO_TIPO.revisar}
         descricao="Veja o resumo, escolha a situação do plano e salve. O que está em vermelho ainda não foi preenchido — é só um aviso, você pode salvar assim mesmo e completar depois.">
-        <div className="overflow-x-auto rounded-lg border border-slate-300">
+        <div className="overflow-x-auto rounded-xl border border-slate-300">
           <table className="w-full min-w-[34rem] border-collapse text-sm">
             <thead>
               <tr className="bg-slate-100 text-left text-xs uppercase tracking-wide text-slate-600">
@@ -584,7 +584,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
           </div>
         </div>
 
-        <section aria-labelledby="conferencia" className="rounded-lg border border-slate-300 bg-slate-50 p-4">
+        <section aria-labelledby="conferencia" className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
           <h3 id="conferencia" className="text-sm font-bold text-slate-900">
             O que ainda falta preencher
           </h3>
@@ -848,7 +848,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
             <input id="titulo" name="titulo" type="text" defaultValue={plano?.titulo ?? ""} placeholder="Se deixar em branco, o sistema cria um nome" className="input-field" />
           </div>
 
-          <fieldset className="rounded-lg border border-slate-300 bg-white p-4">
+          <fieldset className="rounded-2xl border border-slate-200 bg-white p-4">
             <legend className="px-1 text-sm font-bold text-slate-800">Logos do cabeçalho</legend>
             <label className="mt-1 flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" name="incluir_logo_estado" defaultChecked={plano?.incluir_logo_estado ?? true} className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />

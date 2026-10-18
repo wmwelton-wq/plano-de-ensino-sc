@@ -232,7 +232,7 @@ export default function EditorTextoRico({
   const manterSelecao = (e: MouseEventReact) => e.preventDefault();
 
   return (
-    <div className="mt-1 rounded-lg border border-slate-300 bg-white shadow-sm focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/25">
+    <div className="mt-1 rounded-xl border border-slate-300 bg-white shadow-sm focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/25">
       <div
         role="toolbar"
         aria-label="Formatação do texto"

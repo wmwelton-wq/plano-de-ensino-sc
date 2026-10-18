@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import CabecalhoPagina from "@/components/cabecalho-pagina";
 import { Icone } from "@/components/icones";
 import VoltarLink from "../../planos/voltar-link";
+import { urlDaPasta } from "../../meus-planos/dados";
 import ExcluirButton from "../../planos/[id]/excluir-button";
 import PlanoAnualComRascunho from "../form-com-rascunho";
 import EstrelaFavorito from "../../meus-planos/estrela-favorito";
@@ -36,11 +37,11 @@ export default async function EditarPlanoAnualPage({
 
   return (
     <div>
-      <VoltarLink href="/dashboard/meus-planos" rotulo="Voltar aos meus planos" />
+      <VoltarLink href={urlDaPasta("anuais", plano.escola_id, plano.turma)} rotulo="Voltar à lista de planos" />
       <div className="mt-2">
         <CabecalhoPagina
           tom="azul"
-          icone="calendario"
+          ilustracao="anual" compacto
           titulo="Editar plano anual"
           subtitulo={plano.titulo}
           acoes={

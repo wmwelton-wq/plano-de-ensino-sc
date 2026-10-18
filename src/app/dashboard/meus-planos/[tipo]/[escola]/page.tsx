@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
+import NavegacaoTopo from "@/components/navegacao-topo";
 import {
   CartaoPasta,
   CartaoPlano,
-  Migalhas,
   TIPOS,
   agruparPorEscola,
   agruparPorTurma,
@@ -53,11 +54,12 @@ export default async function TurmasDaEscolaPage({
     const hrefPagina = (n: number) => `${urlEscola}?turma=${encodeURIComponent(t.chave)}&pagina=${n}`;
     return (
       <div>
-        <Migalhas itens={[...migalhasBase, { rotulo: grupo.nome, href: urlEscola }, { rotulo: t.nome }]} />
-        <h1 className="text-2xl font-semibold text-slate-900">{t.nome}</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {info.titulo} · {grupo.nome}
-        </p>
+        <NavegacaoTopo
+          voltarHref={urlEscola}
+          voltarRotulo={`Voltar às turmas de ${grupo.nome}`}
+          migalhas={[...migalhasBase, { rotulo: grupo.nome, href: urlEscola }, { rotulo: t.nome }]}
+        />
+        <CabecalhoPagina tom="violeta" ilustracao="turma" titulo={t.nome} subtitulo={`${info.titulo} · ${grupo.nome}`} />
         <div className="mt-4">
           <BaixarVarios
             planos={t.planos.map((p) => ({ id: p.id, titulo: p.titulo, tipo }))}
@@ -98,9 +100,17 @@ export default async function TurmasDaEscolaPage({
   // Segundo nível: as turmas da escola.
   return (
     <div>
-      <Migalhas itens={[...migalhasBase, { rotulo: grupo.nome }]} />
-      <h1 className="text-2xl font-semibold text-slate-900">{grupo.nome}</h1>
-      <p className="mt-1 text-sm text-slate-500">{info.titulo} · escolha a turma para ver os planos.</p>
+      <NavegacaoTopo
+        voltarHref={`/dashboard/meus-planos/${tipo}`}
+        voltarRotulo={`Voltar aos ${info.titulo.toLowerCase()}`}
+        migalhas={[...migalhasBase, { rotulo: grupo.nome }]}
+      />
+      <CabecalhoPagina
+        tom={escola === "sem-escola" ? "ardosia" : "ambar"}
+        ilustracao={escola === "sem-escola" ? "meusPlanos" : "escola"}
+        titulo={grupo.nome}
+        subtitulo={`${info.titulo} · escolha a turma para ver os planos.`}
+      />
       <div className="mt-4">
         <BaixarVarios
           planos={grupo.planos.map((p) => ({ id: p.id, titulo: p.titulo, tipo }))}
@@ -108,7 +118,7 @@ export default async function TurmasDaEscolaPage({
           rotulo="Baixar todos desta escola em um PDF"
         />
       </div>
-      <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {turmas.map((t) => (
           <li key={t.chave}>
             <CartaoPasta

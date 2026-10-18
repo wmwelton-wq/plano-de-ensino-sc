@@ -4,6 +4,9 @@ import { Icone } from "@/components/icones";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import AuthLayout from "@/components/auth-layout";
+import RegrasSenha from "@/components/regras-senha";
+import { Ilustracao } from "@/components/ilustracoes";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -70,14 +73,17 @@ export default function RedefinirSenhaPage() {
 
   if (!sessaoValida) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-6 py-12">
         <div className="card relative w-full max-w-sm p-8 text-center">
-          <h1 className="text-xl font-semibold text-slate-900">Link inválido ou expirado</h1>
+          <div data-tom="ambar" className="mx-auto h-28 w-44">
+            <Ilustracao nome="login" tom="ambar" />
+          </div>
+          <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">Link inválido ou expirado</h1>
           <p className="mt-2 text-sm text-slate-600">
             Por segurança, o link de redefinição de senha só funciona uma vez e expira depois de
             um tempo. Solicite um novo.
           </p>
-          <Link href="/recuperar-senha" className="link-primary mt-6 inline-block">
+          <Link href="/recuperar-senha" className="btn-primary mt-6 w-full">
             Recuperar senha
           </Link>
         </div>
@@ -87,7 +93,7 @@ export default function RedefinirSenhaPage() {
 
   if (sucesso) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-6 py-12">
         <div className="card relative w-full max-w-sm p-8 text-center">
           <div data-tom="verde" className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
             <Icone nome="check" className="h-6 w-6" />
@@ -100,10 +106,16 @@ export default function RedefinirSenhaPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
-
-      <div className="card relative w-full max-w-sm p-8">
-        <h1 className="text-xl font-semibold text-slate-900">Nova senha</h1>
+    <AuthLayout
+      voltarHref="/login"
+      voltarRotulo="Voltar para o login"
+      ilustracao="login"
+      titulo="Crie uma nova senha"
+      texto="Escolha uma senha segura. Veja as regras ao lado do campo enquanto você digita."
+      topicos={["Use pelo menos 8 caracteres", "Misture letras, números e símbolos", "Não repita a senha de outros sites"]}
+    >
+      <div className="card relative w-full p-6 sm:p-8">
+        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Nova senha</h1>
         <p className="mt-1 text-sm text-slate-500">Escolha uma nova senha para sua conta.</p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -121,7 +133,7 @@ export default function RedefinirSenhaPage() {
               onChange={(e) => setSenha(e.target.value)}
               className="input-field"
             />
-            <p className="field-hint">Mínimo de 8 caracteres.</p>
+            <RegrasSenha senha={senha} />
           </div>
 
           <div>
@@ -151,6 +163,6 @@ export default function RedefinirSenhaPage() {
           </button>
         </form>
       </div>
-    </main>
+    </AuthLayout>
   );
 }

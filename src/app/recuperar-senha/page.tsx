@@ -1,8 +1,10 @@
 "use client";
 
-import { Icone } from "@/components/icones";
 import { useState } from "react";
 import Link from "next/link";
+import AuthLayout from "@/components/auth-layout";
+import AvisoSpam from "@/components/aviso-spam";
+import { Ilustracao } from "@/components/ilustracoes";
 import { createClient } from "@/lib/supabase/client";
 import Turnstile from "@/components/turnstile";
 import { verificarTurnstile } from "@/lib/turnstile-client";
@@ -53,39 +55,40 @@ export default function RecuperarSenhaPage() {
 
   if (enviado) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
-        <div className="card relative w-full max-w-sm p-8 text-center">
-          <div data-tom="azul" className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
-            <Icone nome="envelope" className="h-6 w-6" />
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-4 py-10">
+        <div className="card painel-entra relative w-full max-w-lg overflow-hidden text-center">
+          <div data-tom="azul" className="atalho-arte px-6 pt-6">
+            <div className="mx-auto h-36 w-60">
+              <Ilustracao nome="email" tom="azul" />
+            </div>
           </div>
-          <h1 className="mt-4 text-xl font-semibold text-slate-900">Verifique seu email</h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Se houver uma conta cadastrada com <strong>{email}</strong>, enviamos um link para
-            redefinir a senha. Confira também a caixa de spam.
-          </p>
-          <Link href="/login" className="link-primary mt-6 inline-block">
-            Voltar para o login
-          </Link>
+          <div className="p-6 sm:p-8">
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Verifique seu e-mail</h1>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Se houver uma conta cadastrada com <strong className="break-all text-slate-900">{email}</strong>, enviamos um link para redefinir a senha.
+            </p>
+            <AvisoSpam />
+            <Link href="/login" className="btn-primary mt-6 w-full">
+              Voltar para o login
+            </Link>
+          </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
-
-      <div className="relative w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-slate-700"
-          >
-            <span aria-hidden="true">←</span> Planos de Ensino SC
-          </Link>
-        </div>
-
-        <div className="card p-8">
-          <h1 className="text-xl font-semibold text-slate-900">Recuperar senha</h1>
+    <AuthLayout
+      voltarHref="/login"
+      voltarRotulo="Voltar para o login"
+      ilustracao="login"
+      titulo="Esqueceu a senha? Acontece com todo mundo."
+      texto="Informe seu e-mail e enviaremos um link seguro para você criar uma nova senha."
+      topicos={["O link vale por tempo limitado", "Só você consegue redefinir sua senha", "Em caso de dúvida, fale com contato@planodocente.com.br"]}
+    >
+      <div>
+        <div className="card p-6 sm:p-8">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Recuperar senha</h1>
           <p className="mt-1 text-sm text-slate-500">
             Informe o email da sua conta para receber um link de redefinição de senha.
           </p>
@@ -124,6 +127,6 @@ export default function RecuperarSenhaPage() {
           </p>
         </div>
       </div>
-    </main>
+    </AuthLayout>
   );
 }

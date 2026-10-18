@@ -1,4 +1,5 @@
-import { Icone } from "@/components/icones";
+import Logo from "@/components/logo";
+import VoltarHistorico from "@/components/voltar-historico";
 import Link from "next/link";
 import { DATA_ATUALIZACAO, NOME_SERVICO, VERSAO_DOCUMENTOS_LEGAIS } from "@/lib/legal";
 
@@ -17,17 +18,15 @@ export default function DocumentoLegal({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-300 bg-white print:hidden">
+    <div className="min-h-screen bg-[var(--background)]">
+      <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/85 backdrop-blur-md print:hidden">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3.5">
           <Link
             href="/"
-            className="flex items-center gap-2 rounded font-semibold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+            aria-label={NOME_SERVICO}
+            className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-800 text-white">
-              <Icone nome="livro" className="h-5 w-5" />
-            </span>
-            {NOME_SERVICO}
+            <Logo />
           </Link>
           <nav className="flex items-center gap-5 text-sm">
             <Link href={outro.href} className="link-primary">
@@ -40,12 +39,15 @@ export default function DocumentoLegal({
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-6 py-10">
+      <main className="mx-auto max-w-3xl px-6 py-8">
+        <div className="mb-6 print:hidden">
+          <VoltarHistorico reserva="/" />
+        </div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">{titulo}</h1>
         <p className="mt-2 text-sm text-slate-500">
           Última atualização: {DATA_ATUALIZACAO} · Versão {VERSAO_DOCUMENTOS_LEGAIS}
         </p>
-        <p className="mt-5 rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm leading-relaxed text-primary-900">
+        <p className="mt-5 rounded-2xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm leading-relaxed text-primary-900">
           {resumo}
         </p>
 

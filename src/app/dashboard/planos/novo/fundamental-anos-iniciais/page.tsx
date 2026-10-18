@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import PlanoFormFundamentalAnosIniciais from "../../plano-form-fundamental-anos-iniciais";
 import { criarPlano } from "../../actions";
 import VoltarLink from "../../voltar-link";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
 
 export default async function NovoPlanoFundamentalAnosIniciaisPage() {
   const supabase = await createClient();
@@ -25,10 +26,10 @@ export default async function NovoPlanoFundamentalAnosIniciaisPage() {
 
   return (
     <div>
-      <VoltarLink />
-      <h1 className="text-2xl font-semibold text-slate-900">
-        Novo plano — Ensino Fundamental, Anos Iniciais (1º ao 5º ano)
-      </h1>
+      <VoltarLink href="/dashboard/planos/novo" rotulo="Voltar à escolha da etapa" />
+      <div className="mt-2">
+        <CabecalhoPagina tom="verde" ilustracao="iniciais" compacto titulo="Novo plano — Ensino Fundamental, Anos Iniciais" subtitulo="1º ao 5º ano. Preencha por etapas; o plano pode ser salvo como rascunho." />
+      </div>
       <div className="mt-6">
         <PlanoFormFundamentalAnosIniciais
           disciplinas={disciplinas ?? []}

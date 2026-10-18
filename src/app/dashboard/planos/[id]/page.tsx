@@ -12,6 +12,7 @@ import AcoesRapidas from "./acoes-rapidas";
 import CabecalhoPagina from "@/components/cabecalho-pagina";
 import { Icone } from "@/components/icones";
 import VoltarLink from "../voltar-link";
+import { urlDaPasta } from "../../meus-planos/dados";
 
 const DISCIPLINA_ETAPA: Record<Exclude<EtapaPlano, "educacao_infantil">, string> = {
   ensino_medio: "Ensino Médio",
@@ -53,11 +54,11 @@ export default async function EditarPlanoPage({
 
   const cabecalho = (
     <>
-      <VoltarLink href="/dashboard/meus-planos" rotulo="Voltar aos meus planos" />
+      <VoltarLink href={urlDaPasta("mensais", plano.escola_id, plano.turma)} rotulo="Voltar à lista de planos" />
       <div className="mt-2">
         <CabecalhoPagina
           tom="verde"
-          icone="livro"
+          ilustracao="mensal" compacto
           titulo="Editar plano de ensino"
           subtitulo={ROTULOS_ETAPA[etapa]}
           acoes={
@@ -80,7 +81,7 @@ export default async function EditarPlanoPage({
               </Link>
               <Link href={`/dashboard/planos/${id}/replicar`} className="btn-secondary !py-2">
                 <Icone nome="copiar" className="h-4 w-4" />
-                Replicar para outras escolas
+                Copiar para outras turmas
               </Link>
               <ExcluirButton excluirAction={excluirComId} />
             </>

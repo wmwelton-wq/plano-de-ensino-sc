@@ -20,11 +20,11 @@ export default async function NovoPlanoAnualPage() {
 
   return (
     <div>
-      <VoltarLink href="/dashboard/meus-planos" rotulo="Voltar aos meus planos" />
+      <VoltarLink href="/dashboard/meus-planos/anuais" rotulo="Voltar aos planos anuais" />
       <div className="mt-2">
         <CabecalhoPagina
           tom="azul"
-          icone="calendario"
+          ilustracao="novoPlano" compacto
           titulo="Novo plano de ensino anual"
           subtitulo="Feito uma vez por ano: identificação, ementa, competências e os três trimestres, passo a passo."
         />

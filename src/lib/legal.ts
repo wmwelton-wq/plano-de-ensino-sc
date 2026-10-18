@@ -8,8 +8,8 @@ export const SITE = "planodocente.com.br";
 export const EMAIL_CONTATO = "contato@planodocente.com.br";
 
 /** Identificador gravado junto com o aceite (AAAA-MM-DD da última revisão). */
-export const VERSAO_DOCUMENTOS_LEGAIS = "2026-10-07";
-export const DATA_ATUALIZACAO = "7 de outubro de 2026";
+export const VERSAO_DOCUMENTOS_LEGAIS = "2026-10-18";
+export const DATA_ATUALIZACAO = "18 de outubro de 2026";
 
 export const TEXTO_ACEITE =
   "Autorizo o tratamento dos dados necessários para funcionamento, segurança, cobrança e recuperação da conta.";

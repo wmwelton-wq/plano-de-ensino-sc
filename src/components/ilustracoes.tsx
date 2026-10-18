@@ -2,7 +2,7 @@
 // Funcionam em componentes de servidor e de cliente.
 
 export type TomIlustracao = "azul" | "verde" | "violeta" | "ambar" | "ciano" | "ardosia" | "rosa";
-export type NomeIlustracao = "meusPlanos" | "anual" | "mensal" | "escola" | "ajuda" | "opiniao";
+export type NomeIlustracao = "meusPlanos" | "anual" | "mensal" | "escola" | "ajuda" | "opiniao" | "conta" | "infantil" | "iniciais" | "finais" | "medio" | "turma" | "novoPlano" | "login" | "email" | "admin";
 
 /** p = cor principal, d = escura, m = média, l = clara */
 const PALETA: Record<TomIlustracao, { p: string; d: string; m: string; l: string }> = {
@@ -97,6 +97,23 @@ export function Ilustracao({
             <Selo cx={114} cy={80} r={12} fundo={tom === "verde" ? "#2563EB" : "#10B981"} />
             <Brilho x={142} y={62} s={5} cor={c.p} o={0.55} />
             <Brilho x={22} y={30} s={4} cor={c.m} />
+          </>
+        );
+      case "conta":
+        return (
+          <>
+            <circle cx="132" cy="28" r="24" fill={c.l} />
+            <circle cx="26" cy="74" r="18" fill={c.l} opacity=".8" />
+            <rect x="38" y="22" width="86" height="58" rx="12" fill={SOMBRA} opacity=".07" />
+            <rect x="34" y="16" width="86" height="58" rx="12" fill="#fff" />
+            <circle cx="60" cy="41" r="12" fill={c.p} />
+            <circle cx="60" cy="38" r="4.5" fill="#fff" />
+            <path d="M51 50a9 8 0 0 1 18 0z" fill="#fff" />
+            <rect x="78" y="33" width="34" height="6" rx="3" fill={c.d} />
+            <rect x="78" y="45" width="26" height="5" rx="2.5" fill={c.m} />
+            <rect x="46" y="60" width="64" height="5" rx="2.5" fill={c.l} />
+            <Selo cx={118} cy={70} r={12} fundo="#10B981" />
+            <Brilho x={142} y={62} s={5} cor={c.p} o={0.55} />
           </>
         );
       case "mensal":
@@ -228,6 +245,258 @@ export function Ilustracao({
             <circle cx="126" cy="38" r="0.1" fill="none" />
             <circle cx="126" cy="35.6" r="1.7" fill="#fff" />
             <Brilho x={30} y={72} s={5} cor={c.p} o={0.55} />
+          </>
+        );
+      case "infantil":
+        return (
+          <>
+            <circle cx="128" cy="30" r="26" fill={c.l} />
+            <circle cx="24" cy="72" r="18" fill={c.l} opacity=".85" />
+            <ellipse cx="80" cy="90" rx="58" ry="4.5" fill={SOMBRA} opacity=".08" />
+            {/* blocos de montar */}
+            <g transform="rotate(-7 52 76)">
+              <rect x="30" y="62" width="30" height="28" rx="5" fill="#34D399" />
+              <rect x="30" y="62" width="30" height="7" rx="3.5" fill="#fff" opacity=".28" />
+              <text x="45" y="83" textAnchor="middle" fontSize="17" fontWeight="800" fill="#fff" fontFamily="system-ui,sans-serif">A</text>
+            </g>
+            <g transform="rotate(5 92 76)">
+              <rect x="64" y="62" width="30" height="28" rx="5" fill="#FBBF24" />
+              <rect x="64" y="62" width="30" height="7" rx="3.5" fill="#fff" opacity=".35" />
+              <text x="79" y="83" textAnchor="middle" fontSize="17" fontWeight="800" fill="#fff" fontFamily="system-ui,sans-serif">B</text>
+            </g>
+            <g transform="rotate(-4 68 48)">
+              <rect x="50" y="34" width="30" height="28" rx="5" fill={c.p} />
+              <rect x="50" y="34" width="30" height="7" rx="3.5" fill="#fff" opacity=".28" />
+              <text x="65" y="55" textAnchor="middle" fontSize="17" fontWeight="800" fill="#fff" fontFamily="system-ui,sans-serif">C</text>
+            </g>
+            {/* balão */}
+            <g className="anim-flutua">
+              <path d="M124 14c-11 0-17 8-17 17 0 10 9 18 17 22 8-4 17-12 17-22 0-9-6-17-17-17z" fill={c.p} />
+              <path d="M114 22c3-4 8-5 11-4" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" opacity=".7" />
+              <path d="M124 53l-3 5h6z" fill={c.d} />
+              <path d="M124 58c-4 8 4 12 0 20" fill="none" stroke={c.d} strokeWidth="1.6" strokeLinecap="round" />
+            </g>
+            <path d="M104 74c0-3-4-5-6-1.600C96 69 92 71 92 74c0 3.600 6 7 6 7s6-3.400 6-7z" fill="#F43F5E" transform="translate(34 -14)" />
+            <Brilho x={24} y={30} s={5} cor={c.p} o={0.6} />
+            <Brilho x={142} y={78} s={4} cor="#FBBF24" />
+          </>
+        );
+      case "iniciais":
+        return (
+          <>
+            <circle cx="30" cy="32" r="22" fill={c.l} />
+            <circle cx="132" cy="66" r="24" fill={c.l} opacity=".85" />
+            <ellipse cx="80" cy="91" rx="60" ry="4.5" fill={SOMBRA} opacity=".08" />
+            {/* caderno */}
+            <g transform="rotate(-6 66 52)">
+              <rect x="38" y="16" width="62" height="72" rx="8" fill={c.d} />
+              <rect x="44" y="16" width="56" height="70" rx="6" fill="#fff" />
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <circle key={i} cx="44" cy={26 + i * 11} r="2.6" fill={c.m} />
+              ))}
+              <rect x="54" y="26" width="34" height="5" rx="2.5" fill={c.p} />
+              <rect x="54" y="37" width="38" height="4" rx="2" fill={c.l} />
+              <rect x="54" y="46" width="30" height="4" rx="2" fill={c.l} />
+              <text x="58" y="74" fontSize="15" fontWeight="800" fill={c.d} fontFamily="system-ui,sans-serif">1+2</text>
+            </g>
+            {/* lápis */}
+            <g transform="rotate(30 112 52)">
+              <rect x="106" y="14" width="13" height="58" rx="3" fill="#FBBF24" />
+              <rect x="106" y="14" width="5" height="58" rx="2" fill="#FDE68A" />
+              <path d="M106 72h13l-6.500 14z" fill="#FDE7C3" />
+              <path d="M110.500 80.500h4l-2 5z" fill="#334155" />
+              <rect x="106" y="8" width="13" height="9" rx="3" fill="#F472B6" />
+            </g>
+            {/* maçã */}
+            <circle cx="132" cy="78" r="10" fill="#EF4444" />
+            <path d="M132 68c0-3 2-5 4-5" fill="none" stroke="#047857" strokeWidth="2" strokeLinecap="round" />
+            <ellipse cx="138" cy="65" rx="4" ry="2.200" fill="#10B981" transform="rotate(-25 138 65)" />
+            <Brilho x={22} y={78} s={5} cor={c.p} o={0.55} />
+          </>
+        );
+      case "finais":
+        return (
+          <>
+            <circle cx="28" cy="30" r="22" fill={c.l} />
+            <circle cx="134" cy="72" r="22" fill={c.l} opacity=".85" />
+            <ellipse cx="80" cy="91" rx="46" ry="4.500" fill={SOMBRA} opacity=".08" />
+            {/* globo */}
+            <path d="M52 86h56" stroke={c.d} strokeWidth="5" strokeLinecap="round" />
+            <path d="M80 70v14" stroke={c.d} strokeWidth="4" />
+            <path d="M44 22a38 38 0 0 1 0 0" fill="none" />
+            <circle cx="80" cy="42" r="30" fill={c.p} />
+            <path d="M60 30c6-6 14-4 16 2s-6 8-4 14-10 10-14 4-6-14 2-20z" fill="#34D399" />
+            <path d="M88 24c8-2 16 2 18 10s-6 10-10 8-8-6-10-10 0-6 2-8z" fill="#34D399" />
+            <path d="M84 56c5-2 12 2 12 8s-8 8-12 4-4-10 0-12z" fill="#34D399" />
+            <ellipse cx="80" cy="42" rx="12" ry="30" fill="none" stroke="#fff" strokeWidth="1.600" opacity=".5" />
+            <path d="M50 42h60" stroke="#fff" strokeWidth="1.600" opacity=".5" />
+            <path d="M58 24c6-5 14-8 24-8" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" opacity=".45" />
+            {/* régua em triângulo */}
+            <g transform="rotate(14 122 34)">
+              <path d="M108 52V16l22 36z" fill="#FDE68A" stroke="#F59E0B" strokeWidth="2" strokeLinejoin="round" />
+              <path d="M114 44V30l8 14z" fill="#fff" opacity=".7" />
+            </g>
+            {/* átomo */}
+            <g transform="translate(30 66)" fill="none" stroke={c.d} strokeWidth="2">
+              <ellipse rx="14" ry="5.500" />
+              <ellipse rx="14" ry="5.500" transform="rotate(60)" />
+              <ellipse rx="14" ry="5.500" transform="rotate(-60)" />
+              <circle r="3.600" fill="#FBBF24" stroke="none" />
+            </g>
+            <Brilho x={142} y={20} s={5} cor={c.p} o={0.6} />
+          </>
+        );
+      case "medio":
+        return (
+          <>
+            <circle cx="132" cy="28" r="24" fill={c.l} />
+            <circle cx="26" cy="74" r="18" fill={c.l} opacity=".85" />
+            <ellipse cx="80" cy="91" rx="56" ry="4.500" fill={SOMBRA} opacity=".08" />
+            {/* livros */}
+            <rect x="36" y="70" width="88" height="16" rx="4" fill={c.d} />
+            <rect x="36" y="70" width="88" height="5" rx="2.500" fill="#fff" opacity=".2" />
+            <rect x="44" y="55" width="76" height="16" rx="4" fill={c.p} />
+            <rect x="44" y="55" width="76" height="5" rx="2.500" fill="#fff" opacity=".22" />
+            <rect x="52" y="40" width="64" height="16" rx="4" fill="#FBBF24" />
+            <rect x="52" y="40" width="64" height="5" rx="2.500" fill="#fff" opacity=".3" />
+            {/* capelo */}
+            <path d="M80 8l42 17-42 17L38 25z" fill="#1E1B4B" />
+            <path d="M58 35v12c0 4 10 8 22 8s22-4 22-8V35l-22 9z" fill="#312E81" />
+            <path d="M80 8l42 17-42 17L38 25z" fill="#fff" opacity=".08" />
+            <path d="M118 28v18" stroke="#FBBF24" strokeWidth="2.400" strokeLinecap="round" />
+            <circle cx="118" cy="49" r="3.600" fill="#FBBF24" />
+            {/* engrenagem */}
+            <g transform="translate(134 70)">
+              <circle r="9" fill={c.m} />
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
+                <rect key={a} x="-2.500" y="-12.500" width="5" height="6" rx="1.500" fill={c.m} transform={`rotate(${a})`} />
+              ))}
+              <circle r="3.600" fill="#fff" />
+            </g>
+            <Brilho x={22} y={26} s={5} cor={c.p} o={0.6} />
+          </>
+        );
+      case "turma":
+        return (
+          <>
+            <circle cx="132" cy="30" r="24" fill={c.l} />
+            <circle cx="24" cy="74" r="18" fill={c.l} opacity=".85" />
+            <ellipse cx="80" cy="91" rx="58" ry="4.500" fill={SOMBRA} opacity=".07" />
+            {/* lousa */}
+            <rect x="34" y="10" width="92" height="40" rx="7" fill="#1E293B" />
+            <rect x="34" y="10" width="92" height="40" rx="7" fill="none" stroke={c.m} strokeWidth="3" />
+            <path d="M46 24c8-6 12 6 20 0s10-2 14 2" fill="none" stroke="#fff" strokeWidth="2.400" strokeLinecap="round" opacity=".85" />
+            <rect x="46" y="34" width="28" height="3.500" rx="1.750" fill="#fff" opacity=".6" />
+            <Selo cx={106} cy={30} r={8} />
+            {/* alunos */}
+            {[
+              { x: 48, cor: c.p, pele: "#FDE0C8" },
+              { x: 80, cor: "#FBBF24", pele: "#C68B59" },
+              { x: 112, cor: "#34D399", pele: "#F5C9A0" },
+            ].map((a, i) => (
+              <g key={i}>
+                <path d={`M${a.x - 15} 90a15 15 0 0 1 30 0z`} fill={a.cor} />
+                <circle cx={a.x} cy="66" r="10" fill={a.pele} />
+                <path d={`M${a.x - 10} 64a10 10 0 0 1 20 0c-4-4-14-4-20 0z`} fill="#334155" />
+              </g>
+            ))}
+            <Brilho x={142} y={72} s={5} cor={c.p} o={0.6} />
+          </>
+        );
+      case "novoPlano":
+        return (
+          <>
+            <circle cx="30" cy="30" r="22" fill={c.l} />
+            <circle cx="134" cy="72" r="22" fill={c.l} opacity=".85" />
+            <ellipse cx="80" cy="91" rx="46" ry="4.500" fill={SOMBRA} opacity=".07" />
+            <rect x="46" y="16" width="62" height="72" rx="9" fill={SOMBRA} opacity=".07" transform="translate(5 6)" />
+            <rect x="46" y="12" width="62" height="74" rx="9" fill="#fff" />
+            <rect x="54" y="22" width="28" height="5" rx="2.500" fill={c.p} />
+            <rect x="54" y="33" width="44" height="4" rx="2" fill={c.l} />
+            <rect x="54" y="42" width="38" height="4" rx="2" fill={c.l} />
+            <rect x="54" y="51" width="44" height="4" rx="2" fill={c.l} />
+            <rect x="54" y="60" width="26" height="4" rx="2" fill={c.l} />
+            <g className="anim-flutua">
+              <circle cx="110" cy="62" r="17" fill={c.d} stroke="#fff" strokeWidth="3.500" />
+              <path d="M110 53v18M101 62h18" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
+            </g>
+            <Brilho x={28} y={72} s={6} cor={c.p} o={0.6} />
+            <Brilho x={134} y={22} s={5} cor="#FBBF24" />
+            <Brilho x={40} y={14} s={3.500} cor={c.m} />
+          </>
+        );
+      case "login":
+        return (
+          <>
+            <circle cx="132" cy="30" r="25" fill={c.l} />
+            <circle cx="26" cy="72" r="19" fill={c.l} opacity=".85" />
+            <ellipse cx="80" cy="91" rx="46" ry="4.500" fill={SOMBRA} opacity=".07" />
+            {/* escudo */}
+            <path d="M80 8l34 12v26c0 22-14 38-34 46C60 84 46 68 46 46V20z" fill={c.p} />
+            <path d="M80 8l34 12v26c0 22-14 38-34 46z" fill={c.d} opacity=".28" />
+            <path d="M80 8l34 12-2 6L80 15z" fill="#fff" opacity=".25" />
+            {/* cadeado */}
+            <path d="M69 44v-6a11 11 0 0 1 22 0v6" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round" />
+            <rect x="63" y="43" width="34" height="26" rx="7" fill="#fff" />
+            <circle cx="80" cy="53.500" r="4" fill={c.d} />
+            <rect x="78" y="55" width="4" height="8" rx="2" fill={c.d} />
+            {/* chave */}
+            <g transform="rotate(-30 128 70)">
+              <circle cx="116" cy="70" r="8" fill="none" stroke="#FBBF24" strokeWidth="4" />
+              <rect x="122" y="67.500" width="26" height="5" rx="2.500" fill="#FBBF24" />
+              <rect x="138" y="72" width="4" height="7" rx="2" fill="#FBBF24" />
+              <rect x="145" y="72" width="3.500" height="5" rx="1.750" fill="#FBBF24" />
+            </g>
+            <Selo cx={42} cy={22} r={9} />
+            <Brilho x={22} y={44} s={5} cor={c.p} o={0.6} />
+            <Brilho x={146} y={86} s={4} cor={c.p} o={0.5} />
+          </>
+        );
+      case "email":
+        return (
+          <>
+            <circle cx="30" cy="30" r="22" fill={c.l} />
+            <circle cx="134" cy="70" r="24" fill={c.l} opacity=".85" />
+            <ellipse cx="80" cy="91" rx="46" ry="4.500" fill={SOMBRA} opacity=".07" />
+            {/* envelope */}
+            <rect x="34" y="30" width="92" height="58" rx="9" fill={SOMBRA} opacity=".07" transform="translate(4 6)" />
+            <rect x="34" y="30" width="92" height="58" rx="9" fill={c.p} />
+            <path d="M42 36l38 29 38-29" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" opacity=".85" />
+            <path d="M36 84l30-26M124 84L94 58" stroke="#fff" strokeWidth="3" strokeLinecap="round" opacity=".4" />
+            {/* carta saindo */}
+            <g className="anim-flutua">
+              <rect x="52" y="12" width="56" height="40" rx="6" fill="#fff" />
+              <rect x="60" y="21" width="26" height="4" rx="2" fill={c.p} />
+              <rect x="60" y="30" width="38" height="3.500" rx="1.750" fill={c.l} />
+              <rect x="60" y="38" width="30" height="3.500" rx="1.750" fill={c.l} />
+            </g>
+            <Selo cx={120} cy={32} r={12} />
+            <Brilho x={24} y={72} s={5} cor={c.p} o={0.6} />
+            <Brilho x={144} y={16} s={4} cor="#FBBF24" />
+          </>
+        );
+      case "admin":
+        return (
+          <>
+            <circle cx="30" cy="30" r="22" fill={c.l} />
+            <circle cx="134" cy="70" r="24" fill={c.l} opacity=".85" />
+            <ellipse cx="80" cy="91" rx="52" ry="4.500" fill={SOMBRA} opacity=".07" />
+            <rect x="32" y="14" width="96" height="68" rx="11" fill="#fff" />
+            <rect x="32" y="14" width="96" height="14" rx="11" fill={c.p} />
+            <rect x="32" y="22" width="96" height="6" fill={c.p} />
+            <circle cx="42" cy="21" r="2.500" fill="#fff" opacity=".9" />
+            <circle cx="50" cy="21" r="2.500" fill="#fff" opacity=".6" />
+            {[
+              [46, 22],
+              [62, 34],
+              [78, 28],
+              [94, 44],
+            ].map(([x, h], i) => (
+              <rect key={i} x={x} y={76 - h * 1.1} width="11" height={h * 1.1} rx="3" fill={i === 3 ? c.d : c.m} />
+            ))}
+            <path d="M46 52l18-8 16 4 30-22" fill="none" stroke="#10B981" strokeWidth="3.500" strokeLinecap="round" strokeLinejoin="round" />
+            <Selo cx={122} cy={76} r={12} />
+            <Brilho x={142} y={22} s={5} cor={c.p} o={0.6} />
           </>
         );
       case "opiniao":
@@ -439,7 +708,7 @@ export function AnelProgresso({
             <stop offset="1" stopColor="#34D399" />
           </linearGradient>
         </defs>
-        <circle cx={tamanho / 2} cy={tamanho / 2} r={r} fill="none" stroke="#E2E8F0" strokeWidth={espessura} />
+        <circle cx={tamanho / 2} cy={tamanho / 2} r={r} fill="none" className="stroke-slate-200" strokeWidth={espessura} />
         {p > 0 && (
           <circle
             cx={tamanho / 2}

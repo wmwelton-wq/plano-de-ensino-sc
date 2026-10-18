@@ -21,7 +21,7 @@ export default async function DuplicarPlanoAnualPage({ params }: { params: Promi
       <div className="mt-2">
         <CabecalhoPagina
           tom="azul"
-          icone="copiar"
+          ilustracao="anual" compacto
           titulo="Duplicar plano anual para outra turma"
           subtitulo={
             <>

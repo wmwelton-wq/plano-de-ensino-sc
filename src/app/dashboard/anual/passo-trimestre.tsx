@@ -238,7 +238,7 @@ export default function PassoTrimestre({ info, valor, atualizar, indice, anoDaTu
 
         {aba === "conteudos" && (
           <>
-            <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800">
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800">
               <input
                 type="checkbox"
                 checked={t.conteudosAtivo}
@@ -270,7 +270,7 @@ export default function PassoTrimestre({ info, valor, atualizar, indice, anoDaTu
 
         {aba === "projeto" && (
           <>
-            <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800">
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800">
               <input
                 type="checkbox"
                 checked={t.projetoAtivo}

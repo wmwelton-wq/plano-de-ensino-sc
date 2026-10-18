@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { CartaoPasta, Migalhas, SEM_ESCOLA, TIPOS, agruparPorEscola, carregarPlanos, tipoValido, type TipoPlano } from "../dados";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
+import { Icone } from "@/components/icones";
+import NavegacaoTopo from "@/components/navegacao-topo";
+import { CartaoPasta, SEM_ESCOLA, TIPOS, agruparPorEscola, carregarPlanos, tipoValido, type TipoPlano } from "../dados";
 
 export default async function EscolasDoTipoPage({
   params,
@@ -22,22 +25,26 @@ export default async function EscolasDoTipoPage({
 
   return (
     <div>
-      <Migalhas
-        itens={[
+      <NavegacaoTopo
+        voltarHref="/dashboard/meus-planos"
+        voltarRotulo="Voltar aos meus planos"
+        migalhas={[
           { rotulo: "Início", href: "/dashboard" },
           { rotulo: "Meus planos", href: "/dashboard/meus-planos" },
           { rotulo: info.titulo },
         ]}
       />
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">{info.titulo}</h1>
-          <p className="mt-1 text-sm text-slate-500">Escolha a escola para ver as turmas e os planos.</p>
-        </div>
-        <Link href={info.novo} className="btn-azul">
-          <span aria-hidden="true">+</span> Novo {info.singular}
-        </Link>
-      </div>
+      <CabecalhoPagina
+        tom={tipo === "anuais" ? "azul" : "verde"}
+        ilustracao={tipo === "anuais" ? "anual" : "mensal"}
+        titulo={info.titulo}
+        subtitulo="Escolha a escola para ver as turmas e os planos."
+        acoes={
+          <Link href={info.novo} className="btn-azul">
+            <Icone nome="mais" className="h-4 w-4" /> Novo {info.singular}
+          </Link>
+        }
+      />
 
       {(copias || novos) && (
         <p role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
@@ -55,7 +62,7 @@ export default async function EscolasDoTipoPage({
           </Link>
         </div>
       ) : (
-        <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {escolas.map((e) => (
             <li key={e.chave}>
               <CartaoPasta
