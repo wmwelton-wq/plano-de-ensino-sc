@@ -4,11 +4,14 @@ import { useState } from "react";
 import { gerarPdfDoElemento } from "@/lib/gerar-pdf";
 import { gerarWordDoElemento } from "@/lib/gerar-word";
 import { baixarArquivo } from "@/lib/baixar-arquivo";
+import CompartilharLink from "./compartilhar-link";
 
 interface BarraAcoesPlanoProps {
   titulo: string;
   /** Anos Iniciais saem em paisagem (modelo oficial); as demais etapas, em retrato. */
   paisagem: boolean;
+  /** Quando informado, mostra o botão "Compartilhar link" (somente leitura). */
+  compartilhar?: { tipo: "mensal" | "anual"; planoId: string };
 }
 
 /**
@@ -16,7 +19,7 @@ interface BarraAcoesPlanoProps {
  * Os dois downloads geram o arquivo no próprio navegador a partir do
  * conteúdo exibido (#plano-conteudo).
  */
-export default function BarraAcoesPlano({ titulo, paisagem }: BarraAcoesPlanoProps) {
+export default function BarraAcoesPlano({ titulo, paisagem, compartilhar }: BarraAcoesPlanoProps) {
   const orientacao = paisagem ? "paisagem" : "retrato";
   const [ocupado, setOcupado] = useState<"pdf" | "word" | null>(null);
   const [mensagem, setMensagem] = useState<string | null>(null);
@@ -74,6 +77,7 @@ export default function BarraAcoesPlano({ titulo, paisagem }: BarraAcoesPlanoPro
           {mensagem}
         </p>
       )}
+      {compartilhar && <CompartilharLink tipo={compartilhar.tipo} planoId={compartilhar.planoId} titulo={titulo} paisagem={paisagem} />}
     </div>
   );
 }

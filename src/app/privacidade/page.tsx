@@ -79,6 +79,26 @@ export default function PrivacidadePage() {
               "Gerado no momento do cadastro.",
             ],
             [
+              "Login com Google (opcional)",
+              "Se você escolher entrar com o Google, recebemos seu nome e seu email. Não recebemos sua senha do Google nem acessamos seus arquivos ou contatos.",
+              "Informados pelo Google com a sua autorização.",
+            ],
+            [
+              "Calendário escolar (opcional)",
+              "Datas que você cadastrar (festas, projetos, reuniões, feriados municipais) e a escolha de usar ou não o calendário. Se enviar o calendário da escola em PDF, o arquivo é lido por IA e não é guardado: salvamos apenas as datas que você confirmar.",
+              "Informados por você.",
+            ],
+            [
+              "Link de leitura (opcional)",
+              "Se você criar um link para compartilhar um plano, guardamos uma cópia em PDF desse plano, acessível a quem tiver o link, por até 60 dias. Você pode encerrar o link antes disso.",
+              "Gerado por você.",
+            ],
+            [
+              "Colegas e envio por e-mail (opcional)",
+              "Se você cadastrar colegas, guardamos o nome e o email que você informar, visíveis só para você. Ao enviar um plano, o colega recebe um email com o link de leitura e guardamos o registro do envio (email do destinatário, data e resultado) para controlar limites e evitar abuso. Cadastre apenas pessoas que concordam em receber seus planos.",
+              "Informados por você.",
+            ],
+            [
               "Dados técnicos e de segurança",
               "Endereço IP, data e hora de acesso, tipo de navegador e dispositivo, páginas acessadas, tentativas de login e erros.",
               "Coletados automaticamente quando você acessa o site.",
@@ -182,6 +202,21 @@ export default function PrivacidadePage() {
               "Vercel",
               "Hospedagem do site e da aplicação.",
               "Dados técnicos de acesso (IP, navegador, páginas) e tráfego do site.",
+            ],
+            [
+              "Google",
+              "Somente se você escolher “Entrar com Google”: confirmar sua identidade.",
+              "Nome e email da sua conta Google.",
+            ],
+            [
+              "Provedores de IA (Google Gemini, OpenAI, Anthropic, DeepSeek, Mistral ou Groq)",
+              "Somente quando você usa a IA do caminho metodológico ou envia um calendário em PDF. O servidor escolhe um provedor disponível; se um falhar, tenta outro.",
+              "Título, turma, habilidades e conteúdos do plano e as instruções que você escrever (caminho metodológico); ou o PDF do calendário. Não enviamos seu nome, email, nem dados de alunos.",
+            ],
+            [
+              "Resend",
+              "Somente se você enviar um plano por email a um colega: entregar a mensagem.",
+              "Nome e email do colega, seu nome, o título do plano e o link de leitura.",
             ],
             [
               "Cloudflare",
@@ -344,11 +379,13 @@ export default function PrivacidadePage() {
 
       <Secao id="decisoes-automatizadas" numero={12} titulo="Decisões automatizadas e IA">
         <p>
-          Hoje o {NOME_SERVICO} não toma decisões automatizadas que afetem seus direitos. O
-          serviço pode, no futuro, oferecer recursos de inteligência artificial para ajudar na
-          redação dos planos. Se isso ocorrer, atualizaremos este Aviso antes, informando quais
-          dados seriam enviados ao provedor do recurso e para quê. As sugestões da ferramenta,
-          quando existirem, são apoio ao seu trabalho e devem sempre ser revisadas por você.
+          O {NOME_SERVICO} não toma decisões automatizadas que afetem seus direitos. Oferecemos
+          dois recursos opcionais de inteligência artificial: (1) a criação de um rascunho do
+          “caminho metodológico” do plano e (2) a leitura do calendário escolar enviado por você em
+          PDF (até 4 páginas, um envio a cada 3 meses). Nesses casos, enviamos a provedores de IA
+          apenas o conteúdo necessário (dados pedagógicos do plano ou o PDF), sem seu nome, email
+          nem dados de alunos. O resultado é sempre um rascunho: você revisa, edita e decide o que
+          salvar. A IA pode errar e não substitui o seu julgamento profissional.
         </p>
       </Secao>
 

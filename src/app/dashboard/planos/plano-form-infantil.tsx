@@ -49,6 +49,7 @@ export default function PlanoFormInfantil({
 }: PlanoFormInfantilProps) {
   const [estado, formAction, pendente] = useActionState(action, {});
   const [campoPrincipal, setCampoPrincipal] = useState(plano?.disciplina_id ?? "");
+  const refMetodologia = useRef<EditorTextoRicoHandle>(null);
   const refAvaliacao = useRef<EditorTextoRicoHandle>(null);
   const refInstrumentos = useRef<EditorTextoRicoHandle>(null);
   const [grupoEtario, setGrupoEtario] = useState(plano?.grupo_etario ?? "");
@@ -252,7 +253,7 @@ export default function PlanoFormInfantil({
         titulo="Metodologia / rotina"
         descricao="Como as experiências se organizam no dia a dia (por semana, por momento da rotina)."
       >
-        <MetodologiaIA>
+        <MetodologiaIA editorRef={refMetodologia}>
           <div>
             <label htmlFor="metodologia" className="field-label">
               Metodologia / rotina
@@ -262,6 +263,7 @@ export default function PlanoFormInfantil({
               name="metodologia"
               valorInicial={plano?.metodologia}
               linhas={6}
+              editorRef={refMetodologia}
             />
           </div>
         </MetodologiaIA>

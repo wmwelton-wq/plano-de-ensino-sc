@@ -380,7 +380,7 @@ export default async function VisualizarPlanoAnualPage({
           <Icone nome="setaEsquerda" className="h-4 w-4" espessura={2.2} />
           Voltar para edição
         </Link>
-        <BarraAcoesPlano titulo={plano.titulo} paisagem={paisagem} />
+        <BarraAcoesPlano titulo={plano.titulo} paisagem={paisagem} compartilhar={{ tipo: "anual", planoId: plano.id }} />
       </div>
 
       <style>{`@page { size: A4 landscape; margin: 0; }`}</style>

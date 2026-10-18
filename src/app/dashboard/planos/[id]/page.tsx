@@ -81,7 +81,7 @@ export default async function EditarPlanoPage({
               </Link>
               <Link href={`/dashboard/planos/${id}/replicar`} className="btn-secondary !py-2">
                 <Icone nome="copiar" className="h-4 w-4" />
-                Replicar para outras escolas
+                Copiar para outras turmas
               </Link>
               <ExcluirButton excluirAction={excluirComId} />
             </>

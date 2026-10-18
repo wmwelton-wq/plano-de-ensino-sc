@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthLayout from "@/components/auth-layout";
 import { createClient } from "@/lib/supabase/client";
 import Turnstile from "@/components/turnstile";
 import { verificarTurnstile } from "@/lib/turnstile-client";
+import BotaoGoogle from "@/components/botao-google";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,6 +19,12 @@ export default function LoginPage() {
   const [carregando, setCarregando] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileKey, setTurnstileKey] = useState(0);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("erro") === "google") {
+      setErro("Não foi possível entrar com o Google. Tente de novo ou use seu e-mail e senha.");
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,7 +77,20 @@ export default function LoginPage() {
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Entrar</h1>
           <p className="mt-1 text-sm text-slate-500">Acesse sua conta de professor.</p>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <div className="mt-6">
+            <BotaoGoogle rotulo="Entrar com Google" />
+            <p className="mt-2 text-center text-xs text-slate-400">
+              Ao continuar com o Google, você aceita os <Link href="/termos-de-uso" className="link-primary text-xs">Termos de Uso</Link> e o <Link href="/privacidade" className="link-primary text-xs">Aviso de Privacidade</Link>.
+            </p>
+          </div>
+
+          <div className="my-5 flex items-center gap-3 text-xs font-semibold uppercase tracking-wide text-slate-400" aria-hidden="true">
+            <span className="h-px flex-1 bg-slate-200" />
+            ou
+            <span className="h-px flex-1 bg-slate-200" />
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="field-label">
                 Email

@@ -130,6 +130,10 @@ export default function TermosDeUsoPage() {
             enviar vírus, códigos maliciosos ou arquivos que prejudiquem o funcionamento do
             serviço;
           </li>
+          <li>
+            enviar planos por email a pessoas que não concordaram em recebê-los, ou usar o envio de planos para spam ou
+            propaganda;
+          </li>
           <li>criar contas falsas ou se passar por outra pessoa ou instituição.</li>
         </Lista>
       </Secao>
@@ -225,10 +229,12 @@ export default function TermosDeUsoPage() {
 
       <Secao id="ia" numero={13} titulo="Recursos de inteligência artificial">
         <p>
-          Se o serviço passar a oferecer recursos de inteligência artificial, as sugestões geradas
-          são apenas um ponto de partida: podem conter imprecisões e devem ser revisadas por você
-          antes de qualquer uso. Os dados enviados e os limites de uso desses recursos serão
-          informados antes, no Aviso de Privacidade e dentro do próprio serviço.
+          O serviço oferece recursos opcionais de inteligência artificial (rascunho do caminho
+          metodológico e leitura de calendário escolar em PDF). O que a IA gera é apenas um ponto
+          de partida: pode conter imprecisões e deve ser revisado por você antes de qualquer uso.
+          Esses recursos têm limites de uso por professor (por dia, por mês e, no caso do PDF do
+          calendário, até 4 páginas e um envio a cada 3 meses). Os dados enviados estão descritos
+          no Aviso de Privacidade.
         </p>
       </Secao>
 

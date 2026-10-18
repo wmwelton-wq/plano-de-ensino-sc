@@ -107,6 +107,7 @@ export default function PlanoForm({
   // Editores formatados: o seletor de objetos (Anos Finais) e as listas de
   // sugestões acrescentam itens a eles por estes "handles".
   const conteudosRef = useRef<EditorTextoRicoHandle>(null);
+  const metodologiaRef = useRef<EditorTextoRicoHandle>(null);
   const anoDaSerie = (serie: string | null | undefined) => {
     const m = /(\d+)\s*[ºª°]/.exec(serie ?? "");
     return m ? Number(m[1]) : null;
@@ -512,7 +513,7 @@ export default function PlanoForm({
         titulo="Possível caminho metodológico"
         descricao="Como as habilidades serão desenvolvidas — por exemplo, um parágrafo por semana."
       >
-        <MetodologiaIA>
+        <MetodologiaIA editorRef={metodologiaRef}>
           <div>
             <label htmlFor="metodologia" className="field-label">
               Caminho metodológico para desenvolvimento da habilidade
@@ -525,6 +526,7 @@ export default function PlanoForm({
               name="metodologia"
               valorInicial={plano?.metodologia}
               linhas={6}
+              editorRef={metodologiaRef}
             />
           </div>
         </MetodologiaIA>

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import BuscaPlanos, { type ItemBusca } from "./busca-planos";
 import TutorialInicial from "./tutorial-inicial";
+import PrimeirosPassos from "./primeiros-passos";
+import AgendaPainel from "./agenda-painel";
 import { PrimeiroNome } from "./usuario-contexto";
 import { Suspense } from "react";
 import { CartaoPlano, type PlanoLista } from "./meus-planos/dados";
@@ -325,36 +327,13 @@ export default async function InicioPage() {
         </section>
       )}
 
-      {/* ── Primeiros passos (quando ainda não há planos) ── */}
-      {total === 0 && (
-        <section aria-labelledby="primeiros-passos" className="space-y-4">
-          <Secao id="primeiros-passos" icone="sparkle" tom="azul" titulo="Comece em 3 passos" texto="Leva poucos minutos e você não precisa fazer tudo de uma vez." />
-          <ol className="grid gap-4 sm:grid-cols-3">
-            {[
-              { n: 1, tom: "ambar" as Tom, icone: "escola" as NomeIcone, titulo: "Cadastre sua escola", texto: "Nome, município e logo aparecem no cabeçalho dos planos.", href: "/dashboard/escolas/nova", feito: totalEscolas > 0 },
-              { n: 2, tom: "azul" as Tom, icone: "calendario" as NomeIcone, titulo: "Faça o plano anual", texto: "Marque as habilidades e os objetos de conhecimento de cada trimestre.", href: "/dashboard/anual/novo", feito: false },
-              { n: 3, tom: "verde" as Tom, icone: "livro" as NomeIcone, titulo: "Gere os mensais e baixe", texto: "No plano anual, “Gerar planos mensais” faz o trabalho pesado. Baixe em PDF ou Word.", href: "/dashboard/ajuda", feito: false },
-            ].map((p) => (
-              <li key={p.n} className="painel-cartao flex flex-col p-5">
-                <div className="flex items-center justify-between">
-                  <span className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-sm ${TONS[p.tom].tile}`} aria-hidden="true">
-                    <Icone nome={p.icone} className="h-5 w-5" />
-                  </span>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${p.feito ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                    {p.feito ? "Feito" : `Passo ${p.n}`}
-                  </span>
-                </div>
-                <p className="mt-4 text-base font-extrabold text-slate-900">{p.titulo}</p>
-                <p className="mt-1 flex-1 text-sm leading-relaxed text-slate-600">{p.texto}</p>
-                <Link href={p.href} className="link-primary mt-4 inline-flex items-center gap-1 text-sm font-bold">
-                  {p.n === 3 ? "Ver como funciona" : "Começar"}
-                  <Icone nome="setaDireita" className="h-4 w-4" />
-                </Link>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+      {/* ── Primeiros passos: marca sozinho o que já foi feito e some quando tudo estiver pronto ── */}
+      <PrimeirosPassos temEscola={totalEscolas > 0} temAnual={anuais.length > 0} temMensal={mensais.length > 0} temFinalizado={finalizados > 0} />
+
+      {/* ── Agenda escolar (opcional: só aparece se o professor ligou o calendário; antes disso, um convite) ── */}
+      <Suspense fallback={null}>
+        <AgendaPainel />
+      </Suspense>
 
       {/* ── Continue de onde parou + Progresso ── */}
       {total > 0 && (

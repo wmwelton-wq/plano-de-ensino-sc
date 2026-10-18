@@ -1,36 +1,12 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
+import ConfirmarExclusao from "@/components/confirmar-exclusao";
 
-function BotaoExcluir() {
-  const { pending } = useFormStatus();
-  return (
-    <button
-      type="submit"
-      disabled={pending}
-      aria-busy={pending}
-      className="btn-perigo-suave disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {pending ? "Excluindo…" : "Excluir plano"}
-    </button>
-  );
-}
-
+/** Excluir plano (mensal ou anual): mostra um aviso bem visível antes de apagar. */
 export default function ExcluirButton({
   excluirAction,
 }: {
   excluirAction: () => Promise<void>;
 }) {
-  return (
-    <form
-      action={excluirAction}
-      onSubmit={(e) => {
-        if (!confirm("Tem certeza que deseja excluir este plano de ensino?")) {
-          e.preventDefault();
-        }
-      }}
-    >
-      <BotaoExcluir />
-    </form>
-  );
+  return <ConfirmarExclusao excluirAction={excluirAction} rotulo="Excluir plano" oQue="este plano de ensino" />;
 }

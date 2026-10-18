@@ -1,6 +1,9 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode, type RefObject } from "react";
+import type { EditorTextoRicoHandle } from "./editor-texto-rico";
+import { gerarMetodologia } from "./ia-actions";
+import CalendarioNoPlano from "./calendario-no-plano";
 
 interface MetodologiaIAProps {
   /** Campo de texto formatado do caminho metodológico (aparece logo abaixo do botão). */
@@ -10,6 +13,8 @@ interface MetodologiaIAProps {
    * escolheu no plano e devolve o texto do caminho metodológico.
    */
   onGerar?: (contexto: ContextoIA) => Promise<string | null>;
+  /** Editor do caminho metodológico: o texto criado pela IA é acrescentado nele como rascunho. */
+  editorRef?: RefObject<EditorTextoRicoHandle | null>;
 }
 
 export interface ContextoIA {
@@ -60,7 +65,7 @@ function montarContexto(form: HTMLFormElement, instrucoes: string): ContextoIA {
   };
 }
 
-export default function MetodologiaIA({ children, onGerar }: MetodologiaIAProps) {
+export default function MetodologiaIA({ children, onGerar, editorRef }: MetodologiaIAProps) {
   const raiz = useRef<HTMLDivElement>(null);
   const [instrucoes, setInstrucoes] = useState("");
   const [aviso, setAviso] = useState<string | null>(null);
@@ -69,14 +74,25 @@ export default function MetodologiaIA({ children, onGerar }: MetodologiaIAProps)
   async function gerar() {
     const form = raiz.current?.closest("form");
     if (!form) return;
-    if (!onGerar) {
+    if (!onGerar && !editorRef) {
       setAviso("A criação com IA será liberada em breve. O botão e o campo de instruções já estão prontos.");
       return;
     }
     setGerando(true);
     setAviso(null);
     try {
-      await onGerar(montarContexto(form, instrucoes.trim()));
+      const contexto = montarContexto(form, instrucoes.trim());
+      if (onGerar) {
+        await onGerar(contexto);
+        return;
+      }
+      const r = await gerarMetodologia(contexto);
+      if (!r.ok) {
+        setAviso(r.erro);
+        return;
+      }
+      editorRef?.current?.anexar(r.paragrafos, "paragrafos");
+      setAviso("Pronto! Colocamos um rascunho no campo abaixo. Leia, ajuste do seu jeito e salve — a IA pode errar.");
     } catch {
       setAviso("Não foi possível criar o caminho metodológico agora. Tente novamente.");
     } finally {
@@ -115,6 +131,7 @@ export default function MetodologiaIA({ children, onGerar }: MetodologiaIAProps)
           </p>
         )}
       </div>
+      <CalendarioNoPlano raiz={raiz} editorRef={editorRef} />
       {children}
     </div>
   );

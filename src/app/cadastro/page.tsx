@@ -11,6 +11,7 @@ import { traduzirErroAuth } from "@/lib/erros-auth";
 import { createClient } from "@/lib/supabase/client";
 import Turnstile from "@/components/turnstile";
 import { verificarTurnstile } from "@/lib/turnstile-client";
+import BotaoGoogle from "@/components/botao-google";
 import { TEXTO_ACEITE, VERSAO_DOCUMENTOS_LEGAIS } from "@/lib/legal";
 
 export default function CadastroPage() {
@@ -212,6 +213,13 @@ export default function CadastroPage() {
               {carregando ? "Criando conta..." : "Criar conta"}
             </button>
           </form>
+
+          <div className="my-5 flex items-center gap-3 text-xs font-semibold uppercase tracking-wide text-slate-400" aria-hidden="true">
+            <span className="h-px flex-1 bg-slate-200" />
+            ou
+            <span className="h-px flex-1 bg-slate-200" />
+          </div>
+          <BotaoGoogle rotulo="Cadastrar com Google" desabilitado={!aceitou} motivoDesabilitado="Para criar a conta, marque antes que leu e aceita os Termos de Uso e o Aviso de Privacidade." />
 
           <p className="mt-6 text-center text-sm text-slate-500">
             Já tem conta? <Link href="/login" className="link-primary">Entrar</Link>

@@ -92,6 +92,7 @@ export default function PlanoFormFundamentalAnosIniciais({
   // Um campo de texto por componente (objetos/conteúdos, instrumentos e critérios); marcar caixinhas escreve no do componente certo.
   const refConteudosDe = useRefsPorComponente();
   const refInstrumentosDe = useRefsPorComponente();
+  const refMetodologiaDe = useRefsPorComponente();
   const refCriteriosDe = useRefsPorComponente();
   const anoDaSerie = (serie: string | null | undefined) => {
     const m = /(\d+)\s*º/.exec(serie ?? "");
@@ -472,7 +473,7 @@ export default function PlanoFormFundamentalAnosIniciais({
               titulo={`Caminho metodológico — ${d.nome}`}
               descricao="Passo a passo para desenvolver as habilidades selecionadas."
             >
-              <MetodologiaIA>
+              <MetodologiaIA editorRef={refMetodologiaDe(d.id)}>
                 <div className="space-y-3">
                   <p className="text-xs text-slate-500">
                     A Sequência Didática é a metodologia recomendada; descreva também os recursos usados em cada aula.
@@ -486,6 +487,7 @@ export default function PlanoFormFundamentalAnosIniciais({
                       name={nomeCampoSecao("metodologia", d.id)}
                       valorInicial={textoSalvo(d.id, "metodologia")}
                       linhas={5}
+                      editorRef={refMetodologiaDe(d.id)}
                     />
                   </div>
                 </div>

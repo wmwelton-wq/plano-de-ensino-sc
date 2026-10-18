@@ -708,7 +708,7 @@ export function AnelProgresso({
             <stop offset="1" stopColor="#34D399" />
           </linearGradient>
         </defs>
-        <circle cx={tamanho / 2} cy={tamanho / 2} r={r} fill="none" stroke="#E2E8F0" strokeWidth={espessura} />
+        <circle cx={tamanho / 2} cy={tamanho / 2} r={r} fill="none" className="stroke-slate-200" strokeWidth={espessura} />
         {p > 0 && (
           <circle
             cx={tamanho / 2}
