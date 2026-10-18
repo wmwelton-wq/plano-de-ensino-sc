@@ -11,8 +11,8 @@ const fonteCorpo = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Planos de Ensino SC",
-  description: "Aplicativo para professores da rede estadual de SC criarem seus planos de ensino.",
+  title: "Plano Docente — planos de ensino para professores de SC",
+  description: "O Plano Docente ajuda professores de Santa Catarina a montar planos de ensino anuais e mensais.",
 };
 
 export const viewport: Viewport = {

@@ -1,0 +1,135 @@
+/* Estilos do painel moderno (faixa de boas-vindas, cartões ilustrados, menu). Importado em dashboard/layout.tsx. */
+
+.hero-painel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgb(226 232 240 / 0.9);
+  background:
+    radial-gradient(900px 380px at 88% -20%, #dbeafe 0%, rgb(219 234 254 / 0) 62%),
+    radial-gradient(620px 300px at -6% 118%, #d1fae5 0%, rgb(209 250 229 / 0) 62%),
+    linear-gradient(135deg, #f8fbff 0%, #ffffff 55%, #f4f8ff 100%);
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.04),
+    0 28px 56px -28px rgb(37 99 235 / 0.28);
+}
+.hero-painel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(148 163 184 / 0.28) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(100deg, rgb(0 0 0 / 0.55), transparent 55%);
+  mask-image: linear-gradient(100deg, rgb(0 0 0 / 0.55), transparent 55%);
+  pointer-events: none;
+}
+
+.painel-cartao {
+  border-radius: 20px;
+  border: 1px solid rgb(226 232 240 / 0.9);
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.04),
+    0 12px 28px -18px rgb(15 23 42 / 0.18);
+}
+
+/* Cartão de atalho com ilustração */
+.atalho-ilustrado {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid rgb(226 232 240 / 0.9);
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.04),
+    0 12px 28px -18px rgb(15 23 42 / 0.18);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+.atalho-ilustrado:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--tom) 45%, white);
+  box-shadow:
+    0 2px 4px rgb(15 23 42 / 0.05),
+    0 22px 40px -18px color-mix(in srgb, var(--tom) 55%, transparent);
+}
+.atalho-ilustrado:hover .atalho-seta {
+  transform: translateX(3px);
+  background: var(--tom);
+  color: #fff;
+}
+.atalho-arte {
+  background: linear-gradient(160deg, var(--tom-claro) 0%, #fff 130%);
+}
+.atalho-seta {
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+/* Animações leves */
+@keyframes painel-flutua {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+@keyframes painel-pisca {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.7);
+  }
+}
+@keyframes painel-entra {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes menu-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.anim-flutua,
+.anim-flutua-lento,
+.anim-pisca {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.anim-flutua {
+  animation: painel-flutua 5s ease-in-out infinite;
+}
+.anim-flutua-lento {
+  animation: painel-flutua 9s ease-in-out infinite;
+}
+.anim-pisca {
+  animation: painel-pisca 3.4s ease-in-out infinite;
+}
+.painel-entra {
+  animation: painel-entra 0.5s ease-out both;
+}
+.menu-entra {
+  animation: menu-entra 0.16s ease-out both;
+  transform-origin: top left;
+}
