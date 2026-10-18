@@ -8,20 +8,20 @@
   --foreground: #0f1b2d;
 
   /* Cores por função: cada tipo de passo/bloco tem o seu tom, sempre o mesmo em todo o sistema. */
-  --tom-azul: #204a7c;
-  --tom-azul-claro: #e9f0f8;
-  --tom-verde: #1d6b4f;
-  --tom-verde-claro: #e7f4ed;
-  --tom-violeta: #5a3e8a;
-  --tom-violeta-claro: #f1ecf8;
-  --tom-ambar: #9a5906;
-  --tom-ambar-claro: #fcf2de;
-  --tom-ciano: #0e6a85;
-  --tom-ciano-claro: #e4f2f7;
-  --tom-ardosia: #3b4658;
-  --tom-ardosia-claro: #eef0f4;
-  --tom-rosa: #9d2f4f;
-  --tom-rosa-claro: #fbebf0;
+  --tom-azul: #2563eb;
+  --tom-azul-claro: #e8f0ff;
+  --tom-verde: #059669;
+  --tom-verde-claro: #def7ec;
+  --tom-violeta: #7c3aed;
+  --tom-violeta-claro: #f0e9ff;
+  --tom-ambar: #d97706;
+  --tom-ambar-claro: #fef0d4;
+  --tom-ciano: #0891b2;
+  --tom-ciano-claro: #dcf4fa;
+  --tom-ardosia: #4f5bd5;
+  --tom-ardosia-claro: #eceeff;
+  --tom-rosa: #db2777;
+  --tom-rosa-claro: #fde7f1;
 }
 
 body {
@@ -135,57 +135,129 @@ body {
 
   /* Botões azuis de destaque (ações principais do formulário e do plano) */
   .btn-azul {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 55%, #1d4ed8 100%);
+    box-shadow: 0 1px 2px rgb(30 64 175 / 0.25), 0 8px 18px -8px rgb(37 99 235 / 0.65);
+  }
+  .btn-azul:hover {
+    filter: brightness(1.07) saturate(1.05);
+    box-shadow: 0 1px 2px rgb(30 64 175 / 0.25), 0 12px 22px -8px rgb(37 99 235 / 0.75);
   }
 
   .btn-azul-suave {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-primary-300 bg-white px-4 py-2 text-sm font-semibold text-primary-800 transition hover:border-primary-500 hover:bg-primary-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:border-primary-400 hover:bg-primary-100 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
   }
 
   /* Botões verdes: abrir listas de sugestões e adicionar itens ao plano (diferentes dos azuis de navegação/salvar). */
   .btn-verde {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
+    background: linear-gradient(135deg, #10b981 0%, #059669 55%, #047857 100%);
+    box-shadow: 0 1px 2px rgb(6 78 59 / 0.25), 0 8px 18px -8px rgb(5 150 105 / 0.65);
+  }
+  .btn-verde:hover {
+    filter: brightness(1.07) saturate(1.05);
   }
 
   .btn-verde-suave {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:border-emerald-500 hover:bg-emerald-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-100 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
   }
 
   /* Nome do componente curricular (disciplina) nos planos dos Anos Iniciais: etiqueta escura fácil de achar. */
   .etiqueta-disciplina {
-    @apply inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-sm font-bold text-white;
-    background: var(--tom-ardosia);
+    @apply inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-sm font-bold text-white;
+    background: linear-gradient(135deg, #64748b, #334155);
+    box-shadow: 0 6px 14px -8px rgb(51 65 85 / 0.8);
   }
 
   .btn-perigo-suave {
     @apply inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
   }
 
-  /* Seções do formulário do plano: cada etapa tem um título em caixa azul. */
+  /* Seções do formulário do plano: cada etapa tem uma faixa de título colorida (cor do tom), com número em destaque. */
   .secao-plano {
-    @apply scroll-mt-28 overflow-hidden rounded-2xl border border-slate-200 bg-white;
+    @apply scroll-mt-28 relative overflow-hidden border bg-white;
     --tom: var(--tom-azul);
     --tom-claro: var(--tom-azul-claro);
-    border-top: 4px solid var(--tom);
+    border-radius: 24px;
+    border-color: color-mix(in srgb, var(--tom) 16%, #e2e8f0);
     box-shadow:
       0 1px 2px rgb(15 23 42 / 0.04),
-      0 12px 28px -18px rgb(15 23 42 / 0.18);
+      0 18px 36px -22px color-mix(in srgb, var(--tom) 45%, transparent);
+  }
+  .secao-plano[hidden] {
+    display: none;
   }
 
   .secao-cabecalho {
-    @apply flex items-center gap-3 px-5 py-3.5;
-    background: var(--tom-claro);
-    color: var(--tom);
-    border-bottom: 1px solid color-mix(in srgb, var(--tom) 22%, white);
+    @apply relative flex items-center gap-3.5 px-5 py-4;
+    color: color-mix(in srgb, var(--tom) 55%, #0f172a);
+    background:
+      radial-gradient(420px 160px at 100% -40%, color-mix(in srgb, var(--tom) 22%, white) 0%, transparent 70%),
+      linear-gradient(135deg, var(--tom-claro) 0%, color-mix(in srgb, var(--tom-claro) 45%, white) 100%);
+    border-bottom: 1px solid color-mix(in srgb, var(--tom) 18%, white);
+  }
+  .secao-cabecalho::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--tom), color-mix(in srgb, var(--tom) 45%, white));
   }
 
   .secao-numero {
-    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white;
-    background: var(--tom);
+    @apply flex h-10 w-10 shrink-0 items-center justify-center text-white;
+    border-radius: 14px;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--tom) 70%, white) 0%, var(--tom) 70%);
+    box-shadow: 0 8px 16px -8px var(--tom), inset 0 1px 0 rgb(255 255 255 / 0.35);
   }
 
   .secao-corpo {
-    @apply space-y-5 bg-white p-5;
+    @apply space-y-5 bg-white p-5 sm:p-6;
+  }
+
+  /* Barra de etapas e barra de baixo do plano passo a passo (ver fluxo-passos.tsx e fluxo-mensal.tsx). */
+  .fluxo-barra {
+    @apply border bg-white/90 backdrop-blur;
+    border-radius: 22px;
+    border-color: rgb(226 232 240 / 0.95);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 18px 34px -20px rgb(30 58 138 / 0.35);
+  }
+  .fluxo-grupo {
+    @apply flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600;
+    background: var(--tom-claro);
+    border-color: color-mix(in srgb, var(--tom) 22%, white);
+    color: color-mix(in srgb, var(--tom) 60%, #0f172a);
+  }
+  .fluxo-grupo:hover {
+    border-color: color-mix(in srgb, var(--tom) 55%, white);
+    transform: translateY(-1px);
+  }
+  .fluxo-grupo[aria-current="step"] {
+    @apply text-white;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--tom) 78%, white) 0%, var(--tom) 70%);
+    border-color: var(--tom);
+    box-shadow: 0 10px 20px -10px var(--tom);
+  }
+  .fluxo-passo {
+    @apply flex items-center gap-1.5 rounded-full border bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600;
+    border-color: color-mix(in srgb, var(--tom) 28%, white);
+  }
+  .fluxo-passo:hover {
+    background: var(--tom-claro);
+  }
+  .fluxo-passo[aria-current="step"] {
+    @apply text-white;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--tom) 78%, white) 0%, var(--tom) 70%);
+    border-color: var(--tom);
+    box-shadow: 0 8px 16px -9px var(--tom);
+  }
+  .fluxo-progresso {
+    @apply h-1.5 w-full overflow-hidden rounded-full bg-slate-100;
+  }
+  .fluxo-progresso > span {
+    @apply block h-full rounded-full;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+    transition: width 0.35s ease;
   }
 
   /* Cabeçalho das páginas internas: faixa ilustrada igual à do painel (ver components/cabecalho-pagina.tsx). */

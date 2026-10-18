@@ -118,17 +118,21 @@ export function FluxoRodape({
   return (
     <div className="sticky bottom-3 z-[5] space-y-2">
       {erro && (
-        <p role="alert" className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700 shadow-sm">
+        <p role="alert" className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700 shadow-sm">
           <Icone nome="alerta" className="mt-0.5 h-4 w-4 shrink-0" />
           {erro}
         </p>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white/95 px-3 py-2.5 shadow-md backdrop-blur">
+      <div className="fluxo-barra space-y-2.5 px-3.5 py-3">
+        <div className="fluxo-progresso" role="progressbar" aria-label="Progresso do plano" aria-valuemin={1} aria-valuemax={passos.length} aria-valuenow={indice + 1}>
+          <span style={{ width: `${((indice + 1) / Math.max(1, passos.length)) * 100}%` }} />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={voltar} disabled={indice === 0} className="btn-azul-suave">
           <Icone nome="setaEsquerda" className="h-4 w-4" />
           Voltar
         </button>
-        <p className="order-last w-full text-center text-xs text-slate-600 sm:order-none sm:w-auto">
+        <p className="order-last w-full text-center text-xs text-slate-500 sm:order-none sm:w-auto">
           Passo {indice + 1} de {passos.length} · <span className="font-semibold text-slate-800">{passo?.grupoRotulo ? `${passo.grupoRotulo} · ` : ""}{passo?.rotulo}</span>
         </p>
         <div className="flex items-center gap-2">
@@ -141,6 +145,7 @@ export function FluxoRodape({
               <Icone nome="setaDireita" className="h-4 w-4" />
             </button>
           )}
+        </div>
         </div>
       </div>
     </div>

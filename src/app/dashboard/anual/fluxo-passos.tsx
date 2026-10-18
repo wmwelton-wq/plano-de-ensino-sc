@@ -30,7 +30,7 @@ export default function FluxoPassos({ grupos, atual, aoIr }: { grupos: GrupoFlux
   const grupoAtual = grupos.find((g) => g.passos.some((p) => p.chave === atual)) ?? grupos[0];
 
   return (
-    <nav aria-label="Etapas do plano" className="sticky top-[4.25rem] z-[5] -mx-1 space-y-2 rounded-xl border border-slate-300 bg-white/95 p-2.5 shadow-sm backdrop-blur print:hidden">
+    <nav aria-label="Etapas do plano" className="fluxo-barra sticky top-[4.25rem] z-[5] -mx-1 space-y-2 p-3 print:hidden">
       <ol className="flex gap-1.5 overflow-x-auto pb-0.5">
         {grupos.map((g) => {
           const ativo = g.id === grupoAtual.id;
@@ -43,15 +43,12 @@ export default function FluxoPassos({ grupos, atual, aoIr }: { grupos: GrupoFlux
                 type="button"
                 onClick={() => aoIr(ativo ? atual : g.passos[0].chave)}
                 aria-current={ativo ? "step" : undefined}
-                className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 ${
-                  ativo ? "text-white" : "bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-                style={ativo ? { background: "var(--tom)", borderColor: "var(--tom)" } : { borderColor: "color-mix(in srgb, var(--tom) 45%, white)" }}
+                className="fluxo-grupo"
               >
                 <Icone nome={completo && !ativo ? "check" : g.icone} className="h-4 w-4" />
                 <span className="max-w-[11rem] truncate">{g.rotulo}</span>
                 {obrigatorios.length > 1 && (
-                  <span className={`rounded-full px-1.5 text-xs font-bold ${ativo ? "bg-white/25" : "bg-slate-100 text-slate-600"}`}>
+                  <span className={`rounded-full px-1.5 text-xs font-bold ${ativo ? "bg-white/25" : "bg-white/80 text-slate-600"}`}>
                     {feitos}/{obrigatorios.length}
                   </span>
                 )}
@@ -62,7 +59,7 @@ export default function FluxoPassos({ grupos, atual, aoIr }: { grupos: GrupoFlux
       </ol>
 
       {grupoAtual.passos.length > 1 && (
-        <ol className="flex gap-1.5 overflow-x-auto rounded-lg bg-slate-100 p-1.5">
+        <ol className="flex gap-1.5 overflow-x-auto rounded-2xl bg-slate-50 p-1.5 ring-1 ring-slate-200/70">
           {grupoAtual.passos.map((p, i) => {
             const ativo = p.chave === atual;
             return (
@@ -71,10 +68,7 @@ export default function FluxoPassos({ grupos, atual, aoIr }: { grupos: GrupoFlux
                   type="button"
                   onClick={() => aoIr(p.chave)}
                   aria-current={ativo ? "step" : undefined}
-                  className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 ${
-                    ativo ? "text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
-                  style={ativo ? { background: "var(--tom)", borderColor: "var(--tom)" } : { borderColor: "color-mix(in srgb, var(--tom) 40%, white)" }}
+                  className="fluxo-passo"
                 >
                   <span
                     className="flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold"
