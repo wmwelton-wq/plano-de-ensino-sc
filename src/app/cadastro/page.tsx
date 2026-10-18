@@ -3,6 +3,7 @@
 import { Icone } from "@/components/icones";
 import { useState } from "react";
 import Link from "next/link";
+import AuthTopo from "@/components/auth-topo";
 import { createClient } from "@/lib/supabase/client";
 import Turnstile from "@/components/turnstile";
 import { verificarTurnstile } from "@/lib/turnstile-client";
@@ -77,7 +78,7 @@ export default function CadastroPage() {
 
   if (sucesso) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-6 py-12">
         <div className="card relative w-full max-w-sm p-8 text-center">
           <div data-tom="azul" className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
             <Icone nome="envelope" className="h-6 w-6" />
@@ -96,17 +97,10 @@ export default function CadastroPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-6 py-12">
 
       <div className="relative w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-slate-700"
-          >
-            <span aria-hidden="true">←</span> Planos de Ensino SC
-          </Link>
-        </div>
+        <AuthTopo voltarHref="/login" voltarRotulo="Voltar para o login" />
 
         <div className="card p-8">
           <h1 className="text-xl font-semibold text-slate-900">Criar conta</h1>

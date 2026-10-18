@@ -4,6 +4,7 @@ import { Icone } from "@/components/icones";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import AuthTopo from "@/components/auth-topo";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -70,7 +71,7 @@ export default function RedefinirSenhaPage() {
 
   if (!sessaoValida) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-6 py-12">
         <div className="card relative w-full max-w-sm p-8 text-center">
           <h1 className="text-xl font-semibold text-slate-900">Link inválido ou expirado</h1>
           <p className="mt-2 text-sm text-slate-600">
@@ -87,7 +88,7 @@ export default function RedefinirSenhaPage() {
 
   if (sucesso) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-6 py-12">
         <div className="card relative w-full max-w-sm p-8 text-center">
           <div data-tom="verde" className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
             <Icone nome="check" className="h-6 w-6" />
@@ -100,9 +101,11 @@ export default function RedefinirSenhaPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-6 py-12">
 
-      <div className="card relative w-full max-w-sm p-8">
+      <div className="relative w-full max-w-sm">
+      <AuthTopo voltarHref="/login" voltarRotulo="Voltar para o login" />
+      <div className="card relative w-full p-8">
         <h1 className="text-xl font-semibold text-slate-900">Nova senha</h1>
         <p className="mt-1 text-sm text-slate-500">Escolha uma nova senha para sua conta.</p>
 
@@ -150,6 +153,7 @@ export default function RedefinirSenhaPage() {
             {carregando ? "Salvando..." : "Salvar nova senha"}
           </button>
         </form>
+      </div>
       </div>
     </main>
   );

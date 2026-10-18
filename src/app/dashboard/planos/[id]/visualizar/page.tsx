@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Icone } from "@/components/icones";
 import { createClient } from "@/lib/supabase/server";
 import logoGoverno from "@/assets/logo-governo-sc.png";
 import BarraAcoesPlano from "./barra-acoes-plano";
@@ -151,9 +152,10 @@ export default async function VisualizarPlanoPage({
       <div className={`mx-auto mb-4 flex ${paisagem ? "max-w-[297mm]" : "max-w-[210mm]"} items-center justify-between px-4 print:hidden`}>
         <Link
           href={`/dashboard/planos/${id}`}
-          className="rounded-lg px-3 py-1.5 text-sm text-slate-600 transition hover:bg-slate-200/70 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+          className="btn-voltar"
         >
-          <span aria-hidden="true">← </span>Voltar para edição
+          <Icone nome="setaEsquerda" className="h-4 w-4" espessura={2.2} />
+          Voltar para edição
         </Link>
         <BarraAcoesPlano titulo={plano.titulo} paisagem={paisagem} />
       </div>

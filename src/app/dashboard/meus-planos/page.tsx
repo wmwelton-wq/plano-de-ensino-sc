@@ -1,7 +1,9 @@
 import { Icone } from "@/components/icones";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Migalhas, TIPOS, type TipoPlano } from "./dados";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
+import NavegacaoTopo from "@/components/navegacao-topo";
+import { TIPOS, type TipoPlano } from "./dados";
 
 export default async function MeusPlanosPage() {
   const supabase = await createClient();
@@ -14,19 +16,27 @@ export default async function MeusPlanosPage() {
 
   return (
     <div>
-      <Migalhas itens={[{ rotulo: "Início", href: "/dashboard" }, { rotulo: "Meus planos" }]} />
-      <h1 className="text-2xl font-semibold text-slate-900">Meus planos</h1>
-      <p className="mt-1 text-sm text-slate-500">Escolha o tipo de plano. Depois você escolhe a escola e a turma.</p>
+      <NavegacaoTopo
+        voltarHref="/dashboard"
+        voltarRotulo="Voltar ao início"
+        migalhas={[{ rotulo: "Início", href: "/dashboard" }, { rotulo: "Meus planos" }]}
+      />
+      <CabecalhoPagina
+        tom="azul"
+        icone="pasta"
+        titulo="Meus planos"
+        subtitulo="Escolha o tipo de plano. Depois você escolhe a escola e a turma."
+      />
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {(Object.keys(TIPOS) as TipoPlano[]).map((tipo) => (
-          <div key={tipo} data-tom={tipo === "anuais" ? "azul" : "verde"} className="card flex flex-col gap-4 border-t-4 p-6 [border-top-color:var(--tom)]">
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]" aria-hidden="true">
-                <Icone nome={tipo === "anuais" ? "calendario" : "livro"} className="h-6 w-6" />
+          <div key={tipo} data-tom={tipo === "anuais" ? "azul" : "verde"} className="card flex flex-col gap-5 p-6">
+            <div className="flex items-center gap-4">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl [background:var(--tom-claro)] [color:var(--tom)]" aria-hidden="true">
+                <Icone nome={tipo === "anuais" ? "calendario" : "livro"} className="h-7 w-7" />
               </span>
               <div>
-                <h2 className="text-xl font-bold text-slate-900">{TIPOS[tipo].titulo}</h2>
+                <h2 className="text-xl font-extrabold tracking-tight text-slate-900">{TIPOS[tipo].titulo}</h2>
                 <p className="text-sm text-slate-500">
                   {total[tipo]} {total[tipo] === 1 ? "plano" : "planos"}
                 </p>

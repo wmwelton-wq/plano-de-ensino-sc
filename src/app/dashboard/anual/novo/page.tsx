@@ -20,7 +20,7 @@ export default async function NovoPlanoAnualPage() {
 
   return (
     <div>
-      <VoltarLink href="/dashboard/meus-planos" rotulo="Voltar aos meus planos" />
+      <VoltarLink href="/dashboard/meus-planos/anuais" rotulo="Voltar aos planos anuais" />
       <div className="mt-2">
         <CabecalhoPagina
           tom="azul"

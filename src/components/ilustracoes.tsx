@@ -2,7 +2,7 @@
 // Funcionam em componentes de servidor e de cliente.
 
 export type TomIlustracao = "azul" | "verde" | "violeta" | "ambar" | "ciano" | "ardosia" | "rosa";
-export type NomeIlustracao = "meusPlanos" | "anual" | "mensal" | "escola" | "ajuda" | "opiniao";
+export type NomeIlustracao = "meusPlanos" | "anual" | "mensal" | "escola" | "ajuda" | "opiniao" | "conta";
 
 /** p = cor principal, d = escura, m = média, l = clara */
 const PALETA: Record<TomIlustracao, { p: string; d: string; m: string; l: string }> = {
@@ -97,6 +97,23 @@ export function Ilustracao({
             <Selo cx={114} cy={80} r={12} fundo={tom === "verde" ? "#2563EB" : "#10B981"} />
             <Brilho x={142} y={62} s={5} cor={c.p} o={0.55} />
             <Brilho x={22} y={30} s={4} cor={c.m} />
+          </>
+        );
+      case "conta":
+        return (
+          <>
+            <circle cx="132" cy="28" r="24" fill={c.l} />
+            <circle cx="26" cy="74" r="18" fill={c.l} opacity=".8" />
+            <rect x="38" y="22" width="86" height="58" rx="12" fill={SOMBRA} opacity=".07" />
+            <rect x="34" y="16" width="86" height="58" rx="12" fill="#fff" />
+            <circle cx="60" cy="41" r="12" fill={c.p} />
+            <circle cx="60" cy="38" r="4.5" fill="#fff" />
+            <path d="M51 50a9 8 0 0 1 18 0z" fill="#fff" />
+            <rect x="78" y="33" width="34" height="6" rx="3" fill={c.d} />
+            <rect x="78" y="45" width="26" height="5" rx="2.5" fill={c.m} />
+            <rect x="46" y="60" width="64" height="5" rx="2.5" fill={c.l} />
+            <Selo cx={118} cy={70} r={12} fundo="#10B981" />
+            <Brilho x={142} y={62} s={5} cor={c.p} o={0.55} />
           </>
         );
       case "mensal":

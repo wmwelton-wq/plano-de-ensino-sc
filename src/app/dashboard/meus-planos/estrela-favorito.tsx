@@ -36,7 +36,7 @@ export default function EstrelaFavorito({
       disabled={pendente}
       aria-pressed={ativo}
       title={ativo ? "Tirar dos favoritos" : "Marcar como favorito (em uso)"}
-      className={`flex shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
+      className={`flex shrink-0 items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 ${
         ativo
           ? "border-amber-400 bg-amber-50 text-amber-700"
           : "border-slate-300 bg-white text-slate-500 hover:border-amber-300 hover:text-amber-600"

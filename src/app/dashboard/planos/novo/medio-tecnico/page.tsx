@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import PlanoForm from "../../plano-form";
 import { criarPlano } from "../../actions";
 import VoltarLink from "../../voltar-link";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
 
 export default async function NovoPlanoMedioTecnicoPage() {
   const supabase = await createClient();
@@ -25,10 +26,10 @@ export default async function NovoPlanoMedioTecnicoPage() {
 
   return (
     <div>
-      <VoltarLink />
-      <h1 className="text-2xl font-semibold text-slate-900">
-        Novo plano — Ensino Médio e Cursos Técnicos
-      </h1>
+      <VoltarLink href="/dashboard/planos/novo" rotulo="Voltar à escolha da etapa" />
+      <div className="mt-2">
+        <CabecalhoPagina tom="violeta" icone="graduacao" titulo="Novo plano — Ensino Médio e Cursos Técnicos" subtitulo="Formação Geral Básica, itinerários e cursos técnicos. Preencha por etapas; o plano pode ser salvo como rascunho." />
+      </div>
       <div className="mt-6">
         <PlanoForm
           etapa="ensino_medio"

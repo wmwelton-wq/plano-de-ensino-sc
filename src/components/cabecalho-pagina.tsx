@@ -26,19 +26,19 @@ export default function CabecalhoPagina({
 }) {
   return (
     <header className="cabecalho-pagina" data-tom={tom}>
-      <div className="flex flex-wrap items-center justify-between gap-4 p-5">
-        <div className="flex items-center gap-3.5">
+      <div className="relative flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
+        <div className="flex min-w-0 items-center gap-3.5">
           <span className="cabecalho-icone" aria-hidden="true">
             <Icone nome={icone} className="h-6 w-6" />
           </span>
           <div>
-            <h1 className="text-xl font-bold leading-tight text-slate-900 sm:text-2xl">{titulo}</h1>
+            <h1 className="text-xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-2xl">{titulo}</h1>
             {subtitulo && <p className="mt-0.5 text-sm text-slate-600">{subtitulo}</p>}
           </div>
         </div>
         {acoes && <div className="flex flex-wrap items-center gap-2">{acoes}</div>}
       </div>
-      {rodape && <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3">{rodape}</div>}
+      {rodape && <div className="relative flex flex-wrap items-center gap-2 border-t border-slate-200/80 bg-white/70 px-5 py-3 sm:px-6">{rodape}</div>}
     </header>
   );
 }

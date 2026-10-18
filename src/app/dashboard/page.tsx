@@ -521,10 +521,10 @@ export default async function InicioPage() {
       </section>
 
       <section aria-labelledby="mais-opcoes" className="space-y-4">
-        <Secao id="mais-opcoes" icone="escola" tom="ambar" titulo="Escolas, ajuda e opinião" />
+        <Secao id="mais-opcoes" icone="escola" tom="ambar" titulo="Escolas, conta e ajuda" />
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <Cartao href="/dashboard/escolas" ilustracao="escola" tom="ambar" titulo="Minhas escolas" texto="Veja e edite as escolas cadastradas." />
-          <Cartao href="/dashboard/escolas/nova" ilustracao="escola" tom="ambar" titulo="Cadastrar escola" texto="Cadastre o nome, o município e a logo." mais />
+          <Cartao href="/dashboard/conta" ilustracao="conta" tom="violeta" titulo="Minha conta" texto="Seu nome, sua senha e a privacidade." />
           <Cartao href="/dashboard/ajuda" ilustracao="ajuda" tom="ciano" titulo="Ajuda" texto="Passo a passo, dicas e vídeos curtos." />
           <Cartao href="/dashboard/opiniao" ilustracao="opiniao" tom="rosa" titulo="Dar minha opinião" texto="3 perguntas rápidas para melhorarmos o app." />
         </div>

@@ -1,6 +1,8 @@
 import { Icone } from "@/components/icones";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
+import NavegacaoTopo from "@/components/navegacao-topo";
 
 export default async function EscolasPage() {
   const supabase = await createClient();
@@ -12,22 +14,26 @@ export default async function EscolasPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Minhas escolas</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Cadastre suas escolas uma vez e reaproveite o nome, o município e a logo na hora de
-            criar novos planos de ensino.
-          </p>
-        </div>
-        <Link href="/dashboard/escolas/nova" className="btn-primary">
-          <Icone nome="mais" className="h-4 w-4" /> Nova escola
-        </Link>
-      </div>
+      <NavegacaoTopo
+        voltarHref="/dashboard"
+        voltarRotulo="Voltar ao início"
+        migalhas={[{ rotulo: "Início", href: "/dashboard" }, { rotulo: "Escolas" }]}
+      />
+      <CabecalhoPagina
+        tom="ambar"
+        icone="escola"
+        titulo="Minhas escolas"
+        subtitulo="Cadastre suas escolas uma vez e reaproveite o nome, o município e a logo na hora de criar novos planos de ensino."
+        acoes={
+          <Link href="/dashboard/escolas/nova" className="btn-primary">
+            <Icone nome="mais" className="h-4 w-4" /> Nova escola
+          </Link>
+        }
+      />
 
       {!escolas || escolas.length === 0 ? (
         <div className="card mt-8 border-dashed p-12 text-center">
-          <div data-tom="ambar" className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
+          <div data-tom="ambar" className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl [background:var(--tom-claro)] [color:var(--tom)]">
             <Icone nome="escola" className="h-6 w-6" />
           </div>
           <p className="mt-4 text-slate-600">Você ainda não cadastrou nenhuma escola.</p>
@@ -41,6 +47,7 @@ export default async function EscolasPage() {
             <li key={escola.id}>
               <Link
                 href={`/dashboard/escolas/${escola.id}`}
+                data-tom="ambar"
                 className="card card-interactive flex items-center gap-4 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               >
                 {escola.logo_url ? (
@@ -48,10 +55,10 @@ export default async function EscolasPage() {
                   <img
                     src={escola.logo_url}
                     alt={`Logo de ${escola.nome}`}
-                    className="h-11 w-11 rounded-lg border border-slate-200 bg-white object-contain p-1"
+                    className="h-12 w-12 rounded-xl border border-slate-200 bg-white object-contain p-1"
                   />
                 ) : (
-                  <div data-tom="ambar" className="flex h-11 w-11 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
+                  <div data-tom="ambar" className="flex h-12 w-12 items-center justify-center rounded-xl [background:var(--tom-claro)] [color:var(--tom)]">
                     <Icone nome="escola" className="h-5 w-5" />
                   </div>
                 )}

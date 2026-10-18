@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import EscolaForm from "../escola-form";
 import { atualizarEscola, excluirEscola } from "../actions";
 import ExcluirButton from "./excluir-button";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
+import NavegacaoTopo from "@/components/navegacao-topo";
 
 export default async function EditarEscolaPage({
   params,
@@ -23,11 +25,23 @@ export default async function EditarEscolaPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">Editar escola</h1>
-        <ExcluirButton excluirAction={excluirComId} />
-      </div>
-      <div className="mt-6 max-w-lg card p-6">
+      <NavegacaoTopo
+        voltarHref="/dashboard/escolas"
+        voltarRotulo="Voltar às minhas escolas"
+        migalhas={[
+          { rotulo: "Início", href: "/dashboard" },
+          { rotulo: "Escolas", href: "/dashboard/escolas" },
+          { rotulo: escola.nome },
+        ]}
+      />
+      <CabecalhoPagina
+        tom="ambar"
+        icone="escola"
+        titulo="Editar escola"
+        subtitulo={escola.nome}
+        acoes={<ExcluirButton excluirAction={excluirComId} />}
+      />
+      <div className="card mt-6 max-w-lg p-6">
         <EscolaForm escola={escola} action={atualizarComId} textoBotao="Salvar alterações" />
       </div>
     </div>

@@ -52,7 +52,7 @@ body {
      app: borda suave, sombra leve e anel de foco mais generoso que o padrão
      do navegador. */
   .input-field {
-    @apply mt-1 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600/25;
+    @apply mt-1 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 transition placeholder:text-slate-400 focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600/25;
   }
 
   .field-label {
@@ -65,11 +65,11 @@ body {
 
   /* Botões */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
   }
 
   .btn-text-danger {
@@ -135,20 +135,20 @@ body {
 
   /* Botões azuis de destaque (ações principais do formulário e do plano) */
   .btn-azul {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-primary-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
   }
 
   .btn-azul-suave {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-primary-300 bg-white px-4 py-2 text-sm font-semibold text-primary-800 transition hover:border-primary-500 hover:bg-primary-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-primary-300 bg-white px-4 py-2 text-sm font-semibold text-primary-800 transition hover:border-primary-500 hover:bg-primary-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600 focus-visible:ring-offset-2;
   }
 
   /* Botões verdes: abrir listas de sugestões e adicionar itens ao plano (diferentes dos azuis de navegação/salvar). */
   .btn-verde {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
   }
 
   .btn-verde-suave {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:border-emerald-500 hover:bg-emerald-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 transition hover:border-emerald-500 hover:bg-emerald-50 active:translate-y-px disabled:pointer-events-none disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2;
   }
 
   /* Nome do componente curricular (disciplina) nos planos dos Anos Iniciais: etiqueta escura fácil de achar. */
@@ -158,15 +158,18 @@ body {
   }
 
   .btn-perigo-suave {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-50 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2;
   }
 
   /* Seções do formulário do plano: cada etapa tem um título em caixa azul. */
   .secao-plano {
-    @apply scroll-mt-28 overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm;
+    @apply scroll-mt-28 overflow-hidden rounded-2xl border border-slate-200 bg-white;
     --tom: var(--tom-azul);
     --tom-claro: var(--tom-azul-claro);
     border-top: 4px solid var(--tom);
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 0.04),
+      0 12px 28px -18px rgb(15 23 42 / 0.18);
   }
 
   .secao-cabecalho {
@@ -177,7 +180,7 @@ body {
   }
 
   .secao-numero {
-    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white;
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white;
     background: var(--tom);
   }
 
@@ -187,25 +190,50 @@ body {
 
   /* Cabeçalho das páginas internas (ver components/cabecalho-pagina.tsx). */
   .cabecalho-pagina {
-    @apply overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm;
+    @apply relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white;
     --tom: var(--tom-azul);
     --tom-claro: var(--tom-azul-claro);
-    border-left: 5px solid var(--tom);
+    background:
+      radial-gradient(520px 220px at 100% -30%, var(--tom-claro) 0%, transparent 70%),
+      linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 0.04),
+      0 24px 48px -28px color-mix(in srgb, var(--tom) 45%, transparent);
   }
 
   .cabecalho-icone {
-    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg;
+    @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl;
     background: var(--tom-claro);
     color: var(--tom);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tom) 14%, transparent);
   }
 
-  /* Cartões */
+  /* Cartões: mesmo acabamento dos cartões do painel inicial. */
   .card {
-    @apply rounded-xl border border-slate-300 bg-white shadow-sm;
+    @apply rounded-2xl border border-slate-200/90 bg-white;
+    box-shadow:
+      0 1px 2px rgb(15 23 42 / 0.04),
+      0 12px 28px -18px rgb(15 23 42 / 0.18);
   }
 
   .card-interactive {
-    @apply transition hover:border-primary-400 hover:shadow-md;
+    @apply transition duration-200 hover:-translate-y-0.5 hover:border-primary-300;
+  }
+  .card-interactive:hover {
+    box-shadow:
+      0 2px 4px rgb(15 23 42 / 0.05),
+      0 20px 36px -18px color-mix(in srgb, var(--tom, var(--tom-azul)) 50%, transparent);
+  }
+
+  /* Botão "Voltar": pílula discreta no topo de cada página. */
+  .btn-voltar {
+    @apply inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-slate-200 bg-white py-1.5 pl-2.5 pr-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+  .btn-voltar > svg {
+    @apply transition-transform duration-200;
+  }
+  .btn-voltar:hover > svg {
+    transform: translateX(-2px);
   }
 
   /* Selos de status */
@@ -221,6 +249,14 @@ body {
 @page {
   size: A4 landscape;
   margin: 10mm;
+}
+
+/* Fundo das telas de entrada (login, cadastro, senha): mesmas cores suaves do painel. */
+.fundo-auth {
+  background:
+    radial-gradient(900px 420px at 92% -8%, #dbeafe 0%, rgb(219 234 254 / 0) 62%),
+    radial-gradient(720px 360px at -8% 108%, #d1fae5 0%, rgb(209 250 229 / 0) 62%),
+    var(--background);
 }
 
 /* Quem prefere menos movimento no sistema (acessibilidade) não vê animações nem transições. */

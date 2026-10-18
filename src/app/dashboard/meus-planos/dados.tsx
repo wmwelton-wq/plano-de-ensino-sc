@@ -75,6 +75,17 @@ export function chaveEscola(plano: PlanoLista): string {
   return plano.escola_id && nomeDaEscola(plano) ? plano.escola_id : SEM_ESCOLA;
 }
 
+/**
+ * Endereço da pasta (escola > turma) onde um plano aparece em "Meus planos".
+ * O botão "Voltar" da tela do plano usa isto para levar o professor de volta à turma certa.
+ */
+export function urlDaPasta(tipo: TipoPlano, escolaId: string | null | undefined, turma: string | null | undefined): string {
+  const base = `/dashboard/meus-planos/${tipo}`;
+  const escola = escolaId ? `${base}/${escolaId}` : `${base}/${SEM_ESCOLA}`;
+  const t = turma?.trim() ?? "";
+  return `${escola}?turma=${encodeURIComponent(t || SEM_TURMA)}`;
+}
+
 export function nomeTurma(plano: PlanoLista): string {
   return plano.turma?.trim() ?? "";
 }
@@ -163,18 +174,19 @@ export function CartaoPasta({
     <Link
       href={href}
       data-tom={tom}
-      className="card card-interactive flex items-center gap-4 border-l-4 px-5 py-5 [border-left-color:var(--tom)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+      className="card card-interactive group flex items-center gap-4 px-5 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
     >
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]" aria-hidden="true">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl [background:var(--tom-claro)] [color:var(--tom)]" aria-hidden="true">
         <Icone nome={icone} className="h-6 w-6" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-lg font-bold text-slate-900">{titulo}</span>
         {detalhe && <span className="block truncate text-sm text-slate-500">{detalhe}</span>}
       </span>
-      <span className="shrink-0 rounded-md px-2.5 py-1 text-sm font-bold [background:var(--tom-claro)] [color:var(--tom)]">
+      <span className="shrink-0 rounded-full px-3 py-1 text-sm font-bold [background:var(--tom-claro)] [color:var(--tom)]">
         {contagem} {contagem === 1 ? "plano" : "planos"}
       </span>
+      <Icone nome="setaDireita" className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-[var(--tom)]" />
     </Link>
   );
 }
@@ -186,6 +198,7 @@ export function CartaoPlano({ plano, base, tipo }: { plano: PlanoLista; base: st
       <EstrelaFavorito tipo={tipo} planoId={plano.id} favorito={!!plano.favorito} />
       <Link
         href={`${base}/${plano.id}`}
+        data-tom={tipo === "anuais" ? "azul" : "verde"}
         className="card card-interactive flex min-w-0 flex-1 items-center justify-between gap-4 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
       >
         <div className="min-w-0">

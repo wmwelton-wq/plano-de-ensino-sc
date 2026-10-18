@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import VoltarLink from "../planos/voltar-link";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
 
 interface Resumo {
   gerado_em: string;
@@ -42,8 +43,12 @@ export default async function PainelDeUsoPage() {
   return (
     <div>
       <VoltarLink href="/dashboard" rotulo="Voltar ao início" />
-      <h1 className="text-2xl font-semibold text-slate-900">Painel de uso</h1>
-      <p className="mt-1 text-sm text-slate-500">Somente números agregados — nenhum dado pessoal ou conteúdo de plano aparece aqui.</p>
+      <CabecalhoPagina
+        tom="ardosia"
+        icone="alvo"
+        titulo="Painel de uso"
+        subtitulo="Somente números agregados — nenhum dado pessoal ou conteúdo de plano aparece aqui."
+      />
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Numero rotulo="Professores" valor={r.totais.professores} />

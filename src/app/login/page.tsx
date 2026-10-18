@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import AuthTopo from "@/components/auth-topo";
 import { createClient } from "@/lib/supabase/client";
 import Turnstile from "@/components/turnstile";
 import { verificarTurnstile } from "@/lib/turnstile-client";
@@ -56,17 +57,10 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--background)] px-6 py-12">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-6 py-12">
 
       <div className="relative w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-slate-700"
-          >
-            <span aria-hidden="true">←</span> Planos de Ensino SC
-          </Link>
-        </div>
+        <AuthTopo voltarHref="/" voltarRotulo="Voltar ao site" />
 
         <div className="card p-8">
           <h1 className="text-xl font-semibold text-slate-900">Entrar</h1>

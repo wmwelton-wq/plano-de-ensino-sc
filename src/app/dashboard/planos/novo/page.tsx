@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Icone, type NomeIcone } from "@/components/icones";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
+import NavegacaoTopo from "@/components/navegacao-topo";
 
 const opcoes = [
   {
@@ -35,10 +37,21 @@ const opcoes = [
 export default function EscolherEtapaPage() {
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Novo plano de ensino</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        Qual etapa de ensino é este plano? Cada etapa tem seus próprios quadros no formulário.
-      </p>
+      <NavegacaoTopo
+        voltarHref="/dashboard/meus-planos/mensais"
+        voltarRotulo="Voltar aos planos mensais"
+        migalhas={[
+          { rotulo: "Início", href: "/dashboard" },
+          { rotulo: "Planos mensais", href: "/dashboard/meus-planos/mensais" },
+          { rotulo: "Novo plano" },
+        ]}
+      />
+      <CabecalhoPagina
+        tom="verde"
+        icone="livro"
+        titulo="Novo plano de ensino"
+        subtitulo="Qual etapa de ensino é este plano? Cada etapa tem seus próprios quadros no formulário."
+      />
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {opcoes.map((opcao) => (
@@ -46,9 +59,9 @@ export default function EscolherEtapaPage() {
             key={opcao.href}
             href={opcao.href}
             data-tom={opcao.tom}
-            className="card card-interactive border-t-4 p-5 [border-top-color:var(--tom)]"
+            className="card card-interactive group p-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl [background:var(--tom-claro)] [color:var(--tom)]">
               <Icone nome={opcao.icone} className="h-6 w-6" />
             </div>
             <p className="mt-3 font-bold text-slate-900">{opcao.titulo}</p>

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { VIDEOS_AJUDA, VIDEOS_SUGERIDOS, enderecoIncorporado } from "@/lib/ajuda-videos";
 import { Icone, type NomeIcone } from "@/components/icones";
 import ReiniciarTutorial from "./reiniciar-tutorial";
+import CabecalhoPagina from "@/components/cabecalho-pagina";
+import NavegacaoTopo from "@/components/navegacao-topo";
 
 const PASSOS = [
   {
@@ -48,14 +50,23 @@ const DICAS = [
 export default function AjudaPage() {
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Ajuda</h1>
-      <p className="mt-2 text-sm text-slate-600">Um passo a passo curto para começar e algumas dicas para ganhar tempo.</p>
+      <NavegacaoTopo
+        voltarHref="/dashboard"
+        voltarRotulo="Voltar ao início"
+        migalhas={[{ rotulo: "Início", href: "/dashboard" }, { rotulo: "Ajuda" }]}
+      />
+      <CabecalhoPagina
+        tom="ciano"
+        icone="ajuda"
+        titulo="Ajuda"
+        subtitulo="Um passo a passo curto para começar e algumas dicas para ganhar tempo."
+      />
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {PASSOS.map((p) => (
-          <div key={p.titulo} data-tom={p.tom} className="card border-l-4 p-5 [border-left-color:var(--tom)]">
+          <div key={p.titulo} data-tom={p.tom} className="card p-5">
             <div className="flex items-start gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]" aria-hidden="true">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl [background:var(--tom-claro)] [color:var(--tom)]" aria-hidden="true">
                 <Icone nome={p.icone} className="h-6 w-6" />
               </span>
               <div>

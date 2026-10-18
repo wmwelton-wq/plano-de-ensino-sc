@@ -86,12 +86,17 @@ export default async function DashboardLayout({
               <MenuTopo menus={menus} extras={extras} />
             </div>
             <div className="ml-auto flex items-center gap-2.5">
-              <span className="hidden items-center gap-2.5 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-3.5 text-sm font-semibold text-slate-700 md:flex">
+              <Link
+                href="/dashboard/conta"
+                aria-label={`Configurações da conta de ${nomeExibido}`}
+                title="Configurações da conta"
+                className="flex items-center gap-2.5 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-1 text-sm font-semibold text-slate-700 transition hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 md:pr-3.5"
+              >
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-indigo-600 text-sm font-bold text-white shadow-sm">
                   {inicial}
                 </span>
-                <span className="max-w-[10rem] truncate">{nomeExibido}</span>
-              </span>
+                <span className="hidden max-w-[10rem] truncate md:inline">{nomeExibido}</span>
+              </Link>
               <LogoutButton />
             </div>
           </div>
