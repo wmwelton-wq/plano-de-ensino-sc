@@ -32,7 +32,7 @@ export default async function NovoPlanoFundamentalAnosFinaisPage() {
     <div>
       <VoltarLink href="/dashboard/planos/novo" rotulo="Voltar à escolha da etapa" />
       <div className="mt-2">
-        <CabecalhoPagina tom="ciano" icone="bussola" titulo="Novo plano — Ensino Fundamental, Anos Finais" subtitulo="6º ao 9º ano. Preencha por etapas; o plano pode ser salvo como rascunho." />
+        <CabecalhoPagina tom="ciano" ilustracao="finais" compacto titulo="Novo plano — Ensino Fundamental, Anos Finais" subtitulo="6º ao 9º ano. Preencha por etapas; o plano pode ser salvo como rascunho." />
       </div>
       <div className="mt-6">
         <PlanoForm

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import RegrasSenha from "@/components/regras-senha";
 
 export default function SenhaForm() {
   const [senha, setSenha] = useState("");
@@ -56,7 +57,7 @@ export default function SenhaForm() {
           onChange={(e) => setSenha(e.target.value)}
           className="input-field"
         />
-        <p className="field-hint">Mínimo de 8 caracteres.</p>
+        <RegrasSenha senha={senha} />
       </div>
       <div>
         <label htmlFor="conta-senha2" className="field-label">

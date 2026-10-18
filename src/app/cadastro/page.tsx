@@ -3,7 +3,11 @@
 import { Icone } from "@/components/icones";
 import { useState } from "react";
 import Link from "next/link";
-import AuthTopo from "@/components/auth-topo";
+import { Ilustracao } from "@/components/ilustracoes";
+import AuthLayout from "@/components/auth-layout";
+import AvisoSpam from "@/components/aviso-spam";
+import RegrasSenha from "@/components/regras-senha";
+import { traduzirErroAuth } from "@/lib/erros-auth";
 import { createClient } from "@/lib/supabase/client";
 import Turnstile from "@/components/turnstile";
 import { verificarTurnstile } from "@/lib/turnstile-client";
@@ -69,7 +73,7 @@ export default function CadastroPage() {
     setCarregando(false);
 
     if (error) {
-      setErro(error.message);
+      setErro(traduzirErroAuth(error.message));
       return;
     }
 
@@ -78,31 +82,40 @@ export default function CadastroPage() {
 
   if (sucesso) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-6 py-12">
-        <div className="card relative w-full max-w-sm p-8 text-center">
-          <div data-tom="azul" className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
-            <Icone nome="envelope" className="h-6 w-6" />
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-4 py-10">
+        <div className="card painel-entra relative w-full max-w-lg overflow-hidden text-center">
+          <div data-tom="azul" className="atalho-arte px-6 pt-6">
+            <div className="mx-auto h-36 w-60">
+              <Ilustracao nome="email" tom="azul" />
+            </div>
           </div>
-          <h1 className="mt-4 text-xl font-semibold text-slate-900">Verifique seu email</h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Enviamos um link de confirmação para <strong>{email}</strong>. Clique nele para ativar
-            sua conta e depois faça login.
-          </p>
-          <Link href="/login" className="link-primary mt-6 inline-block">
-            Voltar para o login
-          </Link>
+          <div className="p-6 sm:p-8">
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Quase lá! Confirme seu e-mail</h1>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Enviamos uma mensagem de boas-vindas com o link de confirmação para <strong className="break-all text-slate-900">{email}</strong>.
+              Abra o e-mail e clique em <strong>“Confirmar meu e-mail”</strong> para ativar sua conta.
+            </p>
+            <AvisoSpam />
+            <Link href="/login" className="btn-primary mt-6 w-full">
+              Ir para o login
+            </Link>
+          </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-6 py-12">
-
-      <div className="relative w-full max-w-sm">
-        <AuthTopo voltarHref="/login" voltarRotulo="Voltar para o login" />
-
-        <div className="card p-8">
+    <AuthLayout
+      voltarHref="/login"
+      voltarRotulo="Voltar para o login"
+      ilustracao="login"
+      titulo="Crie sua conta e monte seus planos com mais tranquilidade"
+      texto="Em poucos minutos você cadastra a escola e começa o plano anual e os planos mensais no formato do Estado."
+      topicos={["Planos anuais e mensais no formato exigido pelo Estado", "Baixe em PDF ou Word, ou imprima", "Seus planos ficam guardados na sua conta"]}
+    >
+      <div>
+        <div className="card p-6 sm:p-8">
           <h1 className="text-xl font-semibold text-slate-900">Criar conta</h1>
           <p className="mt-1 text-sm text-slate-500">
             Cadastre-se para começar a criar seus planos de ensino.
@@ -152,7 +165,7 @@ export default function CadastroPage() {
                 onChange={(e) => setSenha(e.target.value)}
                 className="input-field"
               />
-              <p className="field-hint">Mínimo de 8 caracteres.</p>
+              <RegrasSenha senha={senha} />
             </div>
 
             <div className="flex items-start gap-2.5">
@@ -205,6 +218,6 @@ export default function CadastroPage() {
           </p>
         </div>
       </div>
-    </main>
+    </AuthLayout>
   );
 }

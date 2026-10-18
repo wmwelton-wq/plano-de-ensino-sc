@@ -1,8 +1,10 @@
+import CartaoIlustrado from "@/components/cartao-ilustrado";
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EtapaPlano, PlanoDeEnsino } from "@/lib/database.types";
 import EstrelaFavorito from "./estrela-favorito";
-import { Icone, type NomeIcone } from "@/components/icones";
+import type { NomeIcone } from "@/components/icones";
+import { Ilustracao, type NomeIlustracao } from "@/components/ilustracoes";
 
 export type TipoPlano = "mensais" | "anuais";
 
@@ -52,6 +54,13 @@ const etapaLabel: Record<EtapaPlano, string> = {
   fundamental_anos_iniciais: "Fundamental — Anos Iniciais",
   fundamental_anos_finais: "Fundamental — Anos Finais",
   ensino_medio: "Ensino Médio / Técnico",
+};
+
+const ARTE_DA_ETAPA: Record<EtapaPlano, NomeIlustracao> = {
+  educacao_infantil: "infantil",
+  fundamental_anos_iniciais: "iniciais",
+  fundamental_anos_finais: "finais",
+  ensino_medio: "medio",
 };
 
 export const comparar = (a: string, b: string) =>
@@ -154,7 +163,7 @@ export function Migalhas({ itens }: { itens: { rotulo: string; href?: string }[]
   );
 }
 
-/** Cartão grande e clicável usado nas telas de escolha (tipo, escola, turma). */
+/** Cartão ilustrado e clicável usado nas telas de escolha (tipo, escola, turma). */
 export function CartaoPasta({
   href,
   icone,
@@ -170,24 +179,16 @@ export function CartaoPasta({
   detalhe?: string;
   contagem: number;
 }) {
+  const ilustracao = icone === "escola" ? "escola" : icone === "usuarios" ? "turma" : "meusPlanos";
   return (
-    <Link
+    <CartaoIlustrado
       href={href}
-      data-tom={tom}
-      className="card card-interactive group flex items-center gap-4 px-5 py-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-    >
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl [background:var(--tom-claro)] [color:var(--tom)]" aria-hidden="true">
-        <Icone nome={icone} className="h-6 w-6" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-lg font-bold text-slate-900">{titulo}</span>
-        {detalhe && <span className="block truncate text-sm text-slate-500">{detalhe}</span>}
-      </span>
-      <span className="shrink-0 rounded-full px-3 py-1 text-sm font-bold [background:var(--tom-claro)] [color:var(--tom)]">
-        {contagem} {contagem === 1 ? "plano" : "planos"}
-      </span>
-      <Icone nome="setaDireita" className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-[var(--tom)]" />
-    </Link>
+      ilustracao={ilustracao}
+      tom={tom}
+      titulo={titulo}
+      texto={detalhe}
+      selo={`${contagem} ${contagem === 1 ? "plano" : "planos"}`}
+    />
   );
 }
 
@@ -201,8 +202,11 @@ export function CartaoPlano({ plano, base, tipo }: { plano: PlanoLista; base: st
         data-tom={tipo === "anuais" ? "azul" : "verde"}
         className="card card-interactive flex min-w-0 flex-1 items-center justify-between gap-4 px-5 py-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
       >
-        <div className="min-w-0">
-          <p className="truncate font-medium text-slate-900">{plano.titulo}</p>
+        <div className="hidden h-14 w-[4.5rem] shrink-0 overflow-hidden rounded-xl sm:block atalho-arte" aria-hidden="true">
+          <Ilustracao nome={ARTE_DA_ETAPA[plano.etapa as EtapaPlano] ?? "mensal"} tom={tipo === "anuais" ? "azul" : "verde"} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold text-slate-900">{plano.titulo}</p>
           <p className="mt-0.5 text-sm text-slate-500">
             {etapaLabel[plano.etapa as EtapaPlano] ?? plano.etapa} · {plano.ano_letivo}
           </p>

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import "./dashboard/painel.css";
 
 // O nome da variável (--font-inter) é mantido de propósito: assim a fonte funciona
 // mesmo que o tailwind.config.ts do projeto ainda seja o antigo.

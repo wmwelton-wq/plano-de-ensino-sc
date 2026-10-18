@@ -28,7 +28,7 @@ export default async function NovoPlanoMedioTecnicoPage() {
     <div>
       <VoltarLink href="/dashboard/planos/novo" rotulo="Voltar à escolha da etapa" />
       <div className="mt-2">
-        <CabecalhoPagina tom="violeta" icone="graduacao" titulo="Novo plano — Ensino Médio e Cursos Técnicos" subtitulo="Formação Geral Básica, itinerários e cursos técnicos. Preencha por etapas; o plano pode ser salvo como rascunho." />
+        <CabecalhoPagina tom="violeta" ilustracao="medio" compacto titulo="Novo plano — Ensino Médio e Cursos Técnicos" subtitulo="Formação Geral Básica, itinerários e cursos técnicos. Preencha por etapas; o plano pode ser salvo como rascunho." />
       </div>
       <div className="mt-6">
         <PlanoForm

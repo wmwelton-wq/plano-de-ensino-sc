@@ -59,7 +59,7 @@ export default async function TurmasDaEscolaPage({
           voltarRotulo={`Voltar às turmas de ${grupo.nome}`}
           migalhas={[...migalhasBase, { rotulo: grupo.nome, href: urlEscola }, { rotulo: t.nome }]}
         />
-        <CabecalhoPagina tom="violeta" icone="usuarios" titulo={t.nome} subtitulo={`${info.titulo} · ${grupo.nome}`} />
+        <CabecalhoPagina tom="violeta" ilustracao="turma" titulo={t.nome} subtitulo={`${info.titulo} · ${grupo.nome}`} />
         <div className="mt-4">
           <BaixarVarios
             planos={t.planos.map((p) => ({ id: p.id, titulo: p.titulo, tipo }))}
@@ -107,7 +107,7 @@ export default async function TurmasDaEscolaPage({
       />
       <CabecalhoPagina
         tom={escola === "sem-escola" ? "ardosia" : "ambar"}
-        icone={escola === "sem-escola" ? "pasta" : "escola"}
+        ilustracao={escola === "sem-escola" ? "meusPlanos" : "escola"}
         titulo={grupo.nome}
         subtitulo={`${info.titulo} · escolha a turma para ver os planos.`}
       />
@@ -118,7 +118,7 @@ export default async function TurmasDaEscolaPage({
           rotulo="Baixar todos desta escola em um PDF"
         />
       </div>
-      <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {turmas.map((t) => (
           <li key={t.chave}>
             <CartaoPasta

@@ -24,7 +24,7 @@ export default async function NovoPlanoAnualPage() {
       <div className="mt-2">
         <CabecalhoPagina
           tom="azul"
-          icone="calendario"
+          ilustracao="novoPlano" compacto
           titulo="Novo plano de ensino anual"
           subtitulo="Feito uma vez por ano: identificação, ementa, competências e os três trimestres, passo a passo."
         />

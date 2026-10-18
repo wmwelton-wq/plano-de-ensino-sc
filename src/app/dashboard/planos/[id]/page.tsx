@@ -58,7 +58,7 @@ export default async function EditarPlanoPage({
       <div className="mt-2">
         <CabecalhoPagina
           tom="verde"
-          icone="livro"
+          ilustracao="mensal" compacto
           titulo="Editar plano de ensino"
           subtitulo={ROTULOS_ETAPA[etapa]}
           acoes={

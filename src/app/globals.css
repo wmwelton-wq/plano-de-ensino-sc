@@ -188,17 +188,32 @@ body {
     @apply space-y-5 bg-white p-5;
   }
 
-  /* Cabeçalho das páginas internas (ver components/cabecalho-pagina.tsx). */
+  /* Cabeçalho das páginas internas: faixa ilustrada igual à do painel (ver components/cabecalho-pagina.tsx). */
   .cabecalho-pagina {
-    @apply relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white;
+    @apply relative overflow-hidden border border-slate-200/90 bg-white;
+    border-radius: 28px;
     --tom: var(--tom-azul);
     --tom-claro: var(--tom-azul-claro);
     background:
-      radial-gradient(520px 220px at 100% -30%, var(--tom-claro) 0%, transparent 70%),
-      linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      radial-gradient(760px 320px at 92% -30%, var(--tom-claro) 0%, transparent 64%),
+      radial-gradient(520px 260px at -4% 120%, color-mix(in srgb, var(--tom-claro) 55%, white) 0%, transparent 62%),
+      linear-gradient(135deg, #fbfdff 0%, #ffffff 55%, #f6f9ff 100%);
     box-shadow:
       0 1px 2px rgb(15 23 42 / 0.04),
-      0 24px 48px -28px color-mix(in srgb, var(--tom) 45%, transparent);
+      0 28px 56px -30px color-mix(in srgb, var(--tom) 55%, transparent);
+  }
+  .cabecalho-pagina::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgb(148 163 184 / 0.26) 1px, transparent 1.2px);
+    background-size: 22px 22px;
+    -webkit-mask-image: linear-gradient(100deg, rgb(0 0 0 / 0.5), transparent 55%);
+    mask-image: linear-gradient(100deg, rgb(0 0 0 / 0.5), transparent 55%);
+    pointer-events: none;
+  }
+  .cabecalho-arte {
+    background: radial-gradient(closest-side, #fff 0%, color-mix(in srgb, var(--tom-claro) 70%, white) 72%, transparent 100%);
   }
 
   .cabecalho-icone {

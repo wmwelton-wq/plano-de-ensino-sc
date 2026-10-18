@@ -15,7 +15,7 @@ export default function NovaEscolaPage() {
           { rotulo: "Nova escola" },
         ]}
       />
-      <CabecalhoPagina tom="ambar" icone="escola" titulo="Nova escola" subtitulo="Informe o nome, o município e, se quiser, a logo." />
+      <CabecalhoPagina tom="ambar" ilustracao="escola" titulo="Nova escola" subtitulo="Informe o nome, o município e, se quiser, a logo." />
       <div className="card mt-6 max-w-lg p-6">
         <EscolaForm action={criarEscola} textoBotao="Salvar escola" />
       </div>

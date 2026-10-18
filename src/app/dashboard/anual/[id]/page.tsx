@@ -41,7 +41,7 @@ export default async function EditarPlanoAnualPage({
       <div className="mt-2">
         <CabecalhoPagina
           tom="azul"
-          icone="calendario"
+          ilustracao="anual" compacto
           titulo="Editar plano anual"
           subtitulo={plano.titulo}
           acoes={

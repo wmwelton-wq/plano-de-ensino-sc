@@ -45,7 +45,7 @@ export default async function PainelDeUsoPage() {
       <VoltarLink href="/dashboard" rotulo="Voltar ao início" />
       <CabecalhoPagina
         tom="ardosia"
-        icone="alvo"
+        ilustracao="admin"
         titulo="Painel de uso"
         subtitulo="Somente números agregados — nenhum dado pessoal ou conteúdo de plano aparece aqui."
       />

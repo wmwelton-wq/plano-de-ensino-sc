@@ -35,7 +35,7 @@ export default async function ReplicarPlanoPage({
       <div className="mt-2">
         <CabecalhoPagina
           tom="violeta"
-          icone="copiar"
+          ilustracao="turma" compacto
           titulo="Replicar plano para outras escolas"
           subtitulo={
             <>

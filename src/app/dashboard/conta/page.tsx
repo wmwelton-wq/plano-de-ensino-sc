@@ -29,7 +29,7 @@ export default async function ContaPage() {
       />
       <CabecalhoPagina
         tom="violeta"
-        icone="pessoa"
+        ilustracao="conta"
         titulo="Configurações da conta"
         subtitulo="Seus dados, sua senha e as informações de privacidade."
       />

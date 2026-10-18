@@ -36,7 +36,7 @@ export default async function EscolasDoTipoPage({
       />
       <CabecalhoPagina
         tom={tipo === "anuais" ? "azul" : "verde"}
-        icone={tipo === "anuais" ? "calendario" : "livro"}
+        ilustracao={tipo === "anuais" ? "anual" : "mensal"}
         titulo={info.titulo}
         subtitulo="Escolha a escola para ver as turmas e os planos."
         acoes={
@@ -62,7 +62,7 @@ export default async function EscolasDoTipoPage({
           </Link>
         </div>
       ) : (
-        <ul className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {escolas.map((e) => (
             <li key={e.chave}>
               <CartaoPasta

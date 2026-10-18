@@ -20,7 +20,7 @@ export default async function MensalDoAnualPage({ params }: { params: Promise<{ 
       <div className="mt-2">
         <CabecalhoPagina
           tom="verde"
-          icone="calendario"
+          ilustracao="mensal" compacto
           titulo="Gerar planos mensais a partir deste plano anual"
           subtitulo={
             <>

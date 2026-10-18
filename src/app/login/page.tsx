@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import AuthTopo from "@/components/auth-topo";
+import AuthLayout from "@/components/auth-layout";
 import { createClient } from "@/lib/supabase/client";
 import Turnstile from "@/components/turnstile";
 import { verificarTurnstile } from "@/lib/turnstile-client";
@@ -57,13 +57,17 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden fundo-auth px-6 py-12">
-
-      <div className="relative w-full max-w-sm">
-        <AuthTopo voltarHref="/" voltarRotulo="Voltar ao site" />
-
-        <div className="card p-8">
-          <h1 className="text-xl font-semibold text-slate-900">Entrar</h1>
+    <AuthLayout
+      voltarHref="/"
+      voltarRotulo="Voltar ao site"
+      ilustracao="login"
+      titulo="Que bom ter você de volta!"
+      texto="Entre para continuar seus planos de ensino de onde parou."
+      topicos={["Planos anuais e mensais no formato exigido pelo Estado", "Baixe em PDF ou Word, ou imprima", "Seus planos ficam guardados na sua conta"]}
+    >
+      <div>
+        <div className="card p-6 sm:p-8">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Entrar</h1>
           <p className="mt-1 text-sm text-slate-500">Acesse sua conta de professor.</p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -132,6 +136,6 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
-    </main>
+    </AuthLayout>
   );
 }

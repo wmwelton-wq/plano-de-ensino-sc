@@ -36,7 +36,7 @@ export default async function EditarEscolaPage({
       />
       <CabecalhoPagina
         tom="ambar"
-        icone="escola"
+        ilustracao="escola" compacto
         titulo="Editar escola"
         subtitulo={escola.nome}
         acoes={<ExcluirButton excluirAction={excluirComId} />}
