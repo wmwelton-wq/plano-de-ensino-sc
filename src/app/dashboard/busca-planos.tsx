@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { Icone } from "@/components/icones";
 
 export interface ItemBusca {
   id: string;
@@ -40,7 +41,7 @@ export default function BuscaPlanos({ itens }: { itens: ItemBusca[] }) {
       </label>
       <div className="relative">
         <span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-          🔎
+          <Icone nome="lupa" className="h-5 w-5" />
         </span>
         <input
           id="busca-geral"
@@ -48,7 +49,7 @@ export default function BuscaPlanos({ itens }: { itens: ItemBusca[] }) {
           value={termo}
           onChange={(e) => setTermo(e.target.value)}
           placeholder="Buscar plano por título, escola ou turma..."
-          className="w-full rounded-2xl border-2 border-primary-300 bg-white py-3 pl-11 pr-4 text-base shadow-sm focus:border-primary-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 text-base shadow-[0_1px_2px_rgba(15,23,42,0.04),0_10px_24px_-16px_rgba(15,23,42,0.2)] transition placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-4 focus:ring-primary-500/15"
         />
       </div>
 
