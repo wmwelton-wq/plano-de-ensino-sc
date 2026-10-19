@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { Icone } from "@/components/icones";
 import { ROTULO_TIPO, rotuloPeriodo, type TipoEvento } from "@/lib/feriados";
-import { salvarEventosEmLote } from "./actions";
+import { salvarEventosEmLote, type CotaCalendarioIA } from "./actions";
 
 interface EventoLido {
   titulo: string;
@@ -15,8 +16,27 @@ interface EventoLido {
 
 const LIMITE_BYTES = 4_000_000;
 
-/** Envia o calendário em PDF, a IA lê, e o professor confere cada data antes de salvar. */
-export default function ImportarCalendarioPdf() {
+function dataBr(iso: string | null | undefined): string {
+  return iso ? new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "";
+}
+
+interface Props {
+  escolas: { id: string; nome: string }[];
+  /** Escola que está aberta no calendário (já vem marcada). */
+  escolaPadrao: string;
+  cota: CotaCalendarioIA | null;
+  /** Depois de salvar, o calendário passa a mostrar a escola escolhida aqui. */
+  aoSalvar: (escolaId: string) => void;
+}
+
+/** Envia o calendário em PDF, a IA lê, e o professor confere cada data antes de salvar. Cada PDF é de UMA escola. */
+export default function ImportarCalendarioPdf({ escolas, escolaPadrao, cota, aoSalvar }: Props) {
+  const [escolaId, setEscolaId] = useState(escolaPadrao || escolas[0]?.id || "");
+  useEffect(() => {
+    if (escolaPadrao) setEscolaId(escolaPadrao);
+  }, [escolaPadrao]);
+  const [restantes, setRestantes] = useState<number | null>(cota?.restantes ?? null);
+  const esgotado = Boolean(cota && !cota.ilimitado && restantes !== null && restantes <= 0);
   const entrada = useRef<HTMLInputElement>(null);
   const [lendo, setLendo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -36,6 +56,10 @@ export default function ImportarCalendarioPdf() {
       setErro("O PDF é grande demais (máximo de 4 MB).");
       return;
     }
+    if (!escolaId) {
+      setErro("Escolha antes para qual escola é este calendário.");
+      return;
+    }
     setLendo(true);
     try {
       const corpo = new FormData();
@@ -46,6 +70,7 @@ export default function ImportarCalendarioPdf() {
         setErro(dados?.erro ?? "Não foi possível ler o calendário agora.");
         return;
       }
+      if (restantes !== null && !cota?.ilimitado) setRestantes(Math.max(0, restantes - 1));
       const eventos = dados.eventos ?? [];
       if (eventos.length === 0) setErro("Não encontrei datas nesse PDF. Você pode adicionar manualmente em “Adicionar data”.");
       if (eventos.length > 0) {
@@ -64,13 +89,15 @@ export default function ImportarCalendarioPdf() {
     if (!lidos) return;
     const escolhidos = lidos.filter((_, i) => marcados.has(i));
     iniciar(async () => {
-      const r = await salvarEventosEmLote(escolhidos);
+      const r = await salvarEventosEmLote(escolhidos, escolaId);
       if (r.erro) {
         setErro(r.erro);
         return;
       }
-      setFeito(`${escolhidos.length} data(s) adicionada(s) ao seu calendário.`);
+      const nome = escolas.find((e) => e.id === escolaId)?.nome ?? "a escola";
+      setFeito(`${escolhidos.length} data(s) adicionada(s) ao calendário de ${nome}.`);
       setLidos(null);
+      aoSalvar(escolaId);
     });
   }
 
@@ -81,16 +108,47 @@ export default function ImportarCalendarioPdf() {
         Tem o calendário da escola em PDF?
       </h2>
       <p className="mt-1 text-sm text-slate-600">
-        Envie o PDF e a IA monta as datas para você conferir. Até <strong>4 páginas</strong> e <strong>um envio a cada 3 meses</strong>. Nada é salvo sem a sua confirmação.
+        Envie o PDF de <strong>uma escola</strong> e a IA monta as datas para você conferir (até <strong>4 páginas</strong>). Nada é salvo sem a sua confirmação. Prefere não usar a IA? Adicione as datas à mão em “Adicionar data”, quantas quiser.
+      </p>
+      <p className="mt-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm text-violet-900">
+        {cota?.ilimitado
+          ? "Seu acesso não tem limite de envios com IA."
+          : !cota
+          ? "Não consegui conferir quantos envios com IA você ainda tem agora."
+          : cota.periodo === "primeiro_mes"
+          ? `No seu primeiro mês de uso você pode enviar até ${cota.limite} calendários com IA (um por escola). Restam ${restantes ?? cota.restantes}.`
+          : `Depois do primeiro mês, são 1 calendário com IA por mês. ${esgotado ? "Neste mês você já usou o seu" : "Neste mês você ainda tem 1 envio"}${esgotado && cota.liberacao ? `; novo envio liberado em ${dataBr(cota.liberacao)}` : ""}.`}
+        {esgotado ? " Enquanto isso, cadastre as datas manualmente." : ""}
       </p>
 
-      {!lidos && (
-        <div className="mt-3">
-          <input ref={entrada} id="pdf-calendario" type="file" accept="application/pdf,.pdf" className="sr-only" onChange={(e) => e.target.files?.[0] && enviar(e.target.files[0])} />
-          <label htmlFor="pdf-calendario" className={`btn-azul cursor-pointer ${lendo ? "pointer-events-none opacity-60" : ""}`}>
-            {lendo ? "Lendo o calendário…" : "Escolher PDF do calendário"}
-          </label>
-        </div>
+      {escolas.length === 0 ? (
+        <p className="mt-3 text-sm text-slate-700">
+          Para enviar um calendário, cadastre antes a escola dele.{" "}
+          <Link href="/dashboard/escolas/nova" className="font-bold text-primary-700 underline">
+            Cadastrar escola
+          </Link>
+        </p>
+      ) : (
+        !lidos && (
+          <div className="mt-3 space-y-3">
+            <div className="max-w-md">
+              <label htmlFor="pdf-escola" className="field-label">
+                Este calendário é de qual escola?
+              </label>
+              <select id="pdf-escola" value={escolaId} onChange={(ev) => setEscolaId(ev.target.value)} className="input-field">
+                {escolas.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <input ref={entrada} id="pdf-calendario" type="file" accept="application/pdf,.pdf" className="sr-only" disabled={esgotado} onChange={(e) => e.target.files?.[0] && enviar(e.target.files[0])} />
+            <label htmlFor="pdf-calendario" className={`btn-azul cursor-pointer ${lendo || esgotado ? "pointer-events-none opacity-60" : ""}`}>
+              {lendo ? "Lendo o calendário…" : "Escolher PDF do calendário"}
+            </label>
+          </div>
+        )
       )}
 
       {erro && (
@@ -106,7 +164,7 @@ export default function ImportarCalendarioPdf() {
 
       {lidos && lidos.length > 0 && (
         <div className="mt-4 space-y-3">
-          <p className="text-sm font-semibold text-slate-700">Confira as datas que encontrei e desmarque o que não quiser:</p>
+          <p className="text-sm font-semibold text-slate-700">Confira as datas que encontrei (serão salvas no calendário de {escolas.find((e) => e.id === escolaId)?.nome ?? "da escola"}) e desmarque o que não quiser:</p>
           <ul className="max-h-80 space-y-1.5 overflow-y-auto rounded-2xl border border-slate-200 p-2">
             {lidos.map((e, i) => (
               <li key={`${e.titulo}-${e.data_inicio}-${i}`}>

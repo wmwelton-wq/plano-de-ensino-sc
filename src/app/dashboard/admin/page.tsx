@@ -2,13 +2,14 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import VoltarLink from "../planos/voltar-link";
 import CabecalhoPagina from "@/components/cabecalho-pagina";
+import Sugestoes, { type Sugestao } from "./sugestoes";
 
 interface Resumo {
   gerado_em: string;
   totais: Record<string, number>;
   funil: { etapa: string; valor: number }[];
   por_semana: { semana: string; novos_professores: number; planos_mensais: number; planos_anuais: number }[];
-  satisfacao: { respostas: number; nota_media: number | null; facilidade_media: number | null; comentarios: { nota: number; comentario: string; data: string }[] };
+  satisfacao: { respostas: number; nota_media: number | null; facilidade_media: number | null; comentarios: { nota: number; comentario: string; data: string; primeiro_nome?: string }[] };
 }
 
 function Numero({ rotulo, valor }: { rotulo: string; valor: number | string }) {
@@ -25,7 +26,8 @@ export default async function PainelDeUsoPage() {
   const { data: ehAdmin } = await supabase.rpc("eh_admin");
   if (ehAdmin !== true) notFound();
 
-  const { data, error } = await supabase.rpc("admin_resumo_uso");
+  const [{ data, error }, { data: sugestoesBrutas }] = await Promise.all([supabase.rpc("admin_resumo_uso"), supabase.rpc("admin_sugestoes")]);
+  const sugestoes = (Array.isArray(sugestoesBrutas) ? sugestoesBrutas : []) as Sugestao[];
   if (error || !data) {
     return (
       <div>
@@ -47,7 +49,7 @@ export default async function PainelDeUsoPage() {
         tom="ardosia"
         ilustracao="admin"
         titulo="Painel de uso"
-        subtitulo="Somente números agregados — nenhum dado pessoal ou conteúdo de plano aparece aqui."
+        subtitulo="Números agregados, os avisos “Faltou algo?” e as avaliações (só com o primeiro nome). Nenhum conteúdo de plano aparece aqui."
       />
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -126,12 +128,14 @@ export default async function PainelDeUsoPage() {
         <ul className="mt-3 space-y-2">
           {r.satisfacao.comentarios.map((c, i) => (
             <li key={i} className="card p-4 text-sm text-slate-700">
-              <span className="font-semibold text-slate-900">Nota {c.nota}</span> <span className="text-slate-400">· {c.data}</span>
+              <span className="font-semibold text-slate-900">{c.primeiro_nome ?? "Professor(a)"}</span> <span className="text-slate-400">· Nota {c.nota} · {c.data}</span>
               <p className="mt-1 whitespace-pre-wrap">{c.comentario}</p>
             </li>
           ))}
         </ul>
       )}
+      <Sugestoes itens={sugestoes} />
+
       <p className="mt-6 text-xs text-slate-400">Atualizado em {new Date(r.gerado_em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}.</p>
     </div>
   );

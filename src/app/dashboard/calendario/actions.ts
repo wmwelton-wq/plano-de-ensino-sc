@@ -24,6 +24,13 @@ function texto(formData: FormData, nome: string, max: number): string {
   return typeof v === "string" ? v.trim().slice(0, max) : "";
 }
 
+/** Confere que a escola existe e é do professor (a regra de segurança do banco já esconde as dos outros). */
+async function escolaValida(supabase: Awaited<ReturnType<typeof createClient>>, escolaId: string | null): Promise<boolean> {
+  if (!escolaId) return true;
+  const { data } = await supabase.from("escolas").select("id").eq("id", escolaId).maybeSingle();
+  return Boolean(data);
+}
+
 /** Cria ou edita um evento do calendário do professor. */
 export async function salvarEvento(_anterior: EstadoEvento, formData: FormData): Promise<EstadoEvento> {
   const supabase = await createClient();
@@ -40,6 +47,7 @@ export async function salvarEvento(_anterior: EstadoEvento, formData: FormData):
   const observacao = texto(formData, "observacao", 500) || null;
   const escolaId = texto(formData, "escola_id", 60) || null;
 
+  if (!(await escolaValida(supabase, escolaId))) return { erro: "Escolha uma escola da sua lista." };
   if (!titulo) return { erro: "Escreva o nome do evento." };
   if (!TIPOS.includes(tipoBruto)) return { erro: "Escolha o tipo do evento." };
   if (!dataValida(inicio) || !dataValida(fim)) return { erro: "Confira as datas." };
@@ -72,13 +80,15 @@ export async function salvarEvento(_anterior: EstadoEvento, formData: FormData):
 
 /** Salva vários eventos de uma vez (usado depois de revisar o que a IA leu do PDF do calendário). */
 export async function salvarEventosEmLote(
-  eventos: { titulo: string; tipo: TipoEvento; sem_aula: boolean; data_inicio: string; data_fim: string }[]
+  eventos: { titulo: string; tipo: TipoEvento; sem_aula: boolean; data_inicio: string; data_fim: string }[],
+  escolaId: string
 ): Promise<EstadoEvento> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { erro: "Sessão expirada. Faça login novamente." };
+  if (!escolaId || !(await escolaValida(supabase, escolaId))) return { erro: "Escolha para qual escola é este calendário." };
   if (!Array.isArray(eventos) || eventos.length === 0) return { erro: "Não há datas para salvar." };
   if (eventos.length > 150) return { erro: "São datas demais de uma vez (máximo de 150)." };
 
@@ -90,6 +100,7 @@ export async function salvarEventosEmLote(
     if (!titulo || !TIPOS.includes(e.tipo) || !dataValida(inicio) || !dataValida(fim) || fim < inicio) continue;
     linhas.push({
       professor_id: user.id,
+      escola_id: escolaId,
       titulo,
       tipo: e.tipo,
       sem_aula: !!e.sem_aula,
@@ -127,27 +138,58 @@ export async function definirCalendario(ativo: boolean): Promise<void> {
   revalidatePath("/dashboard");
 }
 
-/** Datas do calendário do professor dentro de um período (usado ao montar o plano). Devolve ativo=false se ele não ligou o calendário. */
+/** Quantos calendários com IA o professor ainda pode enviar (6 no primeiro mês de uso; depois, 1 por mês). */
+export interface CotaCalendarioIA {
+  ilimitado: boolean;
+  periodo: "primeiro_mes" | "mensal" | "ilimitado";
+  limite: number | null;
+  usados: number;
+  restantes: number | null;
+  liberacao?: string | null;
+}
+
+export async function cotaCalendarioIA(): Promise<CotaCalendarioIA | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("calendario_cota");
+  if (error || !data) return null;
+  return data as CotaCalendarioIA;
+}
+
+type EventoPlano = { id: string; titulo: string; tipo: TipoEvento; sem_aula: boolean; data_inicio: string; data_fim: string };
+
+/**
+ * Datas do calendário do professor dentro de um período (usado ao montar o plano). Cada escola tem o seu calendário:
+ * com a escola do plano vêm as datas dela mais as "gerais" (sem escola, que valem para todas). Sem escola escolhida,
+ * vêm só as gerais. Devolve ativo=false se ele não ligou o calendário.
+ */
 export async function eventosDoPeriodo(
   inicio: string,
-  fim: string
-): Promise<{ ativo: boolean; eventos: { id: string; titulo: string; tipo: TipoEvento; sem_aula: boolean; data_inicio: string; data_fim: string }[] }> {
-  if (!dataValida(inicio) || !dataValida(fim) || fim < inicio || (Date.parse(fim) - Date.parse(inicio)) / 86400000 > 400) {
-    return { ativo: false, eventos: [] };
-  }
+  fim: string,
+  escolaId?: string | null
+): Promise<{ ativo: boolean; eventos: EventoPlano[]; escolaNecessaria: boolean }> {
+  const vazio = { ativo: false, eventos: [] as EventoPlano[], escolaNecessaria: false };
+  if (!dataValida(inicio) || !dataValida(fim) || fim < inicio || (Date.parse(fim) - Date.parse(inicio)) / 86400000 > 400) return vazio;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ativo: false, eventos: [] };
+  if (!user) return vazio;
   const { data: prof } = await supabase.from("professores").select("calendario_ativo").eq("id", user.id).single();
-  if ((prof as { calendario_ativo?: boolean | null } | null)?.calendario_ativo !== true) return { ativo: false, eventos: [] };
-  const { data } = await supabase
+  if ((prof as { calendario_ativo?: boolean | null } | null)?.calendario_ativo !== true) return vazio;
+  const idEscola = escolaId && /^[0-9a-f-]{36}$/i.test(escolaId) ? escolaId : null;
+  let consulta = supabase
     .from("calendario_eventos")
     .select("id, titulo, tipo, sem_aula, data_inicio, data_fim")
     .lte("data_inicio", fim)
     .gte("data_fim", inicio)
     .order("data_inicio")
     .limit(80);
-  return { ativo: true, eventos: (data ?? []) as { id: string; titulo: string; tipo: TipoEvento; sem_aula: boolean; data_inicio: string; data_fim: string }[] };
+  consulta = idEscola ? consulta.or(`escola_id.is.null,escola_id.eq.${idEscola}`) : consulta.is("escola_id", null);
+  const { data } = await consulta;
+  let escolaNecessaria = false;
+  if (!idEscola) {
+    const { count } = await supabase.from("calendario_eventos").select("id", { count: "exact", head: true }).not("escola_id", "is", null);
+    escolaNecessaria = (count ?? 0) > 0;
+  }
+  return { ativo: true, eventos: (data ?? []) as EventoPlano[], escolaNecessaria };
 }

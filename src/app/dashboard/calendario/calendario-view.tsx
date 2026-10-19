@@ -21,7 +21,8 @@ import {
   type EventoCalendario,
   type TipoEvento,
 } from "@/lib/feriados";
-import { definirCalendario, excluirEvento, salvarEvento, type EstadoEvento } from "./actions";
+import Link from "next/link";
+import { definirCalendario, excluirEvento, salvarEvento, type CotaCalendarioIA, type EstadoEvento } from "./actions";
 import ImportarCalendarioPdf from "./importar-pdf";
 
 interface Props {
@@ -30,6 +31,9 @@ interface Props {
   ativo: boolean | null;
   eventos: EventoCalendario[];
   escolas: { id: string; nome: string }[];
+  /** Escola que veio no endereço (?escola=...); se não vier, usa a primeira. */
+  escolaInicial?: string | null;
+  cota: CotaCalendarioIA | null;
 }
 
 /** Aparência de cada tipo de item do calendário (classes escritas por extenso para o Tailwind enxergar). */
@@ -66,8 +70,15 @@ function corOficial(o: DataOficial): Cor {
 
 const DIAS_SEMANA_ESCOLA = [1, 2, 3, 4, 5];
 
-export default function CalendarioView({ hoje, mesInicial, ativo, eventos, escolas }: Props) {
+export default function CalendarioView({ hoje, mesInicial, ativo, eventos: todosEventos, escolas, escolaInicial = null, cota }: Props) {
   const [mes, setMes] = useState(mesInicial);
+  // Cada escola tem o seu calendário. "" = só as datas gerais (sem escola), que valem para todas as escolas.
+  const [escolaSel, setEscolaSel] = useState<string>(() => (escolaInicial && escolas.some((e) => e.id === escolaInicial) ? escolaInicial : escolas[0]?.id ?? ""));
+  const eventos = useMemo(
+    () => (escolas.length === 0 ? todosEventos : todosEventos.filter((e) => !e.escola_id || e.escola_id === escolaSel)),
+    [todosEventos, escolas.length, escolaSel]
+  );
+  const nomeEscola = escolas.find((e) => e.id === escolaSel)?.nome ?? null;
   const [formAberto, setFormAberto] = useState<{ evento?: EventoCalendario; data?: string } | null>(null);
   const [horario, salvarHorario] = useHorarioAulas();
   const [, iniciar] = useTransition();
@@ -156,6 +167,52 @@ export default function CalendarioView({ hoje, mesInicial, ativo, eventos, escol
               )}
             </div>
           </div>
+        )}
+      </section>
+
+      {/* Escola: cada escola tem o seu calendário */}
+      <section aria-label="Escola do calendário" className="painel-cartao p-4 sm:p-5">
+        {escolas.length === 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-700">
+              <strong>Cada escola tem o seu calendário.</strong> Cadastre primeiro a escola onde você dá aula; depois você adiciona (ou envia em PDF) as datas dela.
+            </p>
+            <Link href="/dashboard/escolas/nova" className="btn-azul">
+              <Icone nome="mais" className="h-4 w-4" />
+              Cadastrar escola
+            </Link>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[14rem] flex-1">
+              <label htmlFor="escola-calendario" className="field-label">
+                Calendário de qual escola?
+              </label>
+              <select id="escola-calendario" value={escolaSel} onChange={(ev) => setEscolaSel(ev.target.value)} className="input-field">
+                {escolas.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.nome}
+                  </option>
+                ))}
+                <option value="">Só datas gerais (valem para todas as escolas)</option>
+              </select>
+            </div>
+            <Link href="/dashboard/escolas/nova" className="btn-azul-suave">
+              <Icone nome="mais" className="h-4 w-4" />
+              Cadastrar outra escola
+            </Link>
+          </div>
+        )}
+        {escolas.length > 0 && (
+          <p className="mt-2 text-xs text-slate-500">
+            {nomeEscola ? (
+              <>
+                Mostrando o calendário de <strong>{nomeEscola}</strong>, mais as datas gerais. Ao montar um plano e escolher esta escola, é este calendário que aparece lá.
+              </>
+            ) : (
+              <>Mostrando só as datas gerais, que valem para todas as suas escolas.</>
+            )}
+          </p>
         )}
       </section>
 
@@ -265,7 +322,7 @@ export default function CalendarioView({ hoje, mesInicial, ativo, eventos, escol
                     <span className="block text-xs text-slate-500">
                       {l.oficial
                         ? `${l.oficial.esfera === "estadual" ? "Feriado de SC" : l.oficial.natureza === "feriado" ? "Feriado nacional" : l.oficial.natureza === "facultativo" ? "Ponto facultativo" : "Data lembrada"}${l.oficial.nota ? ` · ${l.oficial.nota}` : ""}`
-                        : `${ROTULO_TIPO[l.evento!.tipo]}${l.evento!.sem_aula ? " · sem aula" : ""}${l.evento!.observacao ? ` · ${l.evento!.observacao}` : ""}`}
+                        : `${ROTULO_TIPO[l.evento!.tipo]}${l.evento!.sem_aula ? " · sem aula" : ""}${!l.evento!.escola_id && escolas.length > 0 ? " · vale para todas as escolas" : ""}${l.evento!.observacao ? ` · ${l.evento!.observacao}` : ""}`}
                     </span>
                   </span>
                   {l.evento && (
@@ -345,9 +402,9 @@ export default function CalendarioView({ hoje, mesInicial, ativo, eventos, escol
         </section>
       </div>
 
-      <ImportarCalendarioPdf />
+      <ImportarCalendarioPdf escolas={escolas} escolaPadrao={escolaSel} cota={cota} aoSalvar={(id) => setEscolaSel(id)} />
 
-      {formAberto && <FormEvento key={formAberto.evento?.id ?? formAberto.data} estado={formAberto} escolas={escolas} aoFechar={() => setFormAberto(null)} />}
+      {formAberto && <FormEvento key={formAberto.evento?.id ?? formAberto.data} estado={formAberto} escolas={escolas} escolaPadrao={escolaSel} aoFechar={() => setFormAberto(null)} />}
     </div>
   );
 }
@@ -355,10 +412,12 @@ export default function CalendarioView({ hoje, mesInicial, ativo, eventos, escol
 function FormEvento({
   estado,
   escolas,
+  escolaPadrao,
   aoFechar,
 }: {
   estado: { evento?: EventoCalendario; data?: string };
   escolas: { id: string; nome: string }[];
+  escolaPadrao: string;
   aoFechar: () => void;
 }) {
   const e = estado.evento;
@@ -450,10 +509,10 @@ function FormEvento({
         {escolas.length > 0 && (
           <div>
             <label htmlFor="ev-escola" className="field-label">
-              Escola <span className="font-normal text-slate-400">(opcional)</span>
+              Calendário de qual escola?
             </label>
-            <select id="ev-escola" name="escola_id" defaultValue={e?.escola_id ?? ""} className="input-field">
-              <option value="">Vale para todas</option>
+            <select id="ev-escola" name="escola_id" defaultValue={e ? e.escola_id ?? "" : escolaPadrao} className="input-field">
+              <option value="">Todas as minhas escolas (data geral)</option>
               {escolas.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.nome}

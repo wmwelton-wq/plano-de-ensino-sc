@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type {
   Disciplina,
@@ -17,7 +17,9 @@ import HabilidadePicker from "./habilidade-picker";
 import SecaoPlano from "./secao-plano";
 import CurriculoDigitalCampo from "./curriculo-digital-campo";
 import MetodologiaIA from "./metodologia-ia";
-import { FluxoRodape, FluxoTopo, aoCampoInvalido, semEnterQueEnvia, useFluxoMensal, type PassoMensal } from "./fluxo-mensal";
+import { FluxoRodape, FluxoTopo, aoCampoInvalido, semEnterQueEnvia, useFluxoMensal, useGravacaoPlano, type PassoMensal } from "./fluxo-mensal";
+import CamposPeriodo from "./campos-periodo";
+import FaltouAlgoBotao from "../faltou-algo/faltou-algo-botao";
 import RecomposicaoCampo from "./recomposicao-campo";
 import { componenteDeRecomposicao } from "@/lib/recomposicao";
 import { lerSecoes } from "@/lib/secoes-componentes";
@@ -53,6 +55,13 @@ interface PlanoFormProps {
   rotuloGrupoDisciplinas?: string;
 }
 
+const ROTULO_ETAPA_FALTOU: Record<EtapaPlano, string> = {
+  educacao_infantil: "Educação Infantil",
+  fundamental_anos_iniciais: "Ensino Fundamental — Anos Iniciais",
+  fundamental_anos_finais: "Ensino Fundamental — Anos Finais",
+  ensino_medio: "Ensino Médio / Curso Técnico",
+};
+
 /** Passos do plano (um de cada vez): a recomposição só existe para Língua Portuguesa e Matemática. */
 function montarPassos(comRecomposicao: boolean): PassoMensal[] {
   const ident = { grupo: "ident", grupoRotulo: "Identificação", grupoTom: "ardosia", grupoIcone: "escola" } as const;
@@ -87,11 +96,11 @@ export default function PlanoForm({
   competenciasSelecionadasIds = [],
   plano,
   action,
-  textoBotao,
   rotuloTurma,
   rotuloGrupoDisciplinas = "Formação Geral Básica",
 }: PlanoFormProps) {
-  const [estado, formAction, pendente] = useActionState(action, {});
+  const grav = useGravacaoPlano(action, plano?.id);
+  const [erroPasso, setErroPasso] = useState<string | undefined>();
 
   const vinculoInicial = plano?.disciplina_id
     ? `disciplina:${plano.disciplina_id}`
@@ -179,8 +188,19 @@ export default function PlanoForm({
   const passos = useMemo(() => montarPassos(Boolean(recomposicaoDe)), [recomposicaoDe]);
   const fluxo = useFluxoMensal(passos);
   const { atual } = fluxo;
+  async function salvarEContinuar() {
+    const r = await grav.salvarPasso();
+    setErroPasso(r.erro);
+    if (r.ok) fluxo.avancar();
+  }
   const numeroDe = (chave: string) => passos.findIndex((p) => p.chave === chave) + 1;
   const secaoSalva = lerSecoes(plano?.secoes_componentes).find((x) => x.disciplina_id === vinculoId);
+
+  const contextoFaltou = {
+    etapa: ROTULO_ETAPA_FALTOU[etapa],
+    disciplina: disciplinaSelecionada?.nome,
+    serie: anoSugerido ? `${anoSugerido}${etapa === "ensino_medio" ? "ª série" : "º ano"}` : undefined,
+  };
 
   const campoConteudos = (
     <div>
@@ -197,12 +217,15 @@ export default function PlanoForm({
         editorRef={conteudosRef}
         linhas={6}
       />
+      <p className="mt-2">
+        <FaltouAlgoBotao tipo="objeto_conhecimento" contexto={contextoFaltou} rotulo="Não achou um objeto de conhecimento? Avise a gente" />
+      </p>
     </div>
   );
 
   return (
     <form
-      action={formAction}
+      {...grav.formProps}
       className="space-y-6"
       onKeyDown={semEnterQueEnvia}
       onInvalidCapture={aoCampoInvalido(() => fluxo.ir("ident"))}
@@ -213,7 +236,7 @@ export default function PlanoForm({
       {/* Avisa o servidor que este formulário cuida da recomposição (assim, trocar de disciplina limpa a anterior). */}
       <input type="hidden" name="tem_recomposicao" value="1" />
 
-      <FluxoTopo passos={passos} atual={atual} vistos={fluxo.vistos} aoIr={fluxo.ir} topo={fluxo.topo} />
+      <FluxoTopo passos={passos} atual={atual} vistos={fluxo.vistos} aoIr={(chave) => { void grav.autosalvarSeSujo(); fluxo.ir(chave); }} topo={fluxo.topo} />
 
       {/* ───────── 1. Identificação ───────── */}
       <SecaoPlano
@@ -313,31 +336,7 @@ export default function PlanoForm({
 
           <div className="hidden sm:block" aria-hidden="true" />
 
-          <div>
-            <label htmlFor="data_inicio" className="field-label">
-              Data de início
-            </label>
-            <input
-              id="data_inicio"
-              name="data_inicio"
-              type="date"
-              defaultValue={plano?.data_inicio ?? ""}
-              className="input-field"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="data_fim" className="field-label">
-              Data de fim
-            </label>
-            <input
-              id="data_fim"
-              name="data_fim"
-              type="date"
-              defaultValue={plano?.data_fim ?? ""}
-              className="input-field"
-            />
-          </div>
+          <CamposPeriodo inicioInicial={plano?.data_inicio} fimInicial={plano?.data_fim} />
 
           <div className="sm:col-span-2">
             <label htmlFor="escola_id" className="field-label">
@@ -386,6 +385,9 @@ export default function PlanoForm({
               : "Selecione uma disciplina no passo 1 para ver as competências específicas disponíveis."
           }
         />
+        <p className="mt-3">
+          <FaltouAlgoBotao tipo="competencia" contexto={contextoFaltou} rotulo="Faltou uma competência? Avise a gente" />
+        </p>
       </SecaoPlano>
 
       {/* ───────── Recomposição das aprendizagens (só Língua Portuguesa e Matemática) ───────── */}
@@ -478,6 +480,9 @@ export default function PlanoForm({
                   : "Selecione uma disciplina ou curso técnico no passo 1 para ver as habilidades disponíveis."
               }
             />
+            <p className="mt-3">
+              <FaltouAlgoBotao tipo="habilidade" contexto={contextoFaltou} rotulo="Faltou uma habilidade? Avise a gente" />
+            </p>
           </SecaoPlano>
         </>
       )}
@@ -601,6 +606,10 @@ export default function PlanoForm({
           <ReferenciasCampo valorInicial={plano?.referencias} rows={5} sugeridas={referenciasOficiais(etapa, usarCurriculoDigital)} />
         </div>
 
+        <p>
+          <FaltouAlgoBotao tipo="outro" contexto={contextoFaltou} rotulo="Faltou alguma coisa no seu plano? Avise a gente" />
+        </p>
+
         <div>
           <label htmlFor="status" className="field-label">
             Status
@@ -622,10 +631,12 @@ export default function PlanoForm({
         indice={fluxo.indice}
         ultimo={fluxo.ultimo}
         voltar={fluxo.voltar}
-        avancar={fluxo.avancar}
-        pendente={pendente}
-        textoBotao={textoBotao}
-        erro={estado.erro}
+        salvarEContinuar={salvarEContinuar}
+        pendente={grav.pendente}
+        salvando={grav.salvando}
+        salvoEm={grav.salvoEm}
+        avisoAuto={grav.avisoAuto}
+        erro={grav.estado.erro ?? erroPasso}
       />
     </form>
   );

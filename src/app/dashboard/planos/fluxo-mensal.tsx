@@ -1,9 +1,139 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { startTransition, useActionState, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Icone, type NomeIcone } from "@/components/icones";
 import FluxoPassos, { type GrupoFluxo } from "../anual/fluxo-passos";
 import type { TomSecao } from "./secao-plano";
+import { atualizarPlano, salvarRascunhoPlano, type EstadoFormulario, type ResultadoGravacao } from "./actions";
+
+const SEGUNDOS_AUTOSSALVAR = 4;
+
+function primeiroInvalidoVisivel(form: HTMLFormElement): HTMLInputElement | null {
+  for (const el of Array.from(form.elements)) {
+    const c = el as HTMLInputElement;
+    if (typeof c.checkValidity === "function" && !c.checkValidity() && c.offsetParent !== null) return c;
+  }
+  return null;
+}
+
+/**
+ * Tudo o que o professor faz no plano vai sendo guardado: a cada "Salvar e continuar", ao ficar alguns segundos
+ * sem mexer e ao sair da tela. O primeiro salvamento cria o plano (rascunho) e os seguintes atualizam o mesmo.
+ * O envio final também NÃO limpa os campos se der algum erro (o formulário não é reiniciado).
+ */
+export function useGravacaoPlano(
+  action: (estado: EstadoFormulario, formData: FormData) => Promise<EstadoFormulario>,
+  planoIdInicial?: string
+) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const idRef = useRef<string | null>(planoIdInicial ?? null);
+  const sujo = useRef(false);
+  const emVoo = useRef<Promise<ResultadoGravacao> | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [salvoEm, setSalvoEm] = useState<Date | null>(null);
+  const [avisoAuto, setAvisoAuto] = useState<string | null>(null);
+
+  const acaoFinal = useCallback(
+    async (anterior: EstadoFormulario, fd: FormData) => (idRef.current ? atualizarPlano(idRef.current, anterior, fd) : action(anterior, fd)),
+    [action]
+  );
+  const [estado, formAction, pendente] = useActionState(acaoFinal, {});
+
+  const gravar = useCallback(async (): Promise<ResultadoGravacao> => {
+    const form = formRef.current;
+    if (!form) return { erro: "Não foi possível salvar agora." };
+    while (emVoo.current) await emVoo.current.catch(() => null);
+    const dados = new FormData(form);
+    const p = salvarRascunhoPlano(idRef.current, dados);
+    emVoo.current = p;
+    setSalvando(true);
+    try {
+      const r = await p;
+      if (r.id) {
+        if (!idRef.current) {
+          idRef.current = r.id;
+          try {
+            window.history.replaceState(window.history.state, "", `/dashboard/planos/${r.id}`);
+          } catch {
+            /* sem problema: só muda o endereço mostrado */
+          }
+        }
+        sujo.current = false;
+        setSalvoEm(new Date());
+        setAvisoAuto(null);
+      }
+      return r;
+    } catch {
+      return { erro: "Sem conexão. Verifique a internet e tente de novo." };
+    } finally {
+      emVoo.current = null;
+      setSalvando(false);
+    }
+  }, []);
+
+  const autosalvar = useCallback(async () => {
+    if (!sujo.current || pendente) return;
+    const r = await gravar();
+    if (r.erro) setAvisoAuto(`Ainda não salvo: ${r.erro}`);
+  }, [gravar, pendente]);
+
+  const agendar = useCallback(() => {
+    sujo.current = true;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => void autosalvar(), SEGUNDOS_AUTOSSALVAR * 1000);
+  }, [autosalvar]);
+
+  useEffect(() => {
+    const aoSair = () => {
+      if (document.visibilityState === "hidden" && sujo.current) void autosalvar();
+    };
+    const aviso = (e: BeforeUnloadEvent) => {
+      if (sujo.current) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    document.addEventListener("visibilitychange", aoSair);
+    window.addEventListener("beforeunload", aviso);
+    return () => {
+      document.removeEventListener("visibilitychange", aoSair);
+      window.removeEventListener("beforeunload", aviso);
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [autosalvar]);
+
+  /** "Salvar e continuar": confere os campos deste passo, guarda tudo e devolve se deu certo. */
+  async function salvarPasso(): Promise<{ ok: boolean; erro?: string }> {
+    const form = formRef.current;
+    if (form) {
+      const invalido = primeiroInvalidoVisivel(form);
+      if (invalido) {
+        invalido.reportValidity();
+        return { ok: false };
+      }
+    }
+    if (timer.current) clearTimeout(timer.current);
+    const r = await gravar();
+    if (r.erro) return { ok: false, erro: r.erro };
+    return { ok: true };
+  }
+
+  const formProps = {
+    ref: formRef,
+    onSubmit: (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      sujo.current = false;
+      if (timer.current) clearTimeout(timer.current);
+      const fd = new FormData(e.currentTarget);
+      startTransition(() => formAction(fd));
+    },
+    onChange: agendar,
+    onInput: agendar,
+  };
+
+  return { formProps, estado, pendente, salvando, salvoEm, avisoAuto, salvarPasso, autosalvarSeSujo: autosalvar };
+}
 
 /** Um passo do plano mensal: pertence a um grupo (a faixa de cima) e mostra uma seção de cada vez. */
 export interface PassoMensal {
@@ -94,27 +224,32 @@ export function FluxoTopo({
   );
 }
 
-/** Barra de baixo: Voltar / Próximo e, no último passo, o botão de salvar. */
+/** Barra de baixo: Voltar e um único botão "Salvar e continuar" (no último passo, "Concluir plano"). */
 export function FluxoRodape({
   passos,
   indice,
   ultimo,
   voltar,
-  avancar,
+  salvarEContinuar,
   pendente,
-  textoBotao,
+  salvando,
+  salvoEm,
+  avisoAuto,
   erro,
 }: {
   passos: PassoMensal[];
   indice: number;
   ultimo: boolean;
   voltar: () => void;
-  avancar: () => void;
+  salvarEContinuar: () => void;
   pendente: boolean;
-  textoBotao: string;
+  salvando: boolean;
+  salvoEm: Date | null;
+  avisoAuto: string | null;
   erro?: string;
 }) {
   const passo = passos[indice];
+  const ocupado = pendente || salvando;
   return (
     <div className="sticky bottom-3 z-[5] space-y-2">
       {erro && (
@@ -128,24 +263,29 @@ export function FluxoRodape({
           <span style={{ width: `${((indice + 1) / Math.max(1, passos.length)) * 100}%` }} />
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
-        <button type="button" onClick={voltar} disabled={indice === 0} className="btn-azul-suave">
-          <Icone nome="setaEsquerda" className="h-4 w-4" />
-          Voltar
-        </button>
-        <p className="order-last w-full text-center text-xs text-slate-500 sm:order-none sm:w-auto">
-          Passo {indice + 1} de {passos.length} · <span className="font-semibold text-slate-800">{passo?.grupoRotulo ? `${passo.grupoRotulo} · ` : ""}{passo?.rotulo}</span>
-        </p>
-        <div className="flex items-center gap-2">
-          <button type="submit" disabled={pendente} className={ultimo ? "btn-azul" : "btn-azul-suave"}>
-            {pendente ? "Salvando..." : ultimo ? textoBotao : "Salvar e continuar depois"}
+          <button type="button" onClick={voltar} disabled={indice === 0 || ocupado} className="btn-azul-suave">
+            <Icone nome="setaEsquerda" className="h-4 w-4" />
+            Voltar
           </button>
-          {!ultimo && (
-            <button type="button" onClick={avancar} className="btn-azul">
-              Próximo
+          <div className="order-last w-full text-center text-xs text-slate-500 sm:order-none sm:w-auto" aria-live="polite">
+            <p>
+              Passo {indice + 1} de {passos.length} · <span className="font-semibold text-slate-800">{passo?.grupoRotulo ? `${passo.grupoRotulo} · ` : ""}{passo?.rotulo}</span>
+            </p>
+            <p className={avisoAuto ? "text-amber-700" : "text-emerald-700"}>
+              {salvando ? "Salvando…" : avisoAuto ?? (salvoEm ? `Tudo salvo às ${salvoEm.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "Seu plano é salvo a cada passo")}
+            </p>
+          </div>
+          {ultimo ? (
+            <button type="submit" disabled={ocupado} className="btn-azul">
+              {pendente ? "Salvando..." : "Concluir plano"}
+              <Icone nome="check" className="h-4 w-4" />
+            </button>
+          ) : (
+            <button type="button" onClick={salvarEContinuar} disabled={ocupado} className="btn-azul">
+              {salvando ? "Salvando..." : "Salvar e continuar"}
               <Icone nome="setaDireita" className="h-4 w-4" />
             </button>
           )}
-        </div>
         </div>
       </div>
     </div>

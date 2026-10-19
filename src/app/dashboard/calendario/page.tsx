@@ -3,15 +3,17 @@ import CabecalhoPagina from "@/components/cabecalho-pagina";
 import NavegacaoTopo from "@/components/navegacao-topo";
 import type { EventoCalendario } from "@/lib/feriados";
 import CalendarioView from "./calendario-view";
+import { cotaCalendarioIA } from "./actions";
 
-export default async function CalendarioPage({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
-  const { mes } = await searchParams;
+export default async function CalendarioPage({ searchParams }: { searchParams: Promise<{ mes?: string; escola?: string }> }) {
+  const { mes, escola } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: perfil }, { data: eventos }, { data: escolas }] = await Promise.all([
+  const [{ data: perfil }, { data: eventos }, { data: escolas }, cota] = await Promise.all([
     supabase.from("professores").select("calendario_ativo").single(),
     supabase.from("calendario_eventos").select("id, titulo, tipo, sem_aula, data_inicio, data_fim, observacao, escola_id, origem").order("data_inicio", { ascending: true }),
     supabase.from("escolas").select("id, nome").order("nome"),
+    cotaCalendarioIA(),
   ]);
 
   const hoje = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // AAAA-MM-DD
@@ -30,7 +32,7 @@ export default async function CalendarioPage({ searchParams }: { searchParams: P
         ilustracao="anual"
         compacto
         titulo="Calendário escolar"
-        subtitulo="Feriados do Brasil e de Santa Catarina já vêm prontos. Acrescente recessos, festas, projetos e o que mais acontecer na sua escola."
+        subtitulo="Feriados do Brasil e de Santa Catarina já vêm prontos. Cada escola tem o seu calendário: acrescente recessos, festas, projetos e o que mais acontecer em cada uma."
       />
       <div className="mt-6">
         <CalendarioView
@@ -39,6 +41,8 @@ export default async function CalendarioPage({ searchParams }: { searchParams: P
           ativo={ativo}
           eventos={(eventos ?? []) as unknown as EventoCalendario[]}
           escolas={(escolas ?? []) as { id: string; nome: string }[]}
+          escolaInicial={escola ?? null}
+          cota={cota}
         />
       </div>
     </div>
