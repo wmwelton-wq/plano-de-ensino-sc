@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import VoltarLink from "../planos/voltar-link";
 import CabecalhoPagina from "@/components/cabecalho-pagina";
 import Sugestoes, { type Sugestao } from "./sugestoes";
+import NavegacaoAdmin from "./navegacao-admin";
 
 interface Resumo {
   gerado_em: string;
@@ -51,6 +52,7 @@ export default async function PainelDeUsoPage() {
         titulo="Painel de uso"
         subtitulo="Números agregados, os avisos “Faltou algo?” e as avaliações (só com o primeiro nome). Nenhum conteúdo de plano aparece aqui."
       />
+      <NavegacaoAdmin atual="geral" />
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Numero rotulo="Professores" valor={r.totais.professores} />

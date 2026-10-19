@@ -22,7 +22,7 @@ import {
   type TipoEvento,
 } from "@/lib/feriados";
 import Link from "next/link";
-import { definirCalendario, excluirEvento, salvarEvento, type CotaCalendarioIA, type EstadoEvento } from "./actions";
+import { definirCalendario, excluirCalendario, excluirEvento, salvarEvento, type CotaCalendarioIA, type EstadoEvento } from "./actions";
 import ImportarCalendarioPdf from "./importar-pdf";
 
 interface Props {
@@ -203,6 +203,7 @@ export default function CalendarioView({ hoje, mesInicial, ativo, eventos: todos
             </Link>
           </div>
         )}
+        <LimparCalendario escolas={escolas} escolaSel={escolaSel} nomeEscola={nomeEscola} eventos={todosEventos} />
         {escolas.length > 0 && (
           <p className="mt-2 text-xs text-slate-500">
             {nomeEscola ? (
@@ -406,6 +407,54 @@ export default function CalendarioView({ hoje, mesInicial, ativo, eventos: todos
 
       {formAberto && <FormEvento key={formAberto.evento?.id ?? formAberto.data} estado={formAberto} escolas={escolas} escolaPadrao={escolaSel} aoFechar={() => setFormAberto(null)} />}
     </div>
+  );
+}
+
+/** Exclusão em bloco: no início de cada ano o calendário muda, então o professor pode apagar tudo de uma escola, as datas gerais ou tudo de uma vez. */
+function LimparCalendario({
+  escolas,
+  escolaSel,
+  nomeEscola,
+  eventos,
+}: {
+  escolas: { id: string; nome: string }[];
+  escolaSel: string;
+  nomeEscola: string | null;
+  eventos: EventoCalendario[];
+}) {
+  const daEscola = eventos.filter((e) => e.escola_id && e.escola_id === escolaSel).length;
+  const gerais = eventos.filter((e) => !e.escola_id).length;
+  if (eventos.length === 0) return null;
+  const plural = (n: number) => `${n} ${n === 1 ? "data" : "datas"}`;
+  return (
+    <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm">
+      <summary className="cursor-pointer font-semibold text-slate-700">Limpar calendário (virada de ano)</summary>
+      <p className="mt-2 text-xs text-slate-500">O calendário muda todo ano. Aqui você apaga várias datas de uma vez; para apagar só uma data, use “Excluir” ao lado dela na lista do mês.</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {escolas.length > 0 && escolaSel && daEscola > 0 && (
+          <ConfirmarExclusao
+            excluirAction={excluirCalendario.bind(null, "escola", escolaSel)}
+            rotulo={`Excluir calendário de ${nomeEscola ?? "esta escola"} (${plural(daEscola)})`}
+            oQue={`todas as ${plural(daEscola)} do calendário de ${nomeEscola ?? "esta escola"}`}
+            detalhe="As datas gerais e os calendários das outras escolas continuam como estão."
+          />
+        )}
+        {gerais > 0 && (
+          <ConfirmarExclusao
+            excluirAction={excluirCalendario.bind(null, "gerais")}
+            rotulo={`Excluir datas gerais (${plural(gerais)})`}
+            oQue={`as ${plural(gerais)} gerais, que valem para todas as escolas`}
+            detalhe="Os calendários específicos de cada escola continuam como estão."
+          />
+        )}
+        <ConfirmarExclusao
+          excluirAction={excluirCalendario.bind(null, "todos")}
+          rotulo={`Excluir tudo (${plural(eventos.length)})`}
+          oQue="todo o seu calendário: as datas de todas as escolas e as datas gerais"
+          detalhe="Depois você pode cadastrar o calendário do novo ano, manualmente ou por PDF."
+        />
+      </div>
+    </details>
   );
 }
 

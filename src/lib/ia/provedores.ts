@@ -36,6 +36,10 @@ export interface RespostaIA {
   tokensSaida: number;
   /** Custo estimado em dólares. */
   custo: number;
+  /** Provedores que falharam antes de este responder (ex.: "gemini: HTTP 503 ..."). Vazio quando de primeira. */
+  falhas: string[];
+  /** Tempo total da chamada, em milissegundos. */
+  duracaoMs: number;
 }
 
 interface Provedor {
@@ -210,9 +214,16 @@ export function provedoresDisponiveis(precisaPdf = false, ambiente: Record<strin
 }
 
 export class ErroIA extends Error {
-  constructor(mensagem: string, readonly tentativas: string[] = []) {
+  constructor(mensagem: string, readonly tentativas: string[] = [], readonly duracaoMs = 0) {
     super(mensagem);
   }
+}
+
+/** Texto curto, sem chaves nem dados de professores, para guardar no registro de uso (só o provedor e o motivo). */
+export function resumoDoErro(e: unknown, falhasAntes: string[] = []): string {
+  if (e instanceof ErroIA) return e.tentativas.join(" | ").slice(0, 500) || e.message;
+  const msg = e instanceof Error ? e.message.slice(0, 200) : "erro";
+  return [...falhasAntes, msg].join(" | ").slice(0, 500);
 }
 
 /** Tenta os provedores em ordem até um responder. */
@@ -231,7 +242,7 @@ export async function chamarIA(pedido: PedidoIA, ambiente: Record<string, string
       try {
         const r = await prov.chamar(pedido, prov.chave, prov.modelo, controle.signal);
         const custo = (r.tin * prov.preco[0] + r.tout * prov.preco[1]) / 1_000_000;
-        return { texto: r.texto, provedor: prov.nome, modelo: prov.modelo, tokensEntrada: r.tin, tokensSaida: r.tout, custo };
+        return { texto: r.texto, provedor: prov.nome, modelo: prov.modelo, tokensEntrada: r.tin, tokensSaida: r.tout, custo, falhas, duracaoMs: Date.now() - inicio };
       } catch (e) {
         // Nunca registramos a chave; só o nome do provedor e o motivo curto.
         falhas.push(`${prov.nome}: ${e instanceof Error ? e.message.slice(0, 120) : "erro"}`);
@@ -246,5 +257,51 @@ export async function chamarIA(pedido: PedidoIA, ambiente: Record<string, string
     }
   }
   console.error("[ia] todos os provedores falharam", falhas);
-  throw new ErroIA("Todos os provedores de IA falharam.", falhas);
+  throw new ErroIA("Todos os provedores de IA falharam.", falhas, Date.now() - inicio);
+}
+
+export interface ResultadoTeste {
+  provedor: NomeProvedor;
+  modelo: string;
+  lePdf: boolean;
+  configurado: boolean;
+  ok?: boolean;
+  ms?: number;
+  erro?: string;
+  custo?: number;
+}
+
+/** Lista os provedores (com ou sem chave) na ordem de uso, sem chamar ninguém e sem expor nenhuma chave. */
+export function listarProvedores(ambiente: Record<string, string | undefined> = process.env): ResultadoTeste[] {
+  const configurados = provedoresDisponiveis(false, ambiente);
+  const nomes = new Set(configurados.map((p) => p.nome));
+  const resto = ORDEM_PADRAO.filter((n) => !nomes.has(n));
+  return [
+    ...configurados.map((p): ResultadoTeste => ({ provedor: p.nome, modelo: p.modelo, lePdf: p.lePdf, configurado: true })),
+    ...resto.map((n): ResultadoTeste => ({ provedor: n, modelo: ambiente[`IA_MODELO_${n.toUpperCase()}`]?.trim() || PROVEDORES[n].modeloPadrao, lePdf: PROVEDORES[n].lePdf, configurado: false })),
+  ];
+}
+
+/** Teste rápido (uma frase minúscula) em cada provedor com chave. Só o administrador chama isto; custa frações de centavo. */
+export async function testarProvedores(ambiente: Record<string, string | undefined> = process.env): Promise<ResultadoTeste[]> {
+  const configurados = new Map(provedoresDisponiveis(false, ambiente).map((p) => [p.nome, p]));
+  const ordem = [...new Set([...provedoresDisponiveis(false, ambiente).map((p) => p.nome), ...ORDEM_PADRAO])];
+  return Promise.all(
+    ordem.map(async (nome): Promise<ResultadoTeste> => {
+      const def = PROVEDORES[nome];
+      const prov = configurados.get(nome);
+      if (!prov) return { provedor: nome, modelo: ambiente[`IA_MODELO_${nome.toUpperCase()}`]?.trim() || def.modeloPadrao, lePdf: def.lePdf, configurado: false };
+      const inicio = Date.now();
+      const controle = new AbortController();
+      const relogio = setTimeout(() => controle.abort(), 20_000);
+      try {
+        const r = await prov.chamar({ sistema: "Responda só com a palavra: ok", usuario: "Teste de funcionamento.", maxTokens: 300, temperatura: 0 }, prov.chave, prov.modelo, controle.signal);
+        return { provedor: nome, modelo: prov.modelo, lePdf: def.lePdf, configurado: true, ok: true, ms: Date.now() - inicio, custo: (r.tin * prov.preco[0] + r.tout * prov.preco[1]) / 1_000_000 };
+      } catch (e) {
+        return { provedor: nome, modelo: prov.modelo, lePdf: def.lePdf, configurado: true, ok: false, ms: Date.now() - inicio, erro: (e instanceof Error ? e.message : "erro").slice(0, 200) };
+      } finally {
+        clearTimeout(relogio);
+      }
+    })
+  );
 }

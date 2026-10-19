@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { chamarIA } from "@/lib/ia/provedores";
+import { chamarIA, resumoDoErro, ErroIA } from "@/lib/ia/provedores";
+import { registrarDetalheIA } from "@/lib/ia/registro";
 import { LIMITE_BYTES_PDF, LIMITE_PAGINAS_PDF, SISTEMA_CALENDARIO, contarPaginasPdf, eventosDaResposta, promptCalendario } from "@/lib/ia/calendario-pdf";
 
 export const runtime = "nodejs";
@@ -67,10 +68,12 @@ export async function POST(request: Request) {
       p_custo: resposta.custo,
       p_status: "ok",
     });
+    await registrarDetalheIA(supabase, r.id, resposta.falhas.length ? `recuperado: ${resposta.falhas.join(" | ")}` : null, resposta.duracaoMs);
     return NextResponse.json({ ok: true, eventos }, { headers: { "Cache-Control": "no-store" } });
-  } catch {
+  } catch (e) {
     // Falha dos provedores: o envio fica marcado como falha e não conta na cota de calendários.
     await supabase.rpc("ia_finalizar", { p_id: r.id, p_modelo: "-", p_tokens_entrada: 0, p_tokens_saida: 0, p_custo: 0, p_status: "erro" });
+    await registrarDetalheIA(supabase, r.id, resumoDoErro(e), e instanceof ErroIA ? e.duracaoMs : null);
     return erro("A IA está indisponível agora. Seu direito de envio foi mantido; tente novamente mais tarde.", 503);
   }
 }

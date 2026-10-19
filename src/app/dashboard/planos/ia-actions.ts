@@ -1,7 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { chamarIA } from "@/lib/ia/provedores";
+import { chamarIA, resumoDoErro, ErroIA } from "@/lib/ia/provedores";
+import { registrarDetalheIA } from "@/lib/ia/registro";
 import {
   SISTEMA_METODOLOGIA,
   montarPromptContinuacao,
@@ -122,10 +123,17 @@ export async function gerarMetodologia(contexto: ContextoIA): Promise<ResultadoM
       p_custo: resposta.custo,
       p_status: paragrafos.length ? "ok" : "erro",
     });
+    await registrarDetalheIA(
+      supabase,
+      r.id,
+      paragrafos.length === 0 ? "resposta em formato inaproveitável" : resposta.falhas.length ? `recuperado: ${resposta.falhas.join(" | ")}` : null,
+      resposta.duracaoMs
+    );
     if (paragrafos.length === 0) return { ok: false, erro: "A IA respondeu em um formato que não deu para aproveitar. Tente de novo." };
     return { ok: true, paragrafos, aviso };
-  } catch {
+  } catch (e) {
     await supabase.rpc("ia_finalizar", { p_id: r.id, p_modelo: "-", p_tokens_entrada: 0, p_tokens_saida: 0, p_custo: 0, p_status: "erro" });
+    await registrarDetalheIA(supabase, r.id, resumoDoErro(e), e instanceof ErroIA ? e.duracaoMs : null);
     return { ok: false, erro: "A IA está indisponível neste momento. Seu uso não foi descontado; tente novamente em alguns minutos." };
   }
 }

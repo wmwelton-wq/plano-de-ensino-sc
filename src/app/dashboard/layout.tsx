@@ -65,7 +65,7 @@ export default async function DashboardLayout({
       ],
     },
   ];
-  const extras = [{ href: "/dashboard/calendario", texto: "Calendário" }, { href: "/dashboard/colegas", texto: "Colegas" }, { href: "/dashboard/ajuda", texto: "Ajuda" }, ...(ehAdmin === true ? [{ href: "/dashboard/admin", texto: "Painel de uso" }] : [])];
+  const extras = [{ href: "/dashboard/calendario", texto: "Calendário" }, { href: "/dashboard/colegas", texto: "Colegas" }, { href: "/dashboard/ajuda", texto: "Ajuda" }, ...(ehAdmin === true ? [{ href: "/dashboard/admin", texto: "Central do admin" }] : [])];
 
   const nomeExibido = professor?.nome ?? user.email ?? "";
   const inicial = nomeExibido.trim().charAt(0).toUpperCase() || "P";
