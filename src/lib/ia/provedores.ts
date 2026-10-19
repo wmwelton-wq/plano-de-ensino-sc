@@ -48,7 +48,20 @@ interface Provedor {
   chamar(p: PedidoIA, chave: string, modelo: string, sinal: AbortSignal): Promise<{ texto: string; tin: number; tout: number }>;
 }
 
-const TEMPO_LIMITE_MS = 50_000;
+/** Tempo máximo de uma tentativa em um provedor. */
+const TEMPO_LIMITE_MS = 40_000;
+/** Tempo total para todos os provedores juntos (a função da Vercel tem limite de ~60 s). */
+const TEMPO_TOTAL_MS = 56_000;
+/** Pausa antes de repetir um provedor que respondeu "ocupado". */
+const PAUSA_REPETIR_MS = 1_500;
+
+/** Erros passageiros (provedor sobrecarregado ou com limite momentâneo): vale tentar o mesmo provedor de novo. */
+function erroPassageiro(e: unknown): boolean {
+  const m = e instanceof Error ? e.message : "";
+  return /^HTTP (429|500|502|503|504)\b/.test(m);
+}
+
+const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 async function postJson(url: string, corpo: unknown, cabecalhos: Record<string, string>, sinal: AbortSignal): Promise<any> {
   const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json", ...cabecalhos }, body: JSON.stringify(corpo), signal: sinal, cache: "no-store" });
@@ -79,6 +92,8 @@ function compativelOpenAI(url: string, extra?: { pdf?: boolean }): Provedor["cha
     if (url.includes("api.openai.com")) corpo.max_completion_tokens = p.maxTokens;
     else corpo.max_tokens = p.maxTokens;
     if (p.json) corpo.response_format = { type: "json_object" };
+    // Modelos "gpt-oss" (Groq) raciocinam antes de responder; raciocínio curto gasta menos tempo e menos tokens.
+    if (url.includes("api.groq.com") && modelo.includes("gpt-oss")) corpo.reasoning_effort = "low";
     const d = await postJson(url, corpo, { authorization: `Bearer ${chave}` }, sinal);
     const texto = d?.choices?.[0]?.message?.content;
     if (typeof texto !== "string" || !texto.trim()) throw new Error("resposta vazia");
@@ -165,9 +180,10 @@ const PROVEDORES: Record<NomeProvedor, Omit<Provedor, "chave" | "modelo"> & { mo
   groq: {
     nome: "groq",
     variavel: "GROQ_API_KEY",
-    modeloPadrao: "llama-3.3-70b-versatile",
+    // O Groq desligou o llama-3.3-70b-versatile em 16/08/2026; o gpt-oss-120b é o substituto de produção indicado por eles.
+    modeloPadrao: "openai/gpt-oss-120b",
     lePdf: false,
-    preco: [0.59, 0.79],
+    preco: [0.15, 0.6],
     chamar: compativelOpenAI("https://api.groq.com/openai/v1/chat/completions"),
   },
 };
@@ -204,18 +220,29 @@ export async function chamarIA(pedido: PedidoIA, ambiente: Record<string, string
   const fila = provedoresDisponiveis(Boolean(pedido.pdfBase64), ambiente);
   if (fila.length === 0) throw new ErroIA("Nenhum provedor de IA está configurado.");
   const falhas: string[] = [];
+  const inicio = Date.now();
   for (const prov of fila) {
-    const controle = new AbortController();
-    const relogio = setTimeout(() => controle.abort(), TEMPO_LIMITE_MS);
-    try {
-      const r = await prov.chamar(pedido, prov.chave, prov.modelo, controle.signal);
-      const custo = (r.tin * prov.preco[0] + r.tout * prov.preco[1]) / 1_000_000;
-      return { texto: r.texto, provedor: prov.nome, modelo: prov.modelo, tokensEntrada: r.tin, tokensSaida: r.tout, custo };
-    } catch (e) {
-      // Nunca registramos a chave; só o nome do provedor e o motivo curto.
-      falhas.push(`${prov.nome}: ${e instanceof Error ? e.message.slice(0, 120) : "erro"}`);
-    } finally {
-      clearTimeout(relogio);
+    // Até 2 tentativas por provedor, só quando o erro é passageiro (ex.: "alta demanda").
+    for (let tentativa = 1; tentativa <= 2; tentativa++) {
+      const restante = TEMPO_TOTAL_MS - (Date.now() - inicio);
+      if (restante < 6_000) break;
+      const controle = new AbortController();
+      const relogio = setTimeout(() => controle.abort(), Math.min(TEMPO_LIMITE_MS, restante - 2_000));
+      try {
+        const r = await prov.chamar(pedido, prov.chave, prov.modelo, controle.signal);
+        const custo = (r.tin * prov.preco[0] + r.tout * prov.preco[1]) / 1_000_000;
+        return { texto: r.texto, provedor: prov.nome, modelo: prov.modelo, tokensEntrada: r.tin, tokensSaida: r.tout, custo };
+      } catch (e) {
+        // Nunca registramos a chave; só o nome do provedor e o motivo curto.
+        falhas.push(`${prov.nome}: ${e instanceof Error ? e.message.slice(0, 120) : "erro"}`);
+        if (tentativa === 1 && erroPassageiro(e)) {
+          await dormir(PAUSA_REPETIR_MS);
+          continue;
+        }
+        break;
+      } finally {
+        clearTimeout(relogio);
+      }
     }
   }
   console.error("[ia] todos os provedores falharam", falhas);
