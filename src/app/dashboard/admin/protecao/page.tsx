@@ -6,7 +6,7 @@ import NavegacaoAdmin from "../navegacao-admin";
 import { BotaoReligar, ControlesProtecao } from "./controles-protecao";
 
 interface Painel {
-  config: { ia_habilitada: boolean; gasto_hora: number; chamadas_hora: number; usuario_minuto: number; usuario_hora: number; disparado_em: string | null; motivo: string | null };
+  config: { ia_habilitada: boolean; gasto_hora: number; chamadas_hora: number; usuario_minuto: number; usuario_hora: number; disparado_em: string | null; motivo: string | null; auto: boolean; pico_chamadas: number; pico_gasto: number; efetivo_chamadas: number; efetivo_gasto: number };
   hora: { chamadas: number; custo: number };
   cadastros: { ultima_hora: number; ultimas_24h: number; total: number };
   eventos_por_tipo: Record<string, number>;
@@ -83,8 +83,8 @@ export default async function ProtecaoPage() {
       )}
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <Barra rotulo="Chamadas na última hora (todos)" atual={r.hora.chamadas} teto={c.chamadas_hora} texto={`${r.hora.chamadas} de ${c.chamadas_hora}`} />
-        <Barra rotulo="Gasto na última hora" atual={r.hora.custo} teto={c.gasto_hora} texto={`${usd(r.hora.custo)} de ${usd(c.gasto_hora)}`} />
+        <Barra rotulo="Chamadas na última hora (todos)" atual={r.hora.chamadas} teto={c.efetivo_chamadas} texto={`${r.hora.chamadas} de ${c.efetivo_chamadas}`} />
+        <Barra rotulo="Gasto na última hora" atual={r.hora.custo} teto={c.efetivo_gasto} texto={`${usd(r.hora.custo)} de ${usd(c.efetivo_gasto)}`} />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -107,7 +107,7 @@ export default async function ProtecaoPage() {
       </div>
 
       <div className="mt-4">
-        <ControlesProtecao gastoHora={c.gasto_hora} chamadasHora={c.chamadas_hora} usuarioMinuto={c.usuario_minuto} usuarioHora={c.usuario_hora} />
+        <ControlesProtecao gastoHora={c.gasto_hora} chamadasHora={c.chamadas_hora} usuarioMinuto={c.usuario_minuto} usuarioHora={c.usuario_hora} auto={c.auto} picoChamadas={c.pico_chamadas} />
       </div>
 
       <h2 className="mt-8 text-lg font-bold text-slate-900">Quem mais usou na última hora</h2>

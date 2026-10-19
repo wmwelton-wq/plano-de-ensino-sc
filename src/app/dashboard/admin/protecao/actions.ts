@@ -31,3 +31,12 @@ export async function religarIA(): Promise<{ ok?: true; erro?: string }> {
   revalidatePath("/dashboard/admin/ia");
   return { ok: true };
 }
+
+/** Liga/desliga o ajuste automático do teto do disjuntor conforme o uso cresce. */
+export async function definirTetoAutomatico(auto: boolean): Promise<{ ok?: true; erro?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_protecao_auto", { p_auto: auto });
+  if (error) return { erro: "Não foi possível salvar agora." };
+  revalidatePath("/dashboard/admin/protecao");
+  return { ok: true };
+}
