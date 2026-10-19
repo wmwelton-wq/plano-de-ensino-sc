@@ -226,19 +226,22 @@ function lerRecomposicaoSimples(
   };
 }
 
-export async function criarPlano(
-  _estadoAnterior: EstadoFormulario,
-  formData: FormData
-): Promise<EstadoFormulario> {
-  const supabase = await createClient();
+/** Resultado de gravar o plano sem sair da tela (usado pelo salvamento a cada passo). */
+export interface ResultadoGravacao {
+  id?: string;
+  erro?: string;
+}
 
+/**
+ * Grava o plano (cria se não houver id, atualiza se houver) e devolve o id, SEM redirecionar. É o que faz o
+ * "Salvar e continuar" e o salvamento automático: o plano vai sendo guardado enquanto o professor preenche.
+ */
+async function gravarPlano(planoId: string | null, formData: FormData): Promise<ResultadoGravacao> {
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { erro: "Sessão expirada. Faça login novamente." };
-  }
+  if (!user) return { erro: "Sessão expirada. Faça login novamente." };
 
   const etapa = lerEtapa(formData);
   const { disciplina_id, curso_tecnico_id } = lerVinculo(formData);
@@ -254,59 +257,92 @@ export async function criarPlano(
   }
 
   const erroPeriodo = validarPeriodoAnosIniciais(formData, etapa);
-  if (erroPeriodo) {
-    return { erro: erroPeriodo };
-  }
+  if (erroPeriodo) return { erro: erroPeriodo };
+
+  const titulo = ((formData.get("titulo") as string) || "").trim();
+  if (!titulo) return { erro: "Dê um título ao plano (primeiro passo)." };
 
   const quantidadeAulasRaw = formData.get("quantidade_aulas") as string;
-
-  const { data, error } = await supabase
-    .from("planos_de_ensino")
-    .insert({
-      professor_id: user.id,
-      disciplina_id,
-      curso_tecnico_id,
-      etapa,
-      escola_id: (formData.get("escola_id") as string) || null,
-      ...lerFonteCurriculo(formData),
-      grupo_etario: (formData.get("grupo_etario") as string) || null,
-      segundo_professor_nome: (formData.get("segundo_professor_nome") as string) || null,
-      incluir_logo_estado: formData.get("incluir_logo_estado") === "on",
-      incluir_logo_escola: formData.get("incluir_logo_escola") === "on",
-      usar_curriculo_digital: formData.get("usar_curriculo_digital") === "on",
-      ...lerHabilidadesManuais(formData),
-      titulo: formData.get("titulo") as string,
-      ano_letivo: Number(formData.get("ano_letivo")),
-      turma: (formData.get("turma") as string) || null,
-      data_inicio: (formData.get("data_inicio") as string) || null,
-      data_fim: (formData.get("data_fim") as string) || null,
-      quantidade_aulas: quantidadeAulasRaw ? Number(quantidadeAulasRaw) : null,
-      ...lerObjetivos(formData),
-      conteudos_programaticos: prepararCampoParaSalvar(formData.get("conteudos_programaticos")),
-      metodologia: prepararCampoParaSalvar(formData.get("metodologia")),
-      avaliacao: prepararCampoParaSalvar(formData.get("avaliacao")),
-      instrumentos_avaliacao: prepararCampoParaSalvar(formData.get("instrumentos_avaliacao")),
-      cronograma: (formData.get("cronograma") as string) || null,
-      referencias: (formData.get("referencias") as string) || null,
-      status: (formData.get("status") as string) || "rascunho",
-      ...(await lerSecoesComponentes(supabase, formData, disciplinaIds)),
-      ...lerRecomposicaoSimples(formData, disciplina_id),
-    })
-    .select("id")
-    .single();
-
-  if (error) {
-    return { erro: "Não foi possível salvar o plano. Tente novamente." };
+  const escolaId = (formData.get("escola_id") as string) || null;
+  if (escolaId) {
+    const { data: escola } = await supabase.from("escolas").select("id").eq("id", escolaId).maybeSingle();
+    if (!escola) return { erro: "Escolha uma escola da sua lista." };
   }
 
-  await sincronizarHabilidades(supabase, data.id, lerHabilidadeIds(formData));
-  await sincronizarCompetencias(supabase, data.id, lerCompetenciaIds(formData));
+  const dados = {
+    disciplina_id,
+    curso_tecnico_id,
+    etapa,
+    escola_id: escolaId,
+    ...lerFonteCurriculo(formData),
+    grupo_etario: (formData.get("grupo_etario") as string) || null,
+    segundo_professor_nome: (formData.get("segundo_professor_nome") as string) || null,
+    incluir_logo_estado: formData.get("incluir_logo_estado") === "on",
+    incluir_logo_escola: formData.get("incluir_logo_escola") === "on",
+    usar_curriculo_digital: formData.get("usar_curriculo_digital") === "on",
+    ...lerHabilidadesManuais(formData),
+    titulo,
+    ano_letivo: Number(formData.get("ano_letivo")) || new Date().getFullYear(),
+    turma: (formData.get("turma") as string) || null,
+    data_inicio: (formData.get("data_inicio") as string) || null,
+    data_fim: (formData.get("data_fim") as string) || null,
+    quantidade_aulas: quantidadeAulasRaw ? Number(quantidadeAulasRaw) : null,
+    ...lerObjetivos(formData),
+    conteudos_programaticos: prepararCampoParaSalvar(formData.get("conteudos_programaticos")),
+    metodologia: prepararCampoParaSalvar(formData.get("metodologia")),
+    avaliacao: prepararCampoParaSalvar(formData.get("avaliacao")),
+    instrumentos_avaliacao: prepararCampoParaSalvar(formData.get("instrumentos_avaliacao")),
+    cronograma: (formData.get("cronograma") as string) || null,
+    referencias: (formData.get("referencias") as string) || null,
+    status: (formData.get("status") as string) || "rascunho",
+    ...(await lerSecoesComponentes(supabase, formData, disciplinaIds)),
+    ...lerRecomposicaoSimples(formData, disciplina_id),
+  };
+
+  let id = planoId;
+  if (id) {
+    // RLS em planos_de_ensino garante que este UPDATE só afeta uma linha se ela pertencer ao professor
+    // autenticado (professor_id = auth.uid()) — um professor nunca consegue alterar o plano de outro.
+    const { error } = await supabase.from("planos_de_ensino").update(dados).eq("id", id);
+    if (error) return { erro: "Não foi possível salvar as alterações. Tente novamente." };
+  } else {
+    const { data, error } = await supabase
+      .from("planos_de_ensino")
+      .insert({ ...dados, professor_id: user.id })
+      .select("id")
+      .single();
+    if (error || !data) return { erro: "Não foi possível salvar o plano. Tente novamente." };
+    id = data.id as string;
+  }
+
+  await sincronizarHabilidades(supabase, id, lerHabilidadeIds(formData));
+  await sincronizarCompetencias(supabase, id, lerCompetenciaIds(formData));
   if (etapa === "fundamental_anos_iniciais") {
-    await sincronizarDisciplinas(supabase, data.id, disciplinaIds);
+    await sincronizarDisciplinas(supabase, id, disciplinaIds);
   }
+  return { id };
+}
 
+/** Salva o plano sem sair da tela (botão "Salvar e continuar" e salvamento automático). */
+export async function salvarRascunhoPlano(planoId: string | null, formData: FormData): Promise<ResultadoGravacao> {
+  const r = await gravarPlano(planoId && /^[0-9a-f-]{36}$/i.test(planoId) ? planoId : null, formData);
+  if (r.id) revalidatePath("/dashboard");
+  return r;
+}
+
+/** Depois de salvar de vez, o professor cai na tela de conclusão (baixar, imprimir, encaminhar, novo plano...). */
+function destinoDeConclusao(id: string): string {
+  return `/dashboard/planos/${id}/visualizar?concluido=1`;
+}
+
+export async function criarPlano(
+  _estadoAnterior: EstadoFormulario,
+  formData: FormData
+): Promise<EstadoFormulario> {
+  const r = await gravarPlano(null, formData);
+  if (!r.id) return { erro: r.erro };
   revalidatePath("/dashboard");
-  redirect(`/dashboard/planos/${data.id}`);
+  redirect(destinoDeConclusao(r.id));
 }
 
 export async function atualizarPlano(
@@ -314,77 +350,23 @@ export async function atualizarPlano(
   _estadoAnterior: EstadoFormulario,
   formData: FormData
 ): Promise<EstadoFormulario> {
-  const supabase = await createClient();
-
-  const etapa = lerEtapa(formData);
-  const { disciplina_id, curso_tecnico_id } = lerVinculo(formData);
-  const disciplinaIds = lerDisciplinaIds(formData);
-
-  if (!disciplina_id && !curso_tecnico_id) {
-    return {
-      erro:
-        etapa === "fundamental_anos_iniciais"
-          ? "Selecione ao menos um componente curricular."
-          : "Selecione uma disciplina ou um curso técnico.",
-    };
-  }
-
-  const erroPeriodo = validarPeriodoAnosIniciais(formData, etapa);
-  if (erroPeriodo) {
-    return { erro: erroPeriodo };
-  }
-
-  const quantidadeAulasRaw = formData.get("quantidade_aulas") as string;
-
-  // RLS em planos_de_ensino garante que este UPDATE só afeta uma linha se
-  // ela pertencer ao professor autenticado (professor_id = auth.uid()) —
-  // um professor nunca consegue alterar o plano de outro.
-  const { error } = await supabase
-    .from("planos_de_ensino")
-    .update({
-      disciplina_id,
-      curso_tecnico_id,
-      etapa,
-      escola_id: (formData.get("escola_id") as string) || null,
-      ...lerFonteCurriculo(formData),
-      grupo_etario: (formData.get("grupo_etario") as string) || null,
-      segundo_professor_nome: (formData.get("segundo_professor_nome") as string) || null,
-      incluir_logo_estado: formData.get("incluir_logo_estado") === "on",
-      incluir_logo_escola: formData.get("incluir_logo_escola") === "on",
-      usar_curriculo_digital: formData.get("usar_curriculo_digital") === "on",
-      ...lerHabilidadesManuais(formData),
-      titulo: formData.get("titulo") as string,
-      ano_letivo: Number(formData.get("ano_letivo")),
-      turma: (formData.get("turma") as string) || null,
-      data_inicio: (formData.get("data_inicio") as string) || null,
-      data_fim: (formData.get("data_fim") as string) || null,
-      quantidade_aulas: quantidadeAulasRaw ? Number(quantidadeAulasRaw) : null,
-      ...lerObjetivos(formData),
-      conteudos_programaticos: prepararCampoParaSalvar(formData.get("conteudos_programaticos")),
-      metodologia: prepararCampoParaSalvar(formData.get("metodologia")),
-      avaliacao: prepararCampoParaSalvar(formData.get("avaliacao")),
-      instrumentos_avaliacao: prepararCampoParaSalvar(formData.get("instrumentos_avaliacao")),
-      cronograma: (formData.get("cronograma") as string) || null,
-      referencias: (formData.get("referencias") as string) || null,
-      status: (formData.get("status") as string) || "rascunho",
-      ...(await lerSecoesComponentes(supabase, formData, disciplinaIds)),
-      ...lerRecomposicaoSimples(formData, disciplina_id),
-    })
-    .eq("id", planoId);
-
-  if (error) {
-    return { erro: "Não foi possível salvar as alterações. Tente novamente." };
-  }
-
-  await sincronizarHabilidades(supabase, planoId, lerHabilidadeIds(formData));
-  await sincronizarCompetencias(supabase, planoId, lerCompetenciaIds(formData));
-  if (etapa === "fundamental_anos_iniciais") {
-    await sincronizarDisciplinas(supabase, planoId, disciplinaIds);
-  }
-
+  const r = await gravarPlano(planoId, formData);
+  if (!r.id) return { erro: r.erro };
   revalidatePath("/dashboard");
   revalidatePath(`/dashboard/planos/${planoId}`);
-  redirect(`/dashboard/planos/${planoId}`);
+  redirect(destinoDeConclusao(planoId));
+}
+
+/** Marca o plano como finalizado (ou volta para rascunho) — usado na tela de conclusão. */
+export async function definirStatusPlano(planoId: string, status: "rascunho" | "finalizado"): Promise<{ erro?: string }> {
+  if (status !== "rascunho" && status !== "finalizado") return { erro: "Situação inválida." };
+  const supabase = await createClient();
+  const { error } = await supabase.from("planos_de_ensino").update({ status, updated_at: new Date().toISOString() }).eq("id", planoId);
+  if (error) return { erro: "Não foi possível mudar a situação agora." };
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/meus-planos");
+  revalidatePath(`/dashboard/planos/${planoId}`);
+  return {};
 }
 
 export async function excluirPlano(planoId: string) {

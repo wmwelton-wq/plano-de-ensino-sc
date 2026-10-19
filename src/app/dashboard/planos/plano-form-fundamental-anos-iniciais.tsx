@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import OpcoesLogo from "./opcoes-logo";
 import type { CompetenciaCurricular, Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/lib/database.types";
@@ -8,7 +8,9 @@ import type { EstadoFormulario } from "./actions";
 import SecaoPlano, { type TomSecao } from "./secao-plano";
 import CurriculoDigitalCampo from "./curriculo-digital-campo";
 import MetodologiaIA from "./metodologia-ia";
-import { FluxoRodape, FluxoTopo, aoCampoInvalido, semEnterQueEnvia, useFluxoMensal, type PassoMensal } from "./fluxo-mensal";
+import { FluxoRodape, FluxoTopo, aoCampoInvalido, semEnterQueEnvia, useFluxoMensal, useGravacaoPlano, type PassoMensal } from "./fluxo-mensal";
+import CamposPeriodo from "./campos-periodo";
+import FaltouAlgoBotao from "../faltou-algo/faltou-algo-botao";
 import RecomposicaoCampo from "./recomposicao-campo";
 import { componenteDeRecomposicao } from "@/lib/recomposicao";
 import ReferenciasCampo from "./referencias-campo";
@@ -78,9 +80,9 @@ export default function PlanoFormFundamentalAnosIniciais({
   competenciasSelecionadasIds = [],
   plano,
   action,
-  textoBotao,
 }: PlanoFormFundamentalAnosIniciaisProps) {
-  const [estado, formAction, pendente] = useActionState(action, {});
+  const grav = useGravacaoPlano(action, plano?.id);
+  const [erroPasso, setErroPasso] = useState<string | undefined>();
 
   const [componentesSelecionados, setComponentesSelecionados] = useState<Set<string>>(
     new Set(disciplinasSelecionadasIds.length > 0 ? disciplinasSelecionadasIds : plano?.disciplina_id ? [plano.disciplina_id] : [])
@@ -160,6 +162,11 @@ export default function PlanoFormFundamentalAnosIniciais({
     return lista;
   }, [componentesOrdenados]);
   const fluxo = useFluxoMensal(passos);
+  async function salvarEContinuar() {
+    const r = await grav.salvarPasso();
+    setErroPasso(r.erro);
+    if (r.ok) fluxo.avancar();
+  }
   const { atual } = fluxo;
   const numeroDe = (chave: string) => passos.findIndex((p) => p.chave === chave) + 1;
   /** Um passo de componente só aparece se o componente continua marcado e se é a vez dele. */
@@ -206,7 +213,7 @@ export default function PlanoFormFundamentalAnosIniciais({
 
   return (
     <form
-      action={formAction}
+      {...grav.formProps}
       className="space-y-6"
       onKeyDown={semEnterQueEnvia}
       onInvalidCapture={aoCampoInvalido(() => fluxo.ir("ident"))}
@@ -216,7 +223,7 @@ export default function PlanoFormFundamentalAnosIniciais({
       <input type="hidden" name="vinculo_id" value={componentePrincipalId} />
       <input type="hidden" name="tem_secoes" value="1" />
 
-      <FluxoTopo passos={passos} atual={atual} vistos={fluxo.vistos} aoIr={fluxo.ir} topo={fluxo.topo} />
+      <FluxoTopo passos={passos} atual={atual} vistos={fluxo.vistos} aoIr={(chave) => { void grav.autosalvarSeSujo(); fluxo.ir(chave); }} topo={fluxo.topo} />
 
       {/* ───────── Identificação ───────── */}
       <SecaoPlano
@@ -295,32 +302,7 @@ export default function PlanoFormFundamentalAnosIniciais({
             />
           </div>
 
-          <div>
-            <label htmlFor="data_inicio" className="field-label">
-              Período do plano — início
-            </label>
-            <input
-              id="data_inicio"
-              name="data_inicio"
-              type="date"
-              defaultValue={plano?.data_inicio ?? ""}
-              className="input-field"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="data_fim" className="field-label">
-              Período do plano — fim
-            </label>
-            <input
-              id="data_fim"
-              name="data_fim"
-              type="date"
-              defaultValue={plano?.data_fim ?? ""}
-              className="input-field"
-            />
-            <p className="field-hint">Máximo de 30 dias, conforme o modelo oficial.</p>
-          </div>
+          <CamposPeriodo inicioInicial={plano?.data_inicio} fimInicial={plano?.data_fim} rotuloInicio="Período do plano — início" rotuloFim="Período do plano — fim" dicaFim="Máximo de 30 dias corridos, conforme o modelo oficial." />
 
           <div>
             <label htmlFor="ano_letivo" className="field-label">
@@ -592,6 +574,10 @@ export default function PlanoFormFundamentalAnosIniciais({
           <ReferenciasCampo valorInicial={plano?.referencias} rows={4} sugeridas={referenciasOficiais("fundamental_anos_iniciais", usarCurriculoDigital)} />
         </div>
 
+        <p>
+          <FaltouAlgoBotao tipo="outro" contexto={{ etapa: "Ensino Fundamental — Anos Iniciais" }} rotulo="Faltou alguma coisa no seu plano? Avise a gente" />
+        </p>
+
         <div>
           <label htmlFor="status" className="field-label">
             Status
@@ -613,10 +599,12 @@ export default function PlanoFormFundamentalAnosIniciais({
         indice={fluxo.indice}
         ultimo={fluxo.ultimo}
         voltar={fluxo.voltar}
-        avancar={fluxo.avancar}
-        pendente={pendente}
-        textoBotao={textoBotao}
-        erro={estado.erro}
+        salvarEContinuar={salvarEContinuar}
+        pendente={grav.pendente}
+        salvando={grav.salvando}
+        salvoEm={grav.salvoEm}
+        avisoAuto={grav.avisoAuto}
+        erro={grav.estado.erro ?? erroPasso}
       />
     </form>
   );

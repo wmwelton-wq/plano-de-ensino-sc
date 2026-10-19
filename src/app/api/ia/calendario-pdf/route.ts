@@ -12,7 +12,7 @@ function erro(mensagem: string, status = 400) {
 
 /**
  * Lê um calendário escolar em PDF e devolve as datas encontradas (nada é salvo aqui: o professor confere antes).
- * Regras: no máximo 4 páginas e um envio a cada 3 meses por professor (conferido no banco).
+ * Regras: no máximo 4 páginas; até 6 envios no primeiro mês de uso e depois 1 por mês, por professor (conferido no banco, em ia_reservar).
  */
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: true, eventos }, { headers: { "Cache-Control": "no-store" } });
   } catch {
-    // Falha dos provedores: devolvemos o crédito e o direito ao envio (não conta como o envio do trimestre).
+    // Falha dos provedores: o envio fica marcado como falha e não conta na cota de calendários.
     await supabase.rpc("ia_finalizar", { p_id: r.id, p_modelo: "-", p_tokens_entrada: 0, p_tokens_saida: 0, p_custo: 0, p_status: "erro" });
     return erro("A IA está indisponível agora. Seu direito de envio foi mantido; tente novamente mais tarde.", 503);
   }

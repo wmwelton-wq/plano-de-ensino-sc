@@ -13,11 +13,13 @@ interface Props {
   planoId: string;
   titulo: string;
   paisagem: boolean;
+  /** Já abre o painel de envio, sem o botão "Compartilhar" (usado na tela de conclusão do plano). */
+  semBotao?: boolean;
 }
 
 /** Botão "Compartilhar link": gera o PDF e cria um endereço de leitura para mandar à coordenação ou a um colega. */
-export default function CompartilharLink({ tipo, planoId, titulo, paisagem }: Props) {
-  const [aberto, setAberto] = useState(false);
+export default function CompartilharLink({ tipo, planoId, titulo, paisagem, semBotao = false }: Props) {
+  const [aberto, setAberto] = useState(semBotao);
   const [link, setLink] = useState<LinkCompartilhado | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [mensagem, setMensagem] = useState<string | null>(null);
@@ -117,14 +119,16 @@ export default function CompartilharLink({ tipo, planoId, titulo, paisagem }: Pr
 
   return (
     <div className="w-full print:hidden">
-      <div className="flex justify-end">
-        <button type="button" onClick={() => setAberto((v) => !v)} aria-expanded={aberto} className="btn-azul-suave">
-          <Icone nome="envelope" className="h-4 w-4" />
-          Compartilhar
-        </button>
-      </div>
+      {!semBotao && (
+        <div className="flex justify-end">
+          <button type="button" onClick={() => setAberto((v) => !v)} aria-expanded={aberto} className="btn-azul-suave">
+            <Icone nome="envelope" className="h-4 w-4" />
+            Compartilhar
+          </button>
+        </div>
+      )}
       {aberto && (
-        <div className="mt-3 overflow-hidden rounded-3xl border border-slate-200 bg-white text-left shadow-lg shadow-slate-900/5">
+        <div className={`${semBotao ? "" : "mt-3 "}overflow-hidden rounded-3xl border border-slate-200 bg-white text-left shadow-lg shadow-slate-900/5`}>
           <div className="border-b border-slate-100 bg-gradient-to-r from-primary-50 via-violet-50 to-emerald-50 px-5 py-4">
             <h2 className="text-base font-extrabold text-slate-900">Compartilhar este plano</h2>
             <p className="text-xs text-slate-600">Quem recebe só lê e baixa o PDF: ninguém edita o seu plano. O link vale por 60 dias e você encerra quando quiser.</p>

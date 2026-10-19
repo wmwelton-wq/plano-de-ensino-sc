@@ -34,7 +34,8 @@ function dm(iso: string): string {
  * acrescentar ao caminho metodológico. Só aparece se ele ligou o calendário e preencheu as datas do plano.
  */
 export default function CalendarioNoPlano({ raiz, editorRef }: Props) {
-  const [periodo, setPeriodo] = useState<{ inicio: string; fim: string } | null>(null);
+  const [periodo, setPeriodo] = useState<{ inicio: string; fim: string; escolaId: string } | null>(null);
+  const [pedirEscola, setPedirEscola] = useState(false);
   const [eventos, setEventos] = useState<EventoSimples[] | null>(null);
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [aviso, setAviso] = useState<string | null>(null);
@@ -48,11 +49,12 @@ export default function CalendarioNoPlano({ raiz, editorRef }: Props) {
     const ler = () => {
       const i = (form.elements.namedItem("data_inicio") as HTMLInputElement | null)?.value ?? "";
       const f = (form.elements.namedItem("data_fim") as HTMLInputElement | null)?.value ?? "";
-      setPeriodo(i && f && f >= i ? { inicio: i, fim: f } : null);
+      const e = (form.elements.namedItem("escola_id") as HTMLSelectElement | null)?.value ?? "";
+      setPeriodo(i && f && f >= i ? { inicio: i, fim: f, escolaId: e } : null);
     };
     const aoMudar = (e: Event) => {
       const nome = (e.target as HTMLInputElement | null)?.name;
-      if (nome !== "data_inicio" && nome !== "data_fim") return;
+      if (nome !== "data_inicio" && nome !== "data_fim" && nome !== "escola_id") return;
       if (tempo.current) clearTimeout(tempo.current);
       tempo.current = setTimeout(ler, 300);
     };
@@ -73,9 +75,10 @@ export default function CalendarioNoPlano({ raiz, editorRef }: Props) {
       setEventos(null);
       return;
     }
-    eventosDoPeriodo(periodo.inicio, periodo.fim)
+    eventosDoPeriodo(periodo.inicio, periodo.fim, periodo.escolaId || null)
       .then((r) => {
         if (cancelado) return;
+        setPedirEscola(r.ativo && r.escolaNecessaria);
         setEventos(r.ativo ? r.eventos : null);
         setMarcados(new Set());
       })
@@ -143,8 +146,13 @@ export default function CalendarioNoPlano({ raiz, editorRef }: Props) {
     <div className="space-y-3 rounded-xl border border-blue-200 bg-blue-50/60 p-4" aria-label="Calendário do período do plano">
       <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-blue-900">
         <Icone nome="calendarioMes" className="h-4 w-4" />
-        Seu calendário neste período ({rotuloPeriodo(periodo.inicio, periodo.fim)})
+        Calendário da escola neste período ({rotuloPeriodo(periodo.inicio, periodo.fim)})
       </p>
+      {pedirEscola && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Escolha a <strong>escola</strong> deste plano (no primeiro passo) para trazer o calendário dela. Por enquanto, só aparecem as datas gerais.
+        </p>
+      )}
       <p className="text-sm text-slate-700">
         <strong>{resumo.diasLetivos}</strong> dias letivos · <strong>{aulas}</strong> {aulas === 1 ? "aula" : "aulas"} com os seus dias de aula.{" "}
         <Link href="/dashboard/calendario" className="font-semibold text-primary-700 underline" target="_blank">

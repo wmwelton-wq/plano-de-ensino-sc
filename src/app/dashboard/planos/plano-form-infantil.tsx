@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import type { Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
@@ -9,6 +9,9 @@ import SecaoPlano from "./secao-plano";
 import PassosPlano from "./passos-plano";
 import MetodologiaIA from "./metodologia-ia";
 import BarraSalvar from "./barra-salvar";
+import CamposPeriodo from "./campos-periodo";
+import FaltouAlgoBotao from "../faltou-algo/faltou-algo-botao";
+import { useGravacaoPlano } from "./fluxo-mensal";
 import OpcoesLogo from "./opcoes-logo";
 import ReferenciasCampo from "./referencias-campo";
 import { referenciasOficiais } from "@/lib/referencias-oficiais";
@@ -45,9 +48,8 @@ export default function PlanoFormInfantil({
   objetivosSelecionadosIds = [],
   plano,
   action,
-  textoBotao,
 }: PlanoFormInfantilProps) {
-  const [estado, formAction, pendente] = useActionState(action, {});
+  const grav = useGravacaoPlano(action, plano?.id);
   const [campoPrincipal, setCampoPrincipal] = useState(plano?.disciplina_id ?? "");
   const refMetodologia = useRef<EditorTextoRicoHandle>(null);
   const refAvaliacao = useRef<EditorTextoRicoHandle>(null);
@@ -55,7 +57,7 @@ export default function PlanoFormInfantil({
   const [grupoEtario, setGrupoEtario] = useState(plano?.grupo_etario ?? "");
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form {...grav.formProps} className="space-y-6">
       <input type="hidden" name="etapa" value="educacao_infantil" />
       <input type="hidden" name="vinculo_tipo" value="disciplina" />
 
@@ -156,31 +158,7 @@ export default function PlanoFormInfantil({
 
           <div className="hidden sm:block" aria-hidden="true" />
 
-          <div>
-            <label htmlFor="data_inicio" className="field-label">
-              Data de início
-            </label>
-            <input
-              id="data_inicio"
-              name="data_inicio"
-              type="date"
-              defaultValue={plano?.data_inicio ?? ""}
-              className="input-field"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="data_fim" className="field-label">
-              Data de fim
-            </label>
-            <input
-              id="data_fim"
-              name="data_fim"
-              type="date"
-              defaultValue={plano?.data_fim ?? ""}
-              className="input-field"
-            />
-          </div>
+          <CamposPeriodo inicioInicial={plano?.data_inicio} fimInicial={plano?.data_fim} />
 
           <div className="sm:col-span-2">
             <label htmlFor="escola_id" className="field-label">
@@ -336,6 +314,10 @@ export default function PlanoFormInfantil({
           <ReferenciasCampo valorInicial={plano?.referencias} rows={4} sugeridas={referenciasOficiais("educacao_infantil", false)} />
         </div>
 
+        <p>
+          <FaltouAlgoBotao tipo="outro" contexto={{ etapa: "Educação Infantil" }} rotulo="Faltou alguma coisa no seu plano? Avise a gente" />
+        </p>
+
         <div>
           <label htmlFor="status" className="field-label">
             Status
@@ -352,7 +334,7 @@ export default function PlanoFormInfantil({
         </div>
       </SecaoPlano>
 
-      <BarraSalvar pendente={pendente} textoBotao={textoBotao} erro={estado.erro} />
+      <BarraSalvar pendente={grav.pendente} salvando={grav.salvando} salvoEm={grav.salvoEm} avisoAuto={grav.avisoAuto} textoBotao="Concluir plano" erro={grav.estado.erro} />
     </form>
   );
 }

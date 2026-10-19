@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import logoGoverno from "@/assets/logo-governo-sc.png";
 import BarraAcoesPlano from "./barra-acoes-plano";
 import AutoAcao from "./auto-acao";
+import ConclusaoPlano from "./conclusao-plano";
+import { excluirPlano } from "../../actions";
 import PlanoAnosIniciais from "./plano-anos-iniciais";
 import { lerSecoes } from "@/lib/secoes-componentes";
 import ImpressaoPaginada from "./impressao-paginada";
@@ -12,6 +14,14 @@ import { ESTILO_TEXTO_PLANO } from "@/lib/estilo-plano";
 import { ehHtml, sanitizarHtml } from "@/lib/texto-rico";
 import type { HabilidadeManual } from "@/lib/database.types";
 import { lerReferenciasGravadas, referenciasOficiais } from "@/lib/referencias-oficiais";
+
+/** Rota do formulário de novo plano de cada etapa. */
+const ROTA_NOVO_PLANO: Record<string, string> = {
+  educacao_infantil: "infantil",
+  fundamental_anos_iniciais: "fundamental-anos-iniciais",
+  fundamental_anos_finais: "fundamental-anos-finais",
+  ensino_medio: "medio-tecnico",
+};
 
 function linhas(texto: string | null): string[] {
   if (!texto) return [];
@@ -39,10 +49,10 @@ export default async function VisualizarPlanoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ auto?: string }>;
+  searchParams: Promise<{ auto?: string; concluido?: string }>;
 }) {
   const { id } = await params;
-  const { auto } = await searchParams;
+  const { auto, concluido } = await searchParams;
   const supabase = await createClient();
 
   const { data: plano } = await supabase.from("planos_de_ensino").select("*").eq("id", id).single();
@@ -165,6 +175,16 @@ export default async function VisualizarPlanoPage({
       {/* Precisa vir antes do AutoAcao: registra o preparo da impressão antes de o auto-imprimir disparar. */}
       <ImpressaoPaginada paisagem={paisagem} />
       <AutoAcao acao={auto} titulo={plano.titulo} paisagem={paisagem} />
+      {concluido === "1" && (
+        <ConclusaoPlano
+          planoId={plano.id}
+          titulo={plano.titulo}
+          paisagem={paisagem}
+          statusInicial={plano.status}
+          novoPlanoHref={`/dashboard/planos/novo/${ROTA_NOVO_PLANO[plano.etapa as string] ?? ""}`.replace(/\/$/, "")}
+          excluirAction={excluirPlano.bind(null, plano.id)}
+        />
+      )}
 
       {/*
         A moldura (borda/sombra) abaixo é só o "cartão" da pré-visualização em tela.
