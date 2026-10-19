@@ -7,7 +7,6 @@ import AvisoSpam from "@/components/aviso-spam";
 import { Ilustracao } from "@/components/ilustracoes";
 import { createClient } from "@/lib/supabase/client";
 import Turnstile from "@/components/turnstile";
-import { verificarTurnstile } from "@/lib/turnstile-client";
 
 export default function RecuperarSenhaPage() {
   const supabase = createClient();
@@ -30,21 +29,22 @@ export default function RecuperarSenhaPage() {
 
     setCarregando(true);
 
-    const humano = await verificarTurnstile(turnstileToken);
+    // O token do Turnstile é de uso único e é conferido pelo próprio Supabase
+    // (proteção CAPTCHA do Auth), então vai direto na chamada abaixo.
+    const captchaToken = turnstileToken;
     setTurnstileToken(null);
     setTurnstileKey((k) => k + 1);
 
-    if (!humano) {
-      setErro("Não foi possível confirmar que você não é um robô. Tente novamente.");
-      setCarregando(false);
-      return;
-    }
-
-    await supabase.auth.resetPasswordForEmail(email, {
+    const { error: erroEnvio } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/confirm?type=recovery&next=/redefinir-senha`,
+      captchaToken,
     });
 
     setCarregando(false);
+    if (erroEnvio && erroEnvio.message.toLowerCase().includes("captcha")) {
+      setErro("Não foi possível confirmar que você não é um robô. Tente novamente.");
+      return;
+    }
     // Por segurança, mostramos sempre a mesma mensagem de sucesso, mesmo que
     // o email não esteja cadastrado — assim ninguém descobre quais emails
     // têm conta no sistema só tentando recuperar a senha (evita que um

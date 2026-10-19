@@ -3,6 +3,7 @@ export function traduzirErroAuth(mensagem: string): string {
   const m = mensagem.toLowerCase();
   if (m.includes("already registered") || m.includes("already been registered") || m.includes("user_already_exists"))
     return "Este e-mail já tem cadastro. Tente entrar ou use “Esqueci minha senha”.";
+  if (m.includes("captcha")) return "Não foi possível confirmar que você não é um robô. Tente novamente.";
   if (m.includes("rate limit") || m.includes("too many") || m.includes("security purposes"))
     return "Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo.";
   if (m.includes("weak") || m.includes("pwned") || m.includes("leaked") || m.includes("easy to guess"))

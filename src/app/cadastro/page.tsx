@@ -10,7 +10,6 @@ import RegrasSenha from "@/components/regras-senha";
 import { traduzirErroAuth } from "@/lib/erros-auth";
 import { createClient } from "@/lib/supabase/client";
 import Turnstile from "@/components/turnstile";
-import { verificarTurnstile } from "@/lib/turnstile-client";
 import BotaoGoogle from "@/components/botao-google";
 import { TEXTO_ACEITE, VERSAO_DOCUMENTOS_LEGAIS } from "@/lib/legal";
 
@@ -48,20 +47,17 @@ export default function CadastroPage() {
 
     setCarregando(true);
 
-    const humano = await verificarTurnstile(turnstileToken);
+    // O token do Turnstile é de uso único e é conferido pelo próprio Supabase
+    // (proteção CAPTCHA do Auth), então vai direto na chamada abaixo.
+    const captchaToken = turnstileToken;
     setTurnstileToken(null);
     setTurnstileKey((k) => k + 1);
-
-    if (!humano) {
-      setErro("Não foi possível confirmar que você não é um robô. Tente novamente.");
-      setCarregando(false);
-      return;
-    }
 
     const { error } = await supabase.auth.signUp({
       email,
       password: senha,
       options: {
+        captchaToken,
         // Registro do aceite (versão dos documentos e momento do aceite).
         data: {
           nome,
