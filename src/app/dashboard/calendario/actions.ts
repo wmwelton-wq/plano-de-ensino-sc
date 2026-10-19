@@ -126,6 +126,33 @@ export async function excluirEvento(id: string): Promise<void> {
   revalidatePath("/dashboard");
 }
 
+/**
+ * Apaga datas do calendário em bloco (útil na virada do ano letivo).
+ *  - "escola": todas as datas da escola informada (as datas gerais ficam);
+ *  - "gerais": só as datas gerais (sem escola);
+ *  - "todos":  tudo, de todas as escolas e as gerais.
+ * Só mexe nas datas do próprio professor (a regra de acesso do banco também confere isso).
+ */
+export async function excluirCalendario(escopo: "escola" | "gerais" | "todos", escolaId?: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  let consulta = supabase.from("calendario_eventos").delete().eq("professor_id", user.id);
+  if (escopo === "escola") {
+    if (!escolaId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(escolaId)) return;
+    consulta = consulta.eq("escola_id", escolaId);
+  } else if (escopo === "gerais") {
+    consulta = consulta.is("escola_id", null);
+  } else if (escopo !== "todos") {
+    return;
+  }
+  await consulta;
+  revalidatePath("/dashboard/calendario");
+  revalidatePath("/dashboard");
+}
+
 /** O professor escolhe se quer usar o calendário (agenda no painel e ajuda dentro dos planos). */
 export async function definirCalendario(ativo: boolean): Promise<void> {
   const supabase = await createClient();
