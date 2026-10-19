@@ -1,270 +1,375 @@
 import Link from "next/link";
-import { Icone, type NomeIcone } from "@/components/icones";
+import type { Metadata } from "next";
+import Logo from "@/components/logo";
+import { Icone } from "@/components/icones";
+import Topo from "@/components/landing/topo";
+import Revelar from "@/components/landing/revelar";
+import SimulacaoPlano from "@/components/landing/simulacao-plano";
+import PassosInterativos from "@/components/landing/passos-interativos";
+import DemoIA from "@/components/landing/demo-ia";
+import RecursosFiltro from "@/components/landing/recursos-filtro";
+import ExemploDocumento from "@/components/landing/exemplo-documento";
+import VideoDemo from "@/components/landing/video-demo";
+import Precos from "@/components/landing/precos";
+import "@/components/landing/landing.css";
 
-const recursos = [
+export const metadata: Metadata = {
+  title: "Plano Docente — planos de ensino para professores de Santa Catarina",
+  description:
+    "Monte planos de ensino anuais e mensais com BNCC e Currículo Catarinense, rascunho do caminho metodológico com IA, calendário escolar e PDF ou Word prontos. Feito para professores da rede estadual de SC.",
+};
+
+const CURRICULOS = ["BNCC", "Currículo Base do Território Catarinense", "Currículo de Educação Digital de SC", "Cursos técnicos"];
+
+const DORES = [
+  "Abrir a BNCC, o currículo catarinense e o de educação digital — em três abas",
+  "Copiar código por código das habilidades, sem errar um número",
+  "Formatar tudo no Word até o quadro ficar do jeito certo",
+  "Refazer o mesmo plano para cada turma e cada mês",
+];
+
+const BENEFICIOS = [
+  "Habilidades e competências já cadastradas: é só marcar",
+  "Formulário certo para cada etapa, sem formatar nada",
+  "Planos mensais gerados a partir do anual",
+  "Rascunho do caminho metodológico em segundos",
+  "PDF e Word prontos, com a logo da sua escola",
+];
+
+const PERGUNTAS = [
   {
-    icone: "livro" as NomeIcone,
-    tom: "azul",
-    titulo: "Alinhado à BNCC e ao Currículo Catarinense",
-    descricao:
-      "Escolha habilidades e competências já cadastradas por disciplina, etapa e curso técnico — sem digitar código por código.",
+    p: "A IA escreve o plano inteiro por mim?",
+    r: "Não — e isso é de propósito. A IA ajuda apenas no caminho metodológico, e o texto sempre chega como rascunho no seu editor. Você lê, ajusta, apaga e salva do seu jeito. As decisões pedagógicas continuam sendo suas.",
   },
   {
-    icone: "graduacao" as NomeIcone,
-    tom: "violeta",
-    titulo: "Um formulário certo para cada etapa",
-    descricao:
-      "Educação Infantil, Fundamental (Anos Iniciais e Finais) e Médio/Técnico têm os quadros exigidos para cada realidade.",
+    p: "O documento segue o formato que a rede estadual pede?",
+    r: "Sim. Cada etapa de ensino tem os quadros e campos que o plano exige, e o PDF e o Word saem prontos para entregar, com a logo da sua escola. O Plano Docente é uma ferramenta independente, sem vínculo institucional com a SED/SC.",
   },
   {
-    icone: "imprimir" as NomeIcone,
-    tom: "verde",
-    titulo: "PDF pronto para imprimir ou compartilhar",
-    descricao:
-      "Gere o plano no formato da SED/SC, com a logo da sua escola e do Estado, em poucos cliques.",
+    p: "Preciso entender de tecnologia para usar?",
+    r: "Não. Cada tela mostra um passo de cada vez, com cores diferentes para cada etapa do plano. Se você sabe preencher um formulário, consegue montar o seu plano.",
   },
   {
-    icone: "cadeado" as NomeIcone,
-    tom: "ardosia",
-    titulo: "Seus planos, só seus",
-    descricao:
-      "Cada professor só acessa os próprios planos e escolas — isolamento de dados de ponta a ponta, do banco à tela.",
+    p: "Funciona no celular? Preciso instalar algo?",
+    r: "Funciona direto no navegador do computador ou do celular, sem instalar nada. Se quiser, dá para colocar o Plano Docente na tela inicial do celular como um aplicativo.",
+  },
+  {
+    p: "Meus planos e meus dados estão seguros?",
+    r: "Cada professor só vê e edita os próprios planos e escolas — essa separação é garantida no banco de dados, não só na tela. A conexão é criptografada e o Aviso de Privacidade explica, em linguagem simples, o que fazemos com seus dados.",
+  },
+  {
+    p: "Posso usar em mais de uma escola e para várias turmas?",
+    r: "Pode. Numa mesma conta você cadastra quantas escolas, turmas e componentes precisar, e copia um plano para outras turmas com poucos cliques.",
+  },
+  {
+    p: "Consigo editar no Word depois?",
+    r: "Sim. Além do PDF, você baixa o plano em Word para ajustar o que quiser, e também pode imprimir direto do site.",
+  },
+  {
+    p: "Quanto custa e como funciona a assinatura?",
+    r: "Os planos Mensal, Semestral e Anual estão sendo finalizados, e os valores serão divulgados nesta página. Crie sua conta para conhecer o aplicativo e acompanhar a abertura das assinaturas.",
   },
 ];
 
-const passos = [
-  {
-    numero: "1",
-    tom: "ambar",
-    titulo: "Cadastre escola e disciplina",
-    descricao: "Uma vez só — reaproveite nome, município e logo em todos os planos seguintes.",
-  },
-  {
-    numero: "2",
-    tom: "azul",
-    titulo: "Monte o plano em minutos",
-    descricao: "Selecione habilidades e competências da BNCC já cadastradas, por etapa e componente.",
-  },
-  {
-    numero: "3",
-    tom: "verde",
-    titulo: "Exporte o PDF oficial",
-    descricao: "Baixe, imprima ou compartilhe — pronto no formato exigido pela Secretaria de Educação.",
-  },
-];
-
-const perguntas = [
-  {
-    pergunta: "É gratuito?",
-    resposta: "Sim. Crie sua conta e monte seus planos de ensino sem custo.",
-  },
-  {
-    pergunta: "Meus dados e meus planos estão seguros?",
-    resposta:
-      "Sim. Cada professor só vê e edita os próprios planos e escolas — isso é garantido no próprio banco de dados, não só na tela. A conexão é criptografada de ponta a ponta.",
-  },
-  {
-    pergunta: "Preciso instalar algo?",
-    resposta: "Não. É um site — funciona no navegador do computador ou do celular, sem instalação.",
-  },
-  {
-    pergunta: "Serve para qualquer etapa de ensino?",
-    resposta:
-      "Sim: Educação Infantil, Ensino Fundamental (Anos Iniciais e Finais) e Ensino Médio/Cursos Técnicos, cada um com o formulário certo para a etapa.",
-  },
-];
+function Titulo({ etiqueta, children, texto, claro = false }: { etiqueta: string; children: React.ReactNode; texto?: string; claro?: boolean }) {
+  return (
+    <Revelar className="mx-auto max-w-3xl text-center">
+      <span className={claro ? "ld-etiqueta ld-etiqueta-clara" : "ld-etiqueta"}>{etiqueta}</span>
+      <h2 className={`mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl ${claro ? "text-white" : "text-slate-900"}`}>{children}</h2>
+      {texto && <p className={`mx-auto mt-4 max-w-2xl text-base leading-relaxed sm:text-lg ${claro ? "text-blue-100" : "text-slate-600"}`}>{texto}</p>}
+    </Revelar>
+  );
+}
 
 export default function HomePage() {
   return (
-    <main className="bg-[var(--background)]">
-      {/* TOPO */}
-      <header className="border-b border-slate-300 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-          <span className="flex items-center gap-2.5 font-bold text-slate-900">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-800 text-white">
-              <Icone nome="livro" className="h-5 w-5" />
-            </span>
-            Planos de Ensino SC
-          </span>
-          <nav className="flex items-center gap-2">
-            <Link href="/login" className="btn-secondary !py-2">
-              Entrar
-            </Link>
-            <Link href="/cadastro" className="btn-primary !py-2">
-              Criar conta
-            </Link>
-          </nav>
-        </div>
-      </header>
+    <main className="ld-pagina">
+      <a href="#recursos" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:font-bold focus:text-primary-800">
+        Ir para o conteúdo
+      </a>
+      <Topo />
 
-      {/* HERO */}
-      <section className="border-b border-slate-300 bg-white">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-14 sm:py-20 lg:grid-cols-[1.1fr_0.9fr]">
+      {/* ============ ABERTURA ============ */}
+      <section className="ld-hero">
+        <div className="ld-blob ld-blob-1" aria-hidden="true" />
+        <div className="ld-blob ld-blob-2" aria-hidden="true" />
+        <div className="ld-grade" aria-hidden="true" />
+        <div className="relative mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-12 px-5 pb-28 pt-32 sm:pt-36 lg:grid-cols-[1.02fr_0.98fr] lg:pb-32">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-md bg-primary-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary-800">
+            <p className="ld-chip-hero">
               <Icone nome="escola" className="h-4 w-4" />
-              Para professores da rede estadual de Santa Catarina
+              Feito para professores da rede estadual de Santa Catarina
             </p>
-            <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
-              Pare de perder horas formatando plano de ensino
+            <h1 className="mt-6 text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[3.4rem]">
+              Seu plano de ensino pronto <span className="ld-texto-brilho">em minutos</span>, não em noites de domingo.
             </h1>
-            <p className="mt-5 max-w-xl text-lg text-slate-600">
-              Monte planos anuais e mensais alinhados à BNCC e ao Currículo Catarinense, com a logo da sua escola, prontos para imprimir — em minutos, não em noites de fim de semana.
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-blue-100">
+              Escolha a turma, marque as habilidades da BNCC e do Currículo Catarinense e deixe o Plano Docente montar o plano anual, os mensais e até um rascunho do caminho metodológico. Você revisa, ajusta do seu jeito e baixa em PDF ou Word.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/cadastro" className="btn-primary px-7 py-3 text-base">
-                Criar minha conta gratuita
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <Link href="/cadastro" className="ld-btn-cta">
+                Criar minha conta
+                <Icone nome="setaDireita" className="h-5 w-5" espessura={2.4} />
               </Link>
-              <Link href="/login" className="btn-secondary px-7 py-3 text-base">
-                Já tenho conta
-              </Link>
+              <a href="#como-funciona" className="ld-btn-fantasma !px-7 !py-3.5 !text-base">
+                Ver como funciona
+              </a>
             </div>
-          </div>
-
-          {/* Etapas do plano, cada uma na sua cor (as mesmas do sistema) */}
-          <div className="rounded-xl border border-slate-300 bg-[var(--background)] p-5" aria-hidden="true">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Plano anual, etapa por etapa</p>
-            <ol className="mt-3 space-y-2">
-              {[
-                ["ardosia", "pessoa", "Identificação"],
-                ["azul", "livro", "Ementa"],
-                ["ciano", "globo", "Competências gerais"],
-                ["violeta", "bussola", "Competências específicas"],
-                ["verde", "unidade", "1º trimestre"],
-                ["ambar", "criterios", "2º trimestre"],
-                ["rosa", "lapis", "3º trimestre"],
-              ].map(([tom, icone, rotulo]) => (
-                <li key={rotulo} data-tom={tom} className="flex items-center gap-3 rounded-lg border border-slate-300 border-l-4 bg-white px-3 py-2 [border-left-color:var(--tom)]">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-md [background:var(--tom-claro)] [color:var(--tom)]">
-                    <Icone nome={icone as NomeIcone} className="h-4 w-4" />
-                  </span>
-                  <span className="text-sm font-semibold text-slate-800">{rotulo}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
-
-        <dl className="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-6 pb-12 sm:grid-cols-4">
-          {[
-            ["azul", "BNCC", "Habilidades e competências já cadastradas"],
-            ["verde", "4", "Etapas de ensino cobertas"],
-            ["ambar", "0", "Instalação necessária"],
-            ["violeta", "Grátis", "Para começar"],
-          ].map(([tom, valor, rotulo]) => (
-            <div key={rotulo} data-tom={tom} className="rounded-lg border border-slate-300 border-t-4 bg-white p-4 [border-top-color:var(--tom)]">
-              <dt className="text-2xl font-extrabold [color:var(--tom)]">{valor}</dt>
-              <dd className="mt-1 text-sm text-slate-600">{rotulo}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      {/* RECURSOS */}
-      <section className="py-16">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="max-w-2xl">
-            <h2 className="text-3xl font-bold tracking-tight text-slate-900">Tudo o que você precisa para planejar com tranquilidade</h2>
-            <p className="mt-3 text-slate-600">Menos tempo formatando documento, mais tempo planejando aula.</p>
-          </div>
-
-          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2">
-            {recursos.map((recurso) => (
-              <div key={recurso.titulo} data-tom={recurso.tom} className="card border-l-4 p-6 [border-left-color:var(--tom)]">
-                <div className="flex h-11 w-11 items-center justify-center rounded-lg [background:var(--tom-claro)] [color:var(--tom)]">
-                  <Icone nome={recurso.icone} className="h-6 w-6" />
-                </div>
-                <h3 className="mt-4 font-bold text-slate-900">{recurso.titulo}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{recurso.descricao}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* COMO FUNCIONA */}
-      <section className="border-y border-slate-300 bg-white px-6 py-16">
-        <div className="mx-auto max-w-5xl">
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900">Do zero ao PDF em 3 passos</h2>
-          <ol className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-3">
-            {passos.map((passo) => (
-              <li key={passo.numero} data-tom={passo.tom} className="rounded-lg border border-slate-300 border-t-4 bg-[var(--background)] p-5 [border-top-color:var(--tom)]">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg text-lg font-bold text-white [background:var(--tom)]">{passo.numero}</span>
-                <h3 className="mt-4 font-bold text-slate-900">{passo.titulo}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{passo.descricao}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* SEGURANÇA / CONFIANÇA */}
-      <section className="px-6 py-16">
-        <div className="mx-auto max-w-5xl rounded-xl border border-slate-300 border-l-4 bg-white p-8 [border-left-color:var(--tom-ardosia)] sm:p-10">
-          <div className="grid grid-cols-1 items-center gap-10 sm:grid-cols-2">
-            <div>
-              <span className="inline-flex items-center gap-2 rounded-md bg-[var(--tom-ardosia-claro)] px-3 py-1 text-xs font-bold text-[var(--tom-ardosia)]">
-                <Icone nome="cadeado" className="h-4 w-4" />
-                Privacidade por padrão
-              </span>
-              <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Seus planos são só seus</h2>
-              <p className="mt-3 text-slate-600">
-                Nenhum professor acessa os planos ou escolas de outro professor — essa separação é garantida diretamente no banco de dados, não apenas escondida na tela. A conexão com o site é sempre criptografada.
-              </p>
-            </div>
-            <ul className="space-y-3 text-sm text-slate-700">
-              {[
-                "Isolamento de dados por usuário, de ponta a ponta",
-                "Conexão sempre criptografada (HTTPS)",
-                "Senhas protegidas com criptografia forte",
-                "Verificação anti-robô na criação de conta e login",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2.5">
-                  <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-md bg-[var(--tom-verde-claro)] text-[var(--tom-verde)]">
-                    <Icone nome="check" className="h-3.5 w-3.5" espessura={2.5} />
-                  </span>
-                  {item}
+            <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold text-blue-100/90">
+              {["Sem instalar nada", "Funciona no celular", "Seus planos são só seus"].map((t) => (
+                <li key={t} className="flex items-center gap-1.5">
+                  <Icone nome="check" className="h-4 w-4 text-emerald-300" espessura={2.8} />
+                  {t}
                 </li>
               ))}
             </ul>
           </div>
+          <div className="lg:pl-4">
+            <SimulacaoPlano />
+          </div>
         </div>
-      </section>
 
-      {/* FAQ */}
-      <section className="border-t border-slate-300 bg-white px-6 py-16">
-        <div className="mx-auto max-w-3xl">
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900">Perguntas frequentes</h2>
-          <div className="mt-8 space-y-3">
-            {perguntas.map((item) => (
-              <div key={item.pergunta} data-tom="ciano" className="card border-l-4 p-5 [border-left-color:var(--tom)]">
-                <p className="font-bold text-slate-900">{item.pergunta}</p>
-                <p className="mt-1.5 text-sm text-slate-600">{item.resposta}</p>
-              </div>
+        <div className="relative border-t border-white/10 bg-white/5 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-3 gap-y-2 px-5 py-4">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-200/80">Baseado em</span>
+            {CURRICULOS.map((c) => (
+              <span key={c} className="ld-chip-curriculo">{c}</span>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA FINAL */}
-      <section className="bg-primary-900 px-6 py-16">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Seu próximo plano de ensino pode estar pronto em minutos</h2>
-          <p className="mt-4 text-primary-100">Crie sua conta gratuita agora e monte o primeiro plano ainda hoje.</p>
-          <div className="mt-8">
-            <Link href="/cadastro" className="inline-flex items-center justify-center rounded-lg bg-white px-8 py-3 text-base font-semibold text-primary-900 transition hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary-900">
-              Criar minha conta gratuita
-            </Link>
+      {/* ============ NÚMEROS QUE SÃO FATOS ============ */}
+      <section className="relative z-10 -mt-10 px-5">
+        <Revelar>
+          <dl className="mx-auto grid max-w-5xl grid-cols-2 gap-px overflow-hidden rounded-3xl border border-slate-200 bg-slate-200 shadow-xl shadow-blue-900/10 lg:grid-cols-4">
+            {[
+              ["azul", "4", "etapas de ensino, cada uma com o seu formulário"],
+              ["verde", "3", "currículos oficiais já cadastrados"],
+              ["violeta", "PDF + Word", "e impressão, no formato da rede"],
+              ["ambar", "0", "instalação: abre direto no navegador"],
+            ].map(([tom, valor, rotulo]) => (
+              <div key={rotulo} data-tom={tom} className="bg-white p-5 text-center sm:p-6">
+                <dt className="text-3xl font-extrabold tracking-tight [color:var(--tom)] sm:text-4xl">{valor}</dt>
+                <dd className="mt-1.5 text-sm leading-snug text-slate-600">{rotulo}</dd>
+              </div>
+            ))}
+          </dl>
+        </Revelar>
+      </section>
+
+      {/* ============ O PROBLEMA ============ */}
+      <section className="px-5 py-24">
+        <div className="mx-auto max-w-6xl">
+          <Titulo etiqueta="Você já viveu isso" texto="Domingo à noite, três abas abertas, um modelo em branco e o relógio correndo. O difícil nunca foi pensar a aula — é tudo o que vem antes dela.">
+            O plano de ensino não precisa tomar o seu fim de semana
+          </Titulo>
+          <div className="mt-14 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-2">
+            <Revelar>
+              <div className="h-full rounded-3xl border border-rose-200 bg-rose-50/60 p-7 sm:p-8">
+                <p className="text-sm font-extrabold uppercase tracking-wide text-rose-700">Do jeito antigo</p>
+                <ul className="mt-5 space-y-4">
+                  {DORES.map((d) => (
+                    <li key={d} className="flex items-start gap-3 text-slate-700">
+                      <span className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                        <Icone nome="fechar" className="h-3.5 w-3.5" espessura={2.8} />
+                      </span>
+                      <span className="leading-relaxed">{d}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Revelar>
+            <Revelar atraso={120}>
+              <div className="ld-cartao-bom h-full rounded-3xl p-7 sm:p-8">
+                <p className="text-sm font-extrabold uppercase tracking-wide text-emerald-100">Com o Plano Docente</p>
+                <ul className="mt-5 space-y-4">
+                  {BENEFICIOS.map((b) => (
+                    <li key={b} className="flex items-start gap-3 text-white">
+                      <span className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-white/20 text-white">
+                        <Icone nome="check" className="h-3.5 w-3.5" espessura={3} />
+                      </span>
+                      <span className="leading-relaxed">{b}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-6 border-t border-white/25 pt-5 text-sm text-emerald-50">Menos tempo formatando. Mais tempo pensando na sua turma.</p>
+              </div>
+            </Revelar>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-slate-300 bg-white px-6 py-6 text-center text-sm text-slate-500">
-        Planos de Ensino SC — uso pessoal de professores da rede estadual de Santa Catarina.
-        <span className="mx-2" aria-hidden="true">·</span>
-        <Link href="/termos-de-uso" className="link-primary text-sm">Termos de Uso</Link>
-        <span className="mx-2" aria-hidden="true">·</span>
-        <Link href="/privacidade" className="link-primary text-sm">Aviso de Privacidade</Link>
+      {/* ============ COMO FUNCIONA ============ */}
+      <section id="como-funciona" className="scroll-mt-20 border-y border-slate-200 bg-white px-5 py-24">
+        <div className="mx-auto max-w-6xl">
+          <Titulo etiqueta="Como funciona" texto="Quatro passos, na ordem em que você já pensa. Clique em cada um para ver como é por dentro.">
+            Da turma ao documento pronto, sem se perder no caminho
+          </Titulo>
+          <Revelar className="mt-14">
+            <PassosInterativos />
+          </Revelar>
+        </div>
+      </section>
+
+      {/* ============ IA ============ */}
+      <section id="ia" className="ld-secao-escura scroll-mt-20 px-5 py-24">
+        <div className="ld-blob ld-blob-3" aria-hidden="true" />
+        <div className="relative mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
+          <Revelar>
+            <span className="ld-etiqueta ld-etiqueta-clara">
+              <Icone nome="sparkle" className="h-3.5 w-3.5" /> Caminho metodológico com IA
+            </span>
+            <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">A página em branco acaba aqui</h2>
+            <p className="mt-4 text-lg leading-relaxed text-blue-100">
+              Você diz como quer o texto — por semana ou por aula, e quantas — e recebe um rascunho escrito no tempo certo: o que <strong className="text-white">será feito</strong> em sala.
+            </p>
+            <ul className="mt-7 space-y-3.5">
+              {[
+                ["Semana ou aula, do seu jeito", "Até 5 semanas ou até 16 aulas, na quantidade que você escolher."],
+                ["Sempre no futuro", "“Será realizada…”, “Serão apresentados…” — nunca no infinitivo solto."],
+                ["Conferido automaticamente", "Se faltar alguma parte, o sistema pede o que ficou de fora."],
+                ["Você tem a palavra final", "É um rascunho no seu editor: leia, edite e salve."],
+              ].map(([t, d]) => (
+                <li key={t} className="flex items-start gap-3">
+                  <span className="mt-1 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-emerald-400/20 text-emerald-300">
+                    <Icone nome="check" className="h-3.5 w-3.5" espessura={3} />
+                  </span>
+                  <span className="text-blue-100">
+                    <strong className="text-white">{t}.</strong> {d}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Revelar>
+          <Revelar atraso={120}>
+            <DemoIA />
+          </Revelar>
+        </div>
+      </section>
+
+      {/* ============ RECURSOS ============ */}
+      <section id="recursos" className="scroll-mt-20 px-5 py-24">
+        <div className="mx-auto max-w-6xl">
+          <Titulo etiqueta="Tudo em um só lugar" texto="Do currículo ao envio para a coordenação: o que você precisa para planejar com tranquilidade, no mesmo aplicativo.">
+            Menos ferramentas soltas, mais tempo para ensinar
+          </Titulo>
+          <Revelar className="mt-12">
+            <RecursosFiltro />
+          </Revelar>
+        </div>
+      </section>
+
+      {/* ============ EXEMPLO DO DOCUMENTO ============ */}
+      <section id="exemplo" className="scroll-mt-20 border-y border-slate-200 bg-white px-5 py-24">
+        <div className="mx-auto max-w-6xl">
+          <Titulo etiqueta="Veja como fica" texto="O mesmo tipo de quadro e de campos do plano exportado, com habilidades da BNCC na íntegra. Os exemplos usam escolas e dados fictícios.">
+            O documento que sai do Plano Docente
+          </Titulo>
+          <Revelar className="mt-12">
+            <ExemploDocumento />
+          </Revelar>
+        </div>
+      </section>
+
+      {/* ============ VÍDEO ============ */}
+      <section className="px-5 py-24">
+        <div className="mx-auto max-w-4xl">
+          <Titulo etiqueta="Veja funcionando" texto="Um passeio rápido pelo aplicativo, do cadastro da escola até o PDF pronto.">
+            Em poucos minutos você entende tudo
+          </Titulo>
+          <Revelar className="mt-10">
+            <VideoDemo />
+          </Revelar>
+        </div>
+      </section>
+
+      {/* ============ PLANOS ============ */}
+      <section id="planos" className="ld-secao-planos scroll-mt-20 px-5 py-24">
+        <div className="mx-auto max-w-6xl">
+          <Titulo etiqueta="Planos" texto="Escolha o período que combina com a sua rotina. Os valores estão sendo finalizados e serão divulgados aqui.">
+            Um investimento pequeno perto das horas que você ganha de volta
+          </Titulo>
+          <div className="mt-14">
+            <Precos />
+          </div>
+          <Revelar className="mt-8">
+            <p className="mx-auto flex max-w-2xl items-start justify-center gap-2 text-center text-sm text-slate-500">
+              <Icone nome="cadeado" className="mt-0.5 h-4 w-4 flex-none" />
+              Todos os planos incluem os mesmos currículos e as mesmas etapas de ensino. Seus dados ficam protegidos e só você acessa os seus planos.
+            </p>
+          </Revelar>
+        </div>
+      </section>
+
+      {/* ============ PERGUNTAS ============ */}
+      <section id="perguntas" className="scroll-mt-20 border-y border-slate-200 bg-white px-5 py-24">
+        <div className="mx-auto max-w-3xl">
+          <Titulo etiqueta="Perguntas frequentes">O que os professores perguntam antes de começar</Titulo>
+          <div className="mt-12 space-y-3">
+            {PERGUNTAS.map((item, i) => (
+              <Revelar key={item.p} atraso={Math.min(i, 4) * 40}>
+                <details className="ld-faq">
+                  <summary>
+                    {item.p}
+                    <span className="ld-faq-seta" aria-hidden="true">
+                      <Icone nome="mais" className="h-4 w-4" espessura={2.6} />
+                    </span>
+                  </summary>
+                  <p>{item.r}</p>
+                </details>
+              </Revelar>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ CHAMADA FINAL ============ */}
+      <section className="ld-hero ld-final px-5 py-24">
+        <div className="ld-blob ld-blob-1" aria-hidden="true" />
+        <div className="ld-blob ld-blob-2" aria-hidden="true" />
+        <Revelar className="relative mx-auto max-w-3xl text-center">
+          <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-5xl">Seu próximo plano pode estar pronto antes do café esfriar.</h2>
+          <p className="mx-auto mt-5 max-w-xl text-lg text-blue-100">Crie sua conta, cadastre sua escola e monte o primeiro plano ainda hoje. O domingo agradece.</p>
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link href="/cadastro" className="ld-btn-cta">
+              Criar minha conta
+              <Icone nome="setaDireita" className="h-5 w-5" espessura={2.4} />
+            </Link>
+            <Link href="/login" className="ld-btn-fantasma !px-7 !py-3.5 !text-base">
+              Já tenho conta
+            </Link>
+          </div>
+        </Revelar>
+      </section>
+
+      {/* ============ RODAPÉ ============ */}
+      <footer className="bg-slate-950 px-5 py-12 text-slate-400">
+        <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-8 sm:grid-cols-[1.4fr_1fr_1fr]">
+          <div>
+            <span className="ld-logo-topo"><Logo /></span>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed">Planos de ensino para professores de Santa Catarina — do currículo ao PDF, sem perder o domingo.</p>
+          </div>
+          <nav aria-label="Rodapé" className="text-sm">
+            <p className="font-bold text-slate-200">Navegue</p>
+            <ul className="mt-3 space-y-2">
+              {[["#recursos", "Recursos"], ["#como-funciona", "Como funciona"], ["#planos", "Planos"], ["#perguntas", "Perguntas"]].map(([h, t]) => (
+                <li key={h}><a href={h} className="hover:text-white">{t}</a></li>
+              ))}
+            </ul>
+          </nav>
+          <div className="text-sm">
+            <p className="font-bold text-slate-200">Fale com a gente</p>
+            <ul className="mt-3 space-y-2">
+              <li><a href="mailto:contato@planodocente.com.br" className="hover:text-white">contato@planodocente.com.br</a></li>
+              <li><Link href="/termos-de-uso" className="hover:text-white">Termos de Uso</Link></li>
+              <li><Link href="/privacidade" className="hover:text-white">Aviso de Privacidade</Link></li>
+            </ul>
+          </div>
+        </div>
+        <p className="mx-auto mt-10 max-w-6xl border-t border-white/10 pt-6 text-xs leading-relaxed">
+          © Plano Docente. Ferramenta independente, sem vínculo, parceria ou chancela institucional com a Secretaria de Estado da Educação de Santa Catarina (SED/SC).
+        </p>
       </footer>
     </main>
   );
