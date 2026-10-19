@@ -3,6 +3,7 @@ import Link from "next/link";
 const ABAS = [
   { href: "/dashboard/admin", rotulo: "Visão geral", chave: "geral" },
   { href: "/dashboard/admin/ia", rotulo: "IAs e custos", chave: "ia" },
+  { href: "/dashboard/admin/protecao", rotulo: "Proteção das IAs", chave: "protecao" },
   { href: "/dashboard/admin/banco", rotulo: "Banco e segurança", chave: "banco" },
 ] as const;
 

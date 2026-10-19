@@ -43,7 +43,7 @@ export default async function IaAdminPage({ searchParams }: { searchParams: Prom
   const { data: ehAdmin } = await supabase.rpc("eh_admin");
   if (ehAdmin !== true) notFound();
 
-  const { data, error } = await supabase.rpc("admin_ia_painel", { p_dias: dias });
+  const [{ data, error }, { data: prot }] = await Promise.all([supabase.rpc("admin_ia_painel", { p_dias: dias }), supabase.rpc("admin_protecao_painel")]);
   if (error || !data) {
     return (
       <div>
@@ -64,7 +64,9 @@ export default async function IaAdminPage({ searchParams }: { searchParams: Prom
   const semProvedor = !provedores.some((p) => p.configurado);
 
   const alertas: string[] = [];
-  if (!cfg.ia_habilitada) alertas.push("A IA está DESLIGADA para todos os professores.");
+  const disparado = (prot as { config?: { disparado_em: string | null; motivo: string | null } } | null)?.config;
+  if (!cfg.ia_habilitada && disparado?.disparado_em) alertas.push(`O disjuntor desligou a IA sozinho (${disparado.motivo ?? "uso acima do teto"}). Veja a aba Proteção das IAs.`);
+  else if (!cfg.ia_habilitada) alertas.push("A IA está DESLIGADA para todos os professores.");
   if (semProvedor) alertas.push("Nenhuma chave de IA está configurada neste ambiente.");
   if (pctLimite >= 80) alertas.push(`O gasto do mês já usou ${Math.round(pctLimite)}% do limite.`);
   if (taxa !== null && taxa < 70 && finalizadas >= 5) alertas.push(`A taxa de sucesso no período está baixa (${taxa}%).`);
