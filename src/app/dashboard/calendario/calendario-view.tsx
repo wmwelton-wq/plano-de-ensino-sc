@@ -428,8 +428,8 @@ function LimparCalendario({
   const plural = (n: number) => `${n} ${n === 1 ? "data" : "datas"}`;
   return (
     <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm">
-      <summary className="cursor-pointer font-semibold text-slate-700">Limpar calendário (virada de ano)</summary>
-      <p className="mt-2 text-xs text-slate-500">O calendário muda todo ano. Aqui você apaga várias datas de uma vez; para apagar só uma data, use “Excluir” ao lado dela na lista do mês.</p>
+      <summary className="cursor-pointer font-semibold text-slate-700">Limpar calendário (virada de ano ou troca de escola)</summary>
+      <p className="mt-2 text-xs text-slate-500">O calendário muda todo ano, e você pode parar de dar aulas em uma escola. Escolha a escola no topo da página e apague só o calendário dela; as outras escolas não são afetadas. Para apagar uma data só, use “Excluir” ao lado dela na lista do mês.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {escolas.length > 0 && escolaSel && daEscola > 0 && (
           <ConfirmarExclusao

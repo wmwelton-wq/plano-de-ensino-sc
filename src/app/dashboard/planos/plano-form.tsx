@@ -53,6 +53,8 @@ interface PlanoFormProps {
   placeholderTurma?: string;
   /** Rótulo do agrupamento de componentes no seletor (ex.: "Formação Geral Básica" no Médio). */
   rotuloGrupoDisciplinas?: string;
+  /** Passo em que o formulário abre (vem do aviso "o que falta preencher"). */
+  passoInicial?: string;
 }
 
 const ROTULO_ETAPA_FALTOU: Record<EtapaPlano, string> = {
@@ -98,6 +100,7 @@ export default function PlanoForm({
   action,
   rotuloTurma,
   rotuloGrupoDisciplinas = "Formação Geral Básica",
+  passoInicial,
 }: PlanoFormProps) {
   const grav = useGravacaoPlano(action, plano?.id);
   const [erroPasso, setErroPasso] = useState<string | undefined>();
@@ -186,7 +189,7 @@ export default function PlanoForm({
 
   const recomposicaoDe = vinculoTipo === "disciplina" ? componenteDeRecomposicao(disciplinaSelecionada?.nome) : null;
   const passos = useMemo(() => montarPassos(Boolean(recomposicaoDe)), [recomposicaoDe]);
-  const fluxo = useFluxoMensal(passos);
+  const fluxo = useFluxoMensal(passos, passoInicial);
   const { atual } = fluxo;
   async function salvarEContinuar() {
     const r = await grav.salvarPasso();

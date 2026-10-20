@@ -54,6 +54,8 @@ export interface PlanoAnualFormProps {
   plano?: PlanoAnual;
   action: (anterior: EstadoFormulario, formData: FormData) => Promise<EstadoFormulario>;
   textoBotao: string;
+  /** Passo em que o formulário abre (vem do aviso "o que falta preencher"). */
+  passoInicial?: string;
 }
 
 const OUTRO = "__outro__";
@@ -140,7 +142,7 @@ function feitoTrimestre(l: ListasComp, i: number): boolean {
   return t.unidades.length > 0 && t.habilidades.length > 0 && t.objetos.length > 0;
 }
 
-export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, plano, action, textoBotao }: PlanoAnualFormProps) {
+export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, plano, action, textoBotao, passoInicial }: PlanoAnualFormProps) {
   const [estado, formAction, pendente] = useActionState(action, {});
   const [erroLocal, setErroLocal] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -336,7 +338,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
     return lista;
   }, [multi, componentes, disciplina, nomeComponente]);
 
-  const [passoChave, setPassoChave] = useState("ident");
+  const [passoChave, setPassoChave] = useState(() => (passoInicial && passos.some((p) => p.chave === passoInicial) ? passoInicial : "ident"));
   const indice = Math.max(0, passos.findIndex((p) => p.chave === passoChave));
   const passo = passos[indice];
   const erroIdentificacao = (): string | null => {

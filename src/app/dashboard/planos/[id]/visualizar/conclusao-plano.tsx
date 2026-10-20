@@ -18,6 +18,8 @@ interface Props {
   /** Caminho do formulário de novo plano da mesma etapa (ex.: /dashboard/planos/novo/medio-tecnico). */
   novoPlanoHref: string;
   excluirAction: () => Promise<void>;
+  /** Quantos itens do plano ficaram em branco (o aviso detalhado aparece no fim da página). */
+  faltam?: number;
 }
 
 /**
@@ -25,7 +27,7 @@ interface Props {
  * querer fazer a seguir (marcar como finalizado, baixar, imprimir, copiar para outras turmas, encaminhar a outro
  * professor, começar um novo plano mensal) sem precisar procurar em outras páginas.
  */
-export default function ConclusaoPlano({ planoId, titulo, paisagem, statusInicial, novoPlanoHref, excluirAction }: Props) {
+export default function ConclusaoPlano({ planoId, titulo, paisagem, statusInicial, novoPlanoHref, excluirAction, faltam = 0 }: Props) {
   const [aberto, setAberto] = useState(true);
   const [status, setStatus] = useState(statusInicial === "finalizado" ? "finalizado" : "rascunho");
   const [ocupado, setOcupado] = useState<"status" | "pdf" | "word" | null>(null);
@@ -118,6 +120,25 @@ export default function ConclusaoPlano({ planoId, titulo, paisagem, statusInicia
             </button>
           )}
         </div>
+
+        {faltam > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3">
+            <p className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+              <Icone nome="alerta" className="h-4 w-4 shrink-0" />
+              Faltou preencher {faltam === 1 ? "1 item" : `${faltam} itens`} neste plano.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setAberto(false);
+                window.setTimeout(() => document.getElementById("o-que-falta")?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
+              }}
+              className="btn-azul-suave !px-3 !py-1.5 !text-xs"
+            >
+              Ver o que falta
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <button type="button" onClick={() => setAberto(false)} className="btn-azul-suave justify-start">
