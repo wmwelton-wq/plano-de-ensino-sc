@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export const TIPOS_SUGESTAO = ["competencia", "objeto_conhecimento", "habilidade", "conteudo", "avaliacao", "referencia", "outro"] as const;
+const TIPOS_SUGESTAO = ["competencia", "objeto_conhecimento", "habilidade", "conteudo", "avaliacao", "referencia", "outro"] as const;
 export type TipoSugestao = (typeof TIPOS_SUGESTAO)[number];
 
 export interface DadosSugestao {
