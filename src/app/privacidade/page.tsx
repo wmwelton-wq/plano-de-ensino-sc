@@ -104,6 +104,11 @@ export default function PrivacidadePage() {
               "Coletados automaticamente quando você acessa o site.",
             ],
             [
+              "Localização aproximada",
+              "Cidade, estado e país do seu acesso, deduzidos do provedor de internet no primeiro acesso e no mais recente. Não guardamos o endereço IP nesse registro, nem localização precisa (GPS).",
+              "Coletada automaticamente ao acessar o painel. Usada só pela administração do serviço, para entender de onde vêm os cadastros e para segurança.",
+            ],
+            [
               "Verificação anti-robô",
               "Resultado da verificação do Cloudflare Turnstile (\"não sou um robô\"), que pode analisar sinais técnicos do navegador.",
               "Gerado ao entrar, cadastrar ou recuperar a senha.",

@@ -1,7 +1,7 @@
 "use client";
 
 import { Icone } from "@/components/icones";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Ilustracao } from "@/components/ilustracoes";
 import AuthLayout from "@/components/auth-layout";
@@ -25,6 +25,20 @@ export default function CadastroPage() {
   const [carregando, setCarregando] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileKey, setTurnstileKey] = useState(0);
+  // null = ainda não sabemos; false = cadastros fechados (fase de testes). Se a consulta falhar, mostramos o formulário normalmente
+  // (o banco recusa o cadastro de qualquer jeito quando estiver fechado).
+  const [cadastrosAbertos, setCadastrosAbertos] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    supabase.rpc("cadastros_abertos").then(({ data }) => {
+      if (ativo && typeof data === "boolean") setCadastrosAbertos(data);
+    });
+    return () => {
+      ativo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -99,6 +113,29 @@ export default function CadastroPage() {
           </div>
         </div>
       </main>
+    );
+  }
+
+  if (cadastrosAbertos === false) {
+    return (
+      <AuthLayout
+        voltarHref="/login"
+        voltarRotulo="Voltar para o login"
+        ilustracao="login"
+        titulo="Estamos em fase de testes"
+        texto="O Plano Docente está sendo ajustado com carinho antes de abrir para todos os professores."
+        topicos={["Planos anuais e mensais no formato exigido pelo Estado", "Baixe em PDF ou Word, ou imprima"]}
+      >
+        <div className="card p-6 sm:p-8">
+          <h1 className="text-xl font-semibold text-slate-900">Cadastros temporariamente fechados</h1>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
+            Estamos em fase de testes e, por enquanto, não estamos aceitando novas contas. Quem já tem cadastro continua entrando normalmente. Em breve abriremos para todos.
+          </p>
+          <Link href="/login" className="btn-primary mt-6 w-full">
+            Ir para o login
+          </Link>
+        </div>
+      </AuthLayout>
     );
   }
 

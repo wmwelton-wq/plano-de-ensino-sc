@@ -37,10 +37,18 @@ export default async function DashboardLayout({
 
   // As duas consultas do cabeçalho rodam juntas (uma só espera de rede, não duas em fila).
   // eh_admin devolve false para os demais professores (ou se a função não existir).
-  const [{ data: professor }, { data: ehAdmin }] = await Promise.all([
+  const [{ data: professor }, { data: ehAdmin }, { data: segundaEtapa }] = await Promise.all([
     supabase.from("professores").select("nome").eq("id", user.id).single(),
     supabase.rpc("eh_admin"),
+    supabase.rpc("segundo_fator_estado"),
   ]);
+
+  // Quem ativou a verificação em duas etapas (hoje, só a conta de administração) precisa concluí-la nesta sessão.
+  // Se a função não existir ou falhar, segundaEtapa vem vazio e nada muda para os demais professores.
+  const estado2fa = segundaEtapa as { exigido?: boolean; ok?: boolean } | null;
+  if (estado2fa?.exigido === true && estado2fa.ok !== true) {
+    redirect("/verificar-2fa");
+  }
 
   const menus: MenuDoTopo[] = [
     {
