@@ -5,6 +5,7 @@ const ABAS = [
   { href: "/dashboard/admin/ia", rotulo: "IAs e custos", chave: "ia" },
   { href: "/dashboard/admin/protecao", rotulo: "Proteção das IAs", chave: "protecao" },
   { href: "/dashboard/admin/banco", rotulo: "Banco e segurança", chave: "banco" },
+  { href: "/dashboard/admin/usuarios", rotulo: "Usuários", chave: "usuarios" },
 ] as const;
 
 /** Abas da central do administrador. */

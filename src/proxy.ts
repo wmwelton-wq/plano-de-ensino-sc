@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { localizacaoDosCabecalhos } from "@/lib/localizacao";
 
 // Domínio antigo (subdomínio padrão do Vercel) — não passa pelo Cloudflare,
 // então quem ainda tiver esse link salvo é redirecionado permanentemente
@@ -62,6 +63,29 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // Local aproximado (cidade/estado/país) do acesso, só para o administrador entender de onde vêm os cadastros.
+  // Roda no máximo a cada ~6 horas por navegador (cookie "pd_loc") e nunca atrapalha a navegação se falhar.
+  // O endereço IP não é guardado: só o texto da localização.
+  if (
+    user &&
+    request.nextUrl.pathname === "/dashboard" &&
+    request.method === "GET" &&
+    !request.cookies.has("pd_loc") &&
+    !request.headers.get("next-router-prefetch") &&
+    request.headers.get("purpose") !== "prefetch" &&
+    request.headers.get("sec-purpose") !== "prefetch"
+  ) {
+    try {
+      const l = localizacaoDosCabecalhos(request.headers);
+      if (l.cidade || l.regiao || l.pais) {
+        await supabase.rpc("registrar_acesso", { p_cidade: l.cidade, p_regiao: l.regiao, p_pais: l.pais });
+      }
+      response.cookies.set("pd_loc", "1", { maxAge: 6 * 3600, httpOnly: true, sameSite: "lax", secure: request.nextUrl.protocol === "https:", path: "/" });
+    } catch {
+      /* sem localização, segue normalmente */
+    }
   }
 
   // Agora que o site fica atrás do Cloudflare, garantimos que respostas que

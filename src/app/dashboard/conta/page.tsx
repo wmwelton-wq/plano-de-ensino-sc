@@ -14,7 +14,7 @@ export default async function ContaPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: professor } = await supabase.from("professores").select("nome").eq("id", user.id).single();
+  const [{ data: professor }, { data: ehAdmin }] = await Promise.all([supabase.from("professores").select("nome").eq("id", user.id).single(), supabase.rpc("eh_admin")]);
   const nome = professor?.nome ?? "";
   const desde = user.created_at
     ? new Date(user.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric", timeZone: "America/Sao_Paulo" })
@@ -59,6 +59,25 @@ export default async function ContaPage() {
           </div>
           <SenhaForm />
         </section>
+
+        {ehAdmin === true && (
+          <section className="card p-6 lg:col-span-2" aria-labelledby="duas-etapas-titulo">
+            <div className="flex items-center gap-3">
+              <span data-tom="violeta" className="flex h-11 w-11 items-center justify-center rounded-2xl [background:var(--tom-claro)] [color:var(--tom)]" aria-hidden="true">
+                <Icone nome="documento" className="h-5 w-5" />
+              </span>
+              <h2 id="duas-etapas-titulo" className="text-lg font-extrabold tracking-tight text-slate-900">
+                Verificação em duas etapas
+              </h2>
+            </div>
+            <p className="mt-3 text-sm text-slate-600">Proteja a conta de administração com app autenticador, código por e-mail ou chave de segurança USB.</p>
+            <div className="mt-4">
+              <Link href="/dashboard/conta/seguranca" className="btn-azul-suave">
+                Configurar duas etapas
+              </Link>
+            </div>
+          </section>
+        )}
 
         <section className="card p-6 lg:col-span-2" aria-labelledby="privacidade-titulo">
           <div className="flex items-center gap-3">
