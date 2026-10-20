@@ -16,10 +16,10 @@ export default async function EditarPlanoAnualPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ salvo?: string }>;
+  searchParams: Promise<{ salvo?: string; passo?: string }>;
 }) {
   const { id } = await params;
-  const { salvo } = await searchParams;
+  const { salvo, passo } = await searchParams;
   const supabase = await createClient();
 
   const { data } = await supabase.from("planos_anuais").select("*").eq("id", id).single();
@@ -98,6 +98,7 @@ export default async function EditarPlanoAnualPage({
           plano={plano}
           action={atualizarComId}
           textoBotao="Salvar alterações"
+          passoInicial={typeof passo === "string" && passo.length <= 120 ? passo : undefined}
         />
       </div>
     </div>

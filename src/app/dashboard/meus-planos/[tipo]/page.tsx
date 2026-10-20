@@ -71,6 +71,7 @@ export default async function EscolasDoTipoPage({
                 tom={e.chave === SEM_ESCOLA ? "ardosia" : "ambar"}
                 titulo={e.nome}
                 contagem={e.planos.length}
+                logoUrl={e.logoUrl}
               />
             </li>
           ))}

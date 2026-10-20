@@ -26,6 +26,8 @@ import {
   type TrimestreAnual,
 } from "@/lib/plano-anual";
 import { ordenarComponentes } from "@/lib/secoes-componentes";
+import { pendenciasAnual } from "@/lib/pendencias-plano";
+import AvisoPendencias from "../../../aviso-pendencias";
 
 const MAIUSCULO = (t: string | null | undefined) => (t ?? "").toUpperCase();
 const JUSTIFICADO = { textAlign: "justify" as const };
@@ -577,6 +579,7 @@ export default async function VisualizarPlanoAnualPage({
           )}
         </div>
       </div>
+      <AvisoPendencias tipo="anual" planoId={plano.id} pendencias={pendenciasAnual(plano)} larguraMaxima="max-w-[297mm]" />
     </div>
   );
 }

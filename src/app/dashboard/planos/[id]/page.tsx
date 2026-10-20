@@ -29,10 +29,14 @@ const ROTULOS_ETAPA: Record<EtapaPlano, string> = {
 
 export default async function EditarPlanoPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ passo?: string }>;
 }) {
   const { id } = await params;
+  const { passo } = await searchParams;
+  const passoInicial = typeof passo === "string" && passo.length <= 80 ? passo : undefined;
   const supabase = await createClient();
 
   const { data: plano } = await supabase.from("planos_de_ensino").select("*").eq("id", id).single();
@@ -150,6 +154,7 @@ export default async function EditarPlanoPage({
             plano={plano}
             action={atualizarComId}
             textoBotao="Salvar alterações"
+            passoInicial={passoInicial}
           />
           <AcoesRapidas planoId={id} />
         </div>
@@ -196,6 +201,7 @@ export default async function EditarPlanoPage({
           plano={plano}
           action={atualizarComId}
           textoBotao="Salvar alterações"
+          passoInicial={passoInicial}
           rotuloGrupoDisciplinas={etapa === "ensino_medio" ? "Formação Geral Básica" : "Componentes curriculares"}
           rotuloTurma={etapa === "ensino_medio" ? "Série/ano (turma)" : "Ano/turma"}
           placeholderTurma={etapa === "ensino_medio" ? "Ex.: 1ª série" : "Ex.: 3º ano A"}

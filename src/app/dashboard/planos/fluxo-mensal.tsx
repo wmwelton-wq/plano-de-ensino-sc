@@ -153,8 +153,9 @@ export interface PassoMensal {
  * passos continuam na página (os que não estão na vez ficam escondidos), por isso nada do que o professor
  * escreveu se perde ao trocar de passo e tudo é enviado ao salvar.
  */
-export function useFluxoMensal(passos: PassoMensal[]) {
-  const [bruto, setBruto] = useState(passos[0]?.chave ?? "");
+export function useFluxoMensal(passos: PassoMensal[], passoInicial?: string) {
+  // `passoInicial` vem do botão "Ir para lá" do aviso do que falta preencher; se o passo não existir, começa pelo primeiro.
+  const [bruto, setBruto] = useState(passoInicial && passos.some((p) => p.chave === passoInicial) ? passoInicial : passos[0]?.chave ?? "");
   const [vistos, setVistos] = useState<Set<string>>(() => new Set());
   const atual = passos.some((p) => p.chave === bruto) ? bruto : passos[0]?.chave ?? "";
   const indice = Math.max(

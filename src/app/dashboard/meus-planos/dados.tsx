@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EtapaPlano, PlanoDeEnsino } from "@/lib/database.types";
 import EstrelaFavorito from "./estrela-favorito";
+import type { ItemPlano } from "./lista-planos";
 import type { NomeIcone } from "@/components/icones";
 import { Ilustracao, type NomeIlustracao } from "@/components/ilustracoes";
 
@@ -41,7 +42,17 @@ export interface PlanoLista {
   status: string;
   escola_id: string | null;
   favorito?: boolean | null;
-  escolas: { nome: string; municipio: string } | { nome: string; municipio: string }[] | null;
+  /** Mensais: datas que o professor escolheu para o plano. */
+  data_inicio?: string | null;
+  data_fim?: string | null;
+  updated_at?: string | null;
+  escolas: EscolaDoPlano | EscolaDoPlano[] | null;
+}
+
+interface EscolaDoPlano {
+  nome: string;
+  municipio: string;
+  logo_url?: string | null;
 }
 
 const statusLabel: Record<PlanoDeEnsino["status"], string> = {
@@ -67,12 +78,52 @@ export const comparar = (a: string, b: string) =>
   a.localeCompare(b, "pt-BR", { numeric: true, sensitivity: "base" });
 
 export async function carregarPlanos(supabase: SupabaseClient, tipo: TipoPlano): Promise<PlanoLista[]> {
+  // Só o plano mensal tem datas de início e fim; no anual mostramos quando foi atualizado.
+  const colunas =
+    "id, titulo, ano_letivo, turma, etapa, status, updated_at, escola_id, favorito" +
+    (tipo === "mensais" ? ", data_inicio, data_fim" : "") +
+    ", escolas(nome, municipio, logo_url)";
   const { data } = await supabase
     .from(TIPOS[tipo].tabela)
-    .select("id, titulo, ano_letivo, turma, etapa, status, updated_at, escola_id, favorito, escolas(nome, municipio)")
+    .select(colunas)
     .order("favorito", { ascending: false })
     .order("updated_at", { ascending: false });
   return (data ?? []) as unknown as PlanoLista[];
+}
+
+/** Links de leitura ainda válidos: id do plano → data de validade. Só os do próprio professor (regra do banco). */
+export async function carregarCompartilhados(supabase: SupabaseClient, tipo: TipoPlano): Promise<Record<string, string>> {
+  const { data } = await supabase
+    .from("plano_compartilhamentos")
+    .select("plano_id, expira_em")
+    .eq("plano_tipo", tipo === "anuais" ? "anual" : "mensal")
+    .gt("expira_em", new Date().toISOString());
+  const mapa: Record<string, string> = {};
+  for (const l of (data ?? []) as { plano_id: string; expira_em: string }[]) {
+    if (!mapa[l.plano_id] || l.expira_em > mapa[l.plano_id]) mapa[l.plano_id] = l.expira_em;
+  }
+  return mapa;
+}
+
+/** "2026-08-31" ou "2026-08-31T12:00:00Z" → "31/08/2026". */
+export function formatarDataBr(valor: string | null | undefined): string {
+  if (!valor) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(valor);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+}
+
+/** Linha com a data do plano: o período escolhido (mensal) ou a última atualização (anual). */
+export function textoDeData(plano: Pick<PlanoLista, "data_inicio" | "data_fim" | "updated_at">, tipo: TipoPlano): string {
+  if (tipo === "mensais") {
+    if (plano.data_inicio === undefined && plano.data_fim === undefined) return ""; // lista que não carregou as datas
+    const ini = formatarDataBr(plano.data_inicio);
+    const fim = formatarDataBr(plano.data_fim);
+    if (ini && fim) return `Período: ${ini} a ${fim}`;
+    if (ini || fim) return `Período: ${ini || fim}`;
+    return "Período não informado";
+  }
+  const att = formatarDataBr(plano.updated_at);
+  return att ? `Atualizado em ${att}` : "";
 }
 
 export function nomeDaEscola(plano: PlanoLista): string | null {
@@ -102,7 +153,14 @@ export function nomeTurma(plano: PlanoLista): string {
 export interface GrupoEscola {
   chave: string;
   nome: string;
+  /** Logo que o professor enviou para a escola (se tiver). */
+  logoUrl: string | null;
   planos: PlanoLista[];
+}
+
+export function logoDaEscola(plano: PlanoLista): string | null {
+  const e = Array.isArray(plano.escolas) ? plano.escolas[0] : plano.escolas;
+  return e?.logo_url ?? null;
 }
 
 /** Escolas que têm plano (em ordem alfabética), com "Sem escola definida" por último. */
@@ -111,7 +169,7 @@ export function agruparPorEscola(planos: PlanoLista[]): GrupoEscola[] {
   for (const p of planos) {
     const chave = chaveEscola(p);
     const nome = chave === SEM_ESCOLA ? "Sem escola definida" : (nomeDaEscola(p) ?? "Sem escola definida");
-    const g = mapa.get(chave) ?? { chave, nome, planos: [] };
+    const g = mapa.get(chave) ?? { chave, nome, logoUrl: chave === SEM_ESCOLA ? null : logoDaEscola(p), planos: [] };
     g.planos.push(p);
     mapa.set(chave, g);
   }
@@ -138,6 +196,22 @@ export function agruparPorTurma(planos: PlanoLista[]): GrupoTurma[] {
   return Array.from(mapa.values()).sort(
     (a, b) => (a.chave === SEM_TURMA ? 1 : 0) - (b.chave === SEM_TURMA ? 1 : 0) || comparar(a.nome, b.nome)
   );
+}
+
+/** Prepara os planos para a lista com botões (dados simples, que podem ir do servidor para a tela). */
+export function paraItens(planos: PlanoLista[], tipo: TipoPlano, compartilhados: Record<string, string>): ItemPlano[] {
+  return planos.map((p) => ({
+    id: p.id,
+    titulo: p.titulo,
+    etapaRotulo: etapaLabel[p.etapa as EtapaPlano] ?? p.etapa,
+    ano: p.ano_letivo,
+    situacao: p.status === "finalizado" ? "finalizado" : "rascunho",
+    situacaoRotulo: statusLabel[p.status as PlanoDeEnsino["status"]] ?? p.status,
+    arte: ARTE_DA_ETAPA[p.etapa as EtapaPlano] ?? "mensal",
+    data: textoDeData(p, tipo),
+    favorito: !!p.favorito,
+    compartilhadoAte: compartilhados[p.id] ?? null,
+  }));
 }
 
 export function Migalhas({ itens }: { itens: { rotulo: string; href?: string }[] }) {
@@ -171,6 +245,7 @@ export function CartaoPasta({
   titulo,
   detalhe,
   contagem,
+  logoUrl,
 }: {
   href: string;
   icone: NomeIcone;
@@ -178,6 +253,8 @@ export function CartaoPasta({
   titulo: string;
   detalhe?: string;
   contagem: number;
+  /** Logo da escola, quando o professor enviou uma. */
+  logoUrl?: string | null;
 }) {
   const ilustracao = icone === "escola" ? "escola" : icone === "usuarios" ? "turma" : "meusPlanos";
   return (
@@ -188,6 +265,8 @@ export function CartaoPasta({
       titulo={titulo}
       texto={detalhe}
       selo={`${contagem} ${contagem === 1 ? "plano" : "planos"}`}
+      logoUrl={logoUrl}
+      nomeLogo={titulo}
     />
   );
 }
@@ -210,6 +289,7 @@ export function CartaoPlano({ plano, base, tipo }: { plano: PlanoLista; base: st
           <p className="mt-0.5 text-sm text-slate-500">
             {etapaLabel[plano.etapa as EtapaPlano] ?? plano.etapa} · {plano.ano_letivo}
           </p>
+          {textoDeData(plano, tipo) && <p className="mt-0.5 text-xs text-slate-500">{textoDeData(plano, tipo)}</p>}
         </div>
         <span className={`badge shrink-0 ${finalizado ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${finalizado ? "bg-green-600" : "bg-amber-600"}`} />

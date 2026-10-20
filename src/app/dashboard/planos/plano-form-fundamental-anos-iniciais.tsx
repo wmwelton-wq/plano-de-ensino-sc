@@ -49,6 +49,8 @@ interface PlanoFormFundamentalAnosIniciaisProps {
   plano?: PlanoDeEnsino;
   action: (estado: EstadoFormulario, formData: FormData) => Promise<EstadoFormulario>;
   textoBotao: string;
+  /** Passo em que o formulário abre (vem do aviso "o que falta preencher"). */
+  passoInicial?: string;
 }
 
 /**
@@ -80,6 +82,7 @@ export default function PlanoFormFundamentalAnosIniciais({
   competenciasSelecionadasIds = [],
   plano,
   action,
+  passoInicial,
 }: PlanoFormFundamentalAnosIniciaisProps) {
   const grav = useGravacaoPlano(action, plano?.id);
   const [erroPasso, setErroPasso] = useState<string | undefined>();
@@ -161,7 +164,7 @@ export default function PlanoFormFundamentalAnosIniciais({
     );
     return lista;
   }, [componentesOrdenados]);
-  const fluxo = useFluxoMensal(passos);
+  const fluxo = useFluxoMensal(passos, passoInicial);
   async function salvarEContinuar() {
     const r = await grav.salvarPasso();
     setErroPasso(r.erro);

@@ -14,6 +14,8 @@ import { ESTILO_TEXTO_PLANO } from "@/lib/estilo-plano";
 import { ehHtml, sanitizarHtml } from "@/lib/texto-rico";
 import type { HabilidadeManual } from "@/lib/database.types";
 import { lerReferenciasGravadas, referenciasOficiais } from "@/lib/referencias-oficiais";
+import { pendenciasMensal } from "@/lib/pendencias-plano";
+import AvisoPendencias from "../../../aviso-pendencias";
 
 /** Rota do formulário de novo plano de cada etapa. */
 const ROTA_NOVO_PLANO: Record<string, string> = {
@@ -157,6 +159,12 @@ export default async function VisualizarPlanoPage({
   const rotuloTurma =
     plano.etapa === "ensino_medio" ? "Série/ano:" : ehInfantil ? "Turma/grupo:" : "Ano/turma:";
 
+  const pendencias = pendenciasMensal(plano, {
+    competencias: competenciaIds.length,
+    habilidades: ehInfantil ? (habilidadesTodas ?? []).length : habilidadesCurriculo.length,
+    componentes: componentesDoPlano,
+  });
+
   return (
     <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:py-0">
       <div className={`mx-auto mb-4 flex ${paisagem ? "max-w-[297mm]" : "max-w-[210mm]"} items-center justify-between px-4 print:hidden`}>
@@ -181,6 +189,7 @@ export default async function VisualizarPlanoPage({
           titulo={plano.titulo}
           paisagem={paisagem}
           statusInicial={plano.status}
+          faltam={pendencias.length}
           novoPlanoHref={`/dashboard/planos/novo/${ROTA_NOVO_PLANO[plano.etapa as string] ?? ""}`.replace(/\/$/, "")}
           excluirAction={excluirPlano.bind(null, plano.id)}
         />
@@ -517,6 +526,13 @@ export default async function VisualizarPlanoPage({
         )}
         </div>
       </div>
+      <AvisoPendencias
+        tipo="mensal"
+        planoId={plano.id}
+        etapa={plano.etapa}
+        pendencias={pendencias}
+        larguraMaxima={paisagem ? "max-w-[297mm]" : "max-w-[210mm]"}
+      />
     </div>
   );
 }

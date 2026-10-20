@@ -16,6 +16,8 @@ export default function CartaoIlustrado({
   selo,
   mais = false,
   altura = "h-[124px]",
+  logoUrl,
+  nomeLogo,
 }: {
   href: string;
   ilustracao: NomeIlustracao;
@@ -25,6 +27,9 @@ export default function CartaoIlustrado({
   selo?: ReactNode;
   mais?: boolean;
   altura?: string;
+  /** Logo enviada pelo professor: aparece no lugar da ilustração (ex.: logo da escola). */
+  logoUrl?: string | null;
+  nomeLogo?: string;
 }) {
   return (
     <Link
@@ -33,7 +38,14 @@ export default function CartaoIlustrado({
       className="atalho-ilustrado group flex h-full flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
     >
       <div className={`atalho-arte relative px-4 py-2.5 ${altura}`}>
-        <Ilustracao nome={ilustracao} tom={tom} mais={mais} />
+        {logoUrl ? (
+          <div className="flex h-full items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoUrl} alt={nomeLogo ? `Logo de ${nomeLogo}` : "Logo da escola"} className="max-h-full max-w-[70%] rounded-xl bg-white object-contain p-2 shadow-sm" />
+          </div>
+        ) : (
+          <Ilustracao nome={ilustracao} tom={tom} mais={mais} />
+        )}
         {selo && (
           <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-bold shadow-sm [color:var(--tom)]">{selo}</span>
         )}

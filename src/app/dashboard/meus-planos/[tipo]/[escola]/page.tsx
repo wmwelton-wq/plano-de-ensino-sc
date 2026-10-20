@@ -5,15 +5,17 @@ import CabecalhoPagina from "@/components/cabecalho-pagina";
 import NavegacaoTopo from "@/components/navegacao-topo";
 import {
   CartaoPasta,
-  CartaoPlano,
   TIPOS,
   agruparPorEscola,
   agruparPorTurma,
+  carregarCompartilhados,
   carregarPlanos,
+  paraItens,
   tipoValido,
   type TipoPlano,
 } from "../../dados";
 import BaixarVarios from "../../baixar-varios";
+import ListaPlanos from "../../lista-planos";
 
 const PLANOS_POR_PAGINA = 30;
 
@@ -30,7 +32,7 @@ export default async function TurmasDaEscolaPage({
   const tipo = tipoBruto as TipoPlano;
 
   const supabase = await createClient();
-  const planos = await carregarPlanos(supabase, tipo);
+  const [planos, compartilhados] = await Promise.all([carregarPlanos(supabase, tipo), carregarCompartilhados(supabase, tipo)]);
   const grupo = agruparPorEscola(planos).find((g) => g.chave === escola);
   if (!grupo) notFound();
 
@@ -67,11 +69,7 @@ export default async function TurmasDaEscolaPage({
             rotulo="Baixar todos desta turma em um PDF"
           />
         </div>
-        <ul className="mt-6 space-y-3">
-          {planosDaPagina.map((p) => (
-            <CartaoPlano key={p.id} plano={p} base={info.base} tipo={tipo} />
-          ))}
-        </ul>
+        <ListaPlanos tipo={tipo} base={info.base} itens={paraItens(planosDaPagina, tipo, compartilhados)} todosIds={t.planos.map((p) => p.id)} />
         {totalPaginas > 1 && (
           <nav aria-label="Páginas de planos" className="mt-6 flex items-center justify-between gap-3 text-sm">
             {pagina > 1 ? (
