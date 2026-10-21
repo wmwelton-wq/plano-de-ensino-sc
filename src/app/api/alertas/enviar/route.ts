@@ -50,7 +50,10 @@ async function processar() {
     .lt("tentativas", MAX_TENTATIVAS)
     .order("em", { ascending: true })
     .limit(MAX_POR_CHAMADA);
-  if (error) return NextResponse.json({ ok: false }, { status: 500, headers: semCache });
+  if (error) {
+    console.error("[alertas] falha ao ler alertas pendentes:", error.code, error.message);
+    return NextResponse.json({ ok: false, etapa: "leitura", codigo: error.code ?? null }, { status: 500, headers: semCache });
+  }
 
   let enviados = 0;
   for (const a of (data ?? []) as Alerta[]) {
@@ -90,6 +93,7 @@ async function processar() {
       await db.from("alertas_seguranca").update({ enviado_em: new Date().toISOString(), ultimo_erro: null }).eq("id", a.id);
       enviados += 1;
     } else {
+      console.error("[alertas] falha ao enviar e-mail:", r.motivo, r.detalhe);
       await db
         .from("alertas_seguranca")
         .update({ ultimo_erro: `${r.motivo}${r.detalhe ? `: ${r.detalhe}` : ""}`.slice(0, 300) })
