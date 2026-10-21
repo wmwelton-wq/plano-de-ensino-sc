@@ -7,6 +7,8 @@ import { acaoConcluirRegistroChave, acaoConfirmarCodigo, acaoDesativarEmail, aca
 
 type Chave = { id: string; nome: string; criado_em: string; ultimo_uso: string | null; rp_id: string };
 type FatorTotp = { id: string; friendly_name?: string; status: string; created_at?: string };
+/** Qual dos três métodos está trabalhando agora (para só o botão certo mostrar "aguarde"). */
+type Fazendo = null | "app" | "email" | "chave";
 
 const data = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Sao_Paulo" }) : "nunca");
 
@@ -37,7 +39,10 @@ export default function SegurancaForm({
   const [chaves, setChaves] = useState<Chave[]>(chavesIniciais);
   const [emailAtivo, setEmailAtivo] = useState(emailAtivoInicial);
   const [msg, setMsg] = useState<{ tipo: "erro" | "ok" | "info"; texto: string } | null>(null);
-  const [ocupado, setOcupado] = useState(false);
+  // Enquanto qualquer método trabalha, os três botões ficam travados (evita cliques em dobro),
+  // mas só o botão do método em andamento troca o texto.
+  const [fazendo, setFazendo] = useState<Fazendo>(null);
+  const ocupado = fazendo !== null;
 
   // App autenticador (em andamento)
   const [qr, setQr] = useState<{ id: string; svg: string; segredo: string } | null>(null);
@@ -71,11 +76,11 @@ export default function SegurancaForm({
 
   async function iniciarTotp() {
     setMsg(null);
-    setOcupado(true);
+    setFazendo("app");
     // Limpa tentativas antigas que ficaram sem confirmar.
     for (const f of fatores.filter((x) => x.status !== "verified")) await supabase.auth.mfa.unenroll({ factorId: f.id });
     const { data: d, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `App ${new Date().toLocaleDateString("pt-BR")}`, issuer: "Plano Docente" });
-    setOcupado(false);
+    setFazendo(null);
     if (error || !d) {
       setMsg({ tipo: "erro", texto: "Não foi possível iniciar a configuração do app. Tente de novo." });
       return;
@@ -88,15 +93,15 @@ export default function SegurancaForm({
     e.preventDefault();
     if (!qr) return;
     setMsg(null);
-    setOcupado(true);
+    setFazendo("app");
     const { data: desafio, error: e1 } = await supabase.auth.mfa.challenge({ factorId: qr.id });
     if (e1 || !desafio) {
-      setOcupado(false);
+      setFazendo(null);
       setMsg({ tipo: "erro", texto: "Não foi possível conferir o código. Tente de novo." });
       return;
     }
     const { error: e2 } = await supabase.auth.mfa.verify({ factorId: qr.id, challengeId: desafio.id, code: codigoTotp.replace(/\s/g, "") });
-    setOcupado(false);
+    setFazendo(null);
     if (e2) {
       setMsg({ tipo: "erro", texto: "Código incorreto. Confira o app e tente de novo." });
       return;
@@ -126,31 +131,41 @@ export default function SegurancaForm({
 
   async function pedirCodigoEmail() {
     setMsg(null);
-    setOcupado(true);
-    const r = await acaoEnviarCodigo("ativar");
-    setOcupado(false);
-    if (!r.ok) {
-      setMsg({ tipo: "erro", texto: r.erro });
-      return;
+    setFazendo("email");
+    try {
+      const r = await acaoEnviarCodigo("ativar");
+      if (!r.ok) {
+        setMsg({ tipo: "erro", texto: r.erro });
+        return;
+      }
+      setEmailEnviado(true);
+      setMsg({ tipo: "info", texto: `Enviamos um código de 6 números para ${emailDaConta}. Ele vale por 10 minutos.` });
+    } catch {
+      setMsg({ tipo: "erro", texto: "Não foi possível falar com o servidor agora. Tente de novo em instantes." });
+    } finally {
+      setFazendo(null);
     }
-    setEmailEnviado(true);
-    setMsg({ tipo: "info", texto: `Enviamos um código de 6 números para ${emailDaConta}. Ele vale por 10 minutos.` });
   }
 
   async function confirmarEmail(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-    setOcupado(true);
-    const r = await acaoConfirmarCodigo(codigoEmail, "ativar");
-    setOcupado(false);
-    if (!r.ok) {
-      setMsg({ tipo: "erro", texto: r.erro });
-      return;
+    setFazendo("email");
+    try {
+      const r = await acaoConfirmarCodigo(codigoEmail, "ativar");
+      if (!r.ok) {
+        setMsg({ tipo: "erro", texto: r.erro });
+        return;
+      }
+      setEmailEnviado(false);
+      setCodigoEmail("");
+      setMsg({ tipo: "ok", texto: "Código por e-mail ativado." });
+      await recarregarResto();
+    } catch {
+      setMsg({ tipo: "erro", texto: "Não foi possível falar com o servidor agora. Tente de novo em instantes." });
+    } finally {
+      setFazendo(null);
     }
-    setEmailEnviado(false);
-    setCodigoEmail("");
-    setMsg({ tipo: "ok", texto: "Código por e-mail ativado." });
-    await recarregarResto();
   }
 
   async function desativarEmail() {
@@ -171,7 +186,7 @@ export default function SegurancaForm({
       setMsg({ tipo: "erro", texto: "Este navegador não suporta chaves de segurança." });
       return;
     }
-    setOcupado(true);
+    setFazendo("chave");
     try {
       const o = await acaoOpcoesRegistroChave();
       if (!o.ok) {
@@ -191,7 +206,7 @@ export default function SegurancaForm({
     } catch (e) {
       setMsg({ tipo: "erro", texto: mensagemDoErroDaChave(e) });
     } finally {
-      setOcupado(false);
+      setFazendo(null);
     }
   }
 
@@ -211,7 +226,7 @@ export default function SegurancaForm({
     <div className="mt-6 space-y-4">
       {!servidorPronto && (
         <Aviso tipo="info">
-          A chave secreta do servidor (<code>SUPABASE_SECRET_KEY</code>) ainda não foi colocada na Vercel. Enquanto isso, só o app autenticador funciona; o código por e-mail e a chave de segurança precisam dela.
+          A chave secreta do servidor (<code>SUPABASE_SECRET_KEY</code>) ainda não foi colocada na Vercel (ou está com formato inválido). Enquanto isso, só o app autenticador funciona; o código por e-mail e a chave de segurança precisam dela.
         </Aviso>
       )}
       {totalMetodos === 1 && <Aviso tipo="info">Você tem só um método ativo. Cadastre pelo menos dois (por exemplo app + chave) para não ficar sem acesso se perder um deles.</Aviso>}
@@ -249,7 +264,7 @@ export default function SegurancaForm({
             </div>
             <div className="flex gap-2">
               <button type="submit" disabled={ocupado} className="btn-primary">
-                {ocupado ? "Conferindo..." : "Ativar"}
+                {fazendo === "app" ? "Conferindo..." : "Ativar"}
               </button>
               <button type="button" onClick={cancelarTotp} className="btn-secondary">
                 Cancelar
@@ -259,7 +274,7 @@ export default function SegurancaForm({
         ) : (
           verificados.length === 0 && (
             <button type="button" onClick={iniciarTotp} disabled={ocupado} className="btn-primary mt-4">
-              Configurar app autenticador
+              {fazendo === "app" ? "Preparando..." : "Configurar app autenticador"}
             </button>
           )
         )}
@@ -289,7 +304,7 @@ export default function SegurancaForm({
             </div>
             <div className="flex gap-2">
               <button type="submit" disabled={ocupado} className="btn-primary">
-                {ocupado ? "Conferindo..." : "Ativar"}
+                {fazendo === "email" ? "Conferindo..." : "Ativar"}
               </button>
               <button type="button" onClick={pedirCodigoEmail} disabled={ocupado} className="btn-secondary">
                 Reenviar
@@ -298,7 +313,7 @@ export default function SegurancaForm({
           </form>
         ) : (
           <button type="button" onClick={pedirCodigoEmail} disabled={ocupado} className="btn-primary mt-4">
-            Ativar código por e-mail
+            {fazendo === "email" ? "Enviando código..." : "Ativar código por e-mail"}
           </button>
         )}
       </section>
@@ -330,7 +345,7 @@ export default function SegurancaForm({
                 <input id="nome-chave" maxLength={40} value={nomeChave} onChange={(e) => setNomeChave(e.target.value)} placeholder="Ex.: Feitian K28" className="input-field" />
               </div>
               <button type="button" onClick={cadastrarChave} disabled={ocupado} className="btn-primary">
-                {ocupado ? "Aguardando a chave..." : "Cadastrar chave"}
+                {fazendo === "chave" ? "Aguardando a chave..." : "Cadastrar chave"}
               </button>
             </div>
           </>
