@@ -15,6 +15,12 @@ const NEW_HOST = "planodocente.com.br";
  * longe das telas de login/cadastro.
  */
 export async function proxy(request: NextRequest) {
+  // Rota usada pelo banco (pg_net) para disparar o envio dos alertas de segurança.
+  // Fica fora do redirecionamento e da sessão: não recebe dados e só envia alertas que o próprio banco registrou.
+  if (request.nextUrl.pathname.startsWith("/api/alertas/")) {
+    return NextResponse.next();
+  }
+
   if (request.nextUrl.hostname === OLD_HOST) {
     const url = request.nextUrl.clone();
     url.hostname = NEW_HOST;
