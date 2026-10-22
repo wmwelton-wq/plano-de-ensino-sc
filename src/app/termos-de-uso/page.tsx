@@ -222,8 +222,12 @@ export default function TermosDeUsoPage() {
         </p>
         <p>
           Nas contratações feitas pela internet, aplica-se o direito de arrependimento de 7 dias
-          do Código de Defesa do Consumidor (art. 49), quando cabível. Condições específicas da
-          contratação paga serão apresentadas no momento da compra e complementam estes Termos.
+          do Código de Defesa do Consumidor (art. 49), quando cabível. As regras completas de
+          cancelamento e reembolso estão na nossa{" "}
+          <Link href="/reembolso" className="link-primary">
+            Política de Reembolso
+          </Link>
+          , que complementa estes Termos.
         </p>
       </Secao>
 

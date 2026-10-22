@@ -3,7 +3,7 @@ import VoltarHistorico from "@/components/voltar-historico";
 import Link from "next/link";
 import { DATA_ATUALIZACAO, NOME_SERVICO, VERSAO_DOCUMENTOS_LEGAIS } from "@/lib/legal";
 
-/** Estrutura comum das páginas de Termos de Uso e Aviso de Privacidade. */
+/** Estrutura comum das páginas de Termos de Uso, Aviso de Privacidade e Política de Reembolso. */
 export default function DocumentoLegal({
   titulo,
   resumo,
@@ -75,6 +75,12 @@ export default function DocumentoLegal({
           </span>
           <Link href="/privacidade" className="link-primary">
             Aviso de Privacidade
+          </Link>
+          <span className="mx-2" aria-hidden="true">
+            ·
+          </span>
+          <Link href="/reembolso" className="link-primary">
+            Política de Reembolso
           </Link>
         </footer>
       </main>

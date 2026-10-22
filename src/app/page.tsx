@@ -364,6 +364,7 @@ export default function HomePage() {
               <li><a href="mailto:contato@planodocente.com.br" className="hover:text-white">contato@planodocente.com.br</a></li>
               <li><Link href="/termos-de-uso" className="hover:text-white">Termos de Uso</Link></li>
               <li><Link href="/privacidade" className="hover:text-white">Aviso de Privacidade</Link></li>
+              <li><Link href="/reembolso" className="hover:text-white">Política de Reembolso</Link></li>
             </ul>
           </div>
         </div>
