@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Icone } from "@/components/icones";
 import { createClient } from "@/lib/supabase/server";
-import logoGoverno from "@/assets/logo-governo-sc.png";
 import BarraAcoesPlano from "./barra-acoes-plano";
 import AutoAcao from "./auto-acao";
 import ConclusaoPlano from "./conclusao-plano";
@@ -155,10 +154,9 @@ export default async function VisualizarPlanoPage({
       return linha.disciplinas?.nome ? { id: linha.disciplina_id, nome: linha.disciplinas.nome } : null;
     })
     .filter((c): c is { id: string; nome: string } => c !== null);
-  // Brasões do cabeçalho: o do Estado fica à esquerda e o da escola à direita; cada um pode ser retirado.
-  // Se ao menos um estiver ligado, os dois lados ficam reservados (a escola sem logo deixa o espaço em
-  // branco para o professor colar o brasão depois).
-  const mostrarBrasaoEstado = plano.incluir_logo_estado !== false;
+  // Cabeçalho personalizado: até duas imagens enviadas pelo professor (esquerda = imagem do cadastro da escola,
+  // direita = logo da escola). No cabeçalho da aplicação os dois campos ficam desligados e sai só o texto.
+  const mostrarBrasaoEstado = plano.incluir_logo_estado !== false && Boolean(escola?.imagem_esquerda_url);
   const mostrarLogoEscola = plano.incluir_logo_escola !== false;
   const rotuloTurma =
     plano.etapa === "ensino_medio" ? "Série/ano:" : ehInfantil ? "Turma/grupo:" : "Ano/turma:";
@@ -215,7 +213,7 @@ export default async function VisualizarPlanoPage({
               dataFim: plano.data_fim,
               segundoProfessor: plano.segundo_professor_nome,
               professorNome: professor?.nome ?? "",
-              escola: escola ? { nome: escola.nome, municipio: escola.municipio, logo_url: escola.logo_url } : null,
+              escola: escola ? { nome: escola.nome, municipio: escola.municipio, logo_url: escola.logo_url, imagem_esquerda_url: escola.imagem_esquerda_url } : null,
               mostrarBrasaoEstado,
               mostrarLogoEscola,
               componentes: componentesDoPlano,
@@ -236,8 +234,8 @@ export default async function VisualizarPlanoPage({
                 {mostrarBrasaoEstado && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={logoGoverno.src}
-                    alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
+                    src={escola?.imagem_esquerda_url ?? ""}
+                    alt="Imagem do cabeçalho (lado esquerdo)"
                     className="max-h-20 max-w-full object-contain"
                   />
                 )}
@@ -267,8 +265,8 @@ export default async function VisualizarPlanoPage({
                     {mostrarBrasaoEstado && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={logoGoverno.src}
-                        alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
+                        src={escola?.imagem_esquerda_url ?? ""}
+                        alt="Imagem do cabeçalho (lado esquerdo)"
                         className="mx-auto max-h-24 max-w-full object-contain"
                       />
                     )}

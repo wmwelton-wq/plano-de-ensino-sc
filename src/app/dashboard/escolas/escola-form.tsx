@@ -49,14 +49,35 @@ export default function EscolaForm({ escola, action, textoBotao, voltar }: Escol
       </div>
 
       <div>
+        <label htmlFor="imagem_esquerda" className="field-label">
+          Imagem do cabeçalho — lado esquerdo <span className="text-slate-400">(opcional)</span>
+        </label>
+        {escola?.imagem_esquerda_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={escola.imagem_esquerda_url}
+            alt="Imagem atual do lado esquerdo"
+            className="mt-2 h-16 w-16 rounded-lg border border-slate-200 bg-white object-contain p-1"
+          />
+        )}
+        <input
+          id="imagem_esquerda"
+          name="imagem_esquerda"
+          type="file"
+          accept="image/png,image/jpeg,image/svg+xml,image/webp"
+          className="mt-1 w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+        />
+      </div>
+
+      <div>
         <label htmlFor="logo" className="field-label">
-          Logo da escola <span className="text-slate-400">(opcional)</span>
+          Imagem do cabeçalho — lado direito (logo da escola) <span className="text-slate-400">(opcional)</span>
         </label>
         {escola?.logo_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={escola.logo_url}
-            alt={`Logo atual de ${escola.nome}`}
+            alt="Imagem atual do lado direito"
             className="mt-2 h-16 w-16 rounded-lg border border-slate-200 bg-white object-contain p-1"
           />
         )}
@@ -67,10 +88,12 @@ export default function EscolaForm({ escola, action, textoBotao, voltar }: Escol
           accept="image/png,image/jpeg,image/svg+xml,image/webp"
           className="mt-1 w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
         />
-        <p className="field-hint">
-          Usada no cabeçalho dos planos de ensino gerados para esta escola.
-        </p>
       </div>
+
+      <p className="field-hint">
+        Imagens opcionais, usadas quando você escolhe “Personalizar cabeçalho” no plano. As imagens que você enviar
+        são de inteira responsabilidade sua.
+      </p>
 
       {estado.erro && (
         <p role="alert" className="text-sm text-red-600">

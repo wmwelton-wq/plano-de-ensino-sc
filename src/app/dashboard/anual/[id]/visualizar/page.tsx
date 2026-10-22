@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Icone } from "@/components/icones";
 import { createClient } from "@/lib/supabase/server";
-import logoGoverno from "@/assets/logo-governo-sc.png";
 import BarraAcoesPlano from "@/app/dashboard/planos/[id]/visualizar/barra-acoes-plano";
 import AutoAcao from "@/app/dashboard/planos/[id]/visualizar/auto-acao";
 import ImpressaoPaginada from "@/app/dashboard/planos/[id]/visualizar/impressao-paginada";
@@ -349,7 +348,7 @@ export default async function VisualizarPlanoAnualPage({
   const multi = componentes.length >= 2;
 
   const paisagem = true;
-  const mostrarBrasaoEstado = plano.incluir_logo_estado !== false;
+  const mostrarBrasaoEstado = plano.incluir_logo_estado !== false && Boolean(escola?.imagem_esquerda_url);
   const mostrarLogoEscola = plano.incluir_logo_escola !== false;
   const medio = plano.etapa === "ensino_medio";
 
@@ -401,8 +400,8 @@ export default async function VisualizarPlanoAnualPage({
                   <td className="w-40 border border-black p-1 text-center align-middle">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={logoGoverno.src}
-                      alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
+                      src={escola?.imagem_esquerda_url ?? ""}
+                      alt="Imagem do cabeçalho (lado esquerdo)"
                       className="mx-auto max-h-24 max-w-full object-contain"
                     />
                   </td>

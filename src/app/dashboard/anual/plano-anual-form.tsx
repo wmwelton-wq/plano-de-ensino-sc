@@ -47,6 +47,7 @@ import PassoTrimestre, { TOM_TRIMESTRE } from "./passo-trimestre";
 import FluxoPassos, { type GrupoFluxo } from "./fluxo-passos";
 import { CRITERIOS_AVALIACAO, INSTRUMENTOS_AVALIACAO } from "../planos/sugestoes-avaliacao";
 import EditorLivre from "./editor-livre";
+import OpcoesLogo from "../planos/opcoes-logo";
 
 export interface PlanoAnualFormProps {
   escolas: Escola[];
@@ -851,17 +852,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
             <input id="titulo" name="titulo" type="text" defaultValue={plano?.titulo ?? ""} placeholder="Se deixar em branco, o sistema cria um nome" className="input-field" />
           </div>
 
-          <fieldset className="rounded-2xl border border-slate-200 bg-white p-4">
-            <legend className="px-1 text-sm font-bold text-slate-800">Logos do cabeçalho</legend>
-            <label className="mt-1 flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" name="incluir_logo_estado" defaultChecked={plano?.incluir_logo_estado ?? true} className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
-              Logo do Governo de Santa Catarina (Secretaria de Estado da Educação)
-            </label>
-            <label className="mt-2 flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" name="incluir_logo_escola" defaultChecked={plano?.incluir_logo_escola ?? true} className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
-              Logo da escola
-            </label>
-          </fieldset>
+          <OpcoesLogo plano={plano} />
 
         </div>
         {erroDados && (

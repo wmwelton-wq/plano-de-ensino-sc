@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import logoGoverno from "@/assets/logo-governo-sc.png";
 import { ehHtml, sanitizarHtml } from "@/lib/texto-rico";
 import { lerSecoes, ordenarComponentes } from "@/lib/secoes-componentes";
 
@@ -15,7 +14,7 @@ export interface DadosPlanoAnosIniciais {
   dataFim: string | null;
   segundoProfessor: string | null;
   professorNome: string;
-  escola: { nome: string; municipio: string; logo_url: string | null } | null;
+  escola: { nome: string; municipio: string; logo_url: string | null; imagem_esquerda_url: string | null } | null;
   mostrarBrasaoEstado: boolean;
   mostrarLogoEscola: boolean;
   /** Componentes escolhidos no plano (qualquer ordem). */
@@ -82,20 +81,21 @@ export default function PlanoAnosIniciais({ dados }: { dados: DadosPlanoAnosInic
   const escola = dados.escola;
   const linhaEscola = escola ? `${escola.nome} – ${escola.municipio} – SC` : "_______________";
   const temLogoEscola = dados.mostrarLogoEscola && Boolean(escola?.logo_url);
-  const colunasCabecalho = 1 + (dados.mostrarBrasaoEstado ? 1 : 0) + (temLogoEscola ? 1 : 0);
+  const temImagemEsquerda = dados.mostrarBrasaoEstado && Boolean(escola?.imagem_esquerda_url);
+  const colunasCabecalho = 1 + (temImagemEsquerda ? 1 : 0) + (temLogoEscola ? 1 : 0);
 
   return (
     <>
-      {/* Cabeçalho: brasão do Estado (se ligado), identificação da escola e logo da escola (se ligado e existir). */}
+      {/* Cabeçalho: imagem da esquerda (se personalizado), identificação da escola e imagem da direita (se personalizado). */}
       <table className="w-full border-collapse border border-black" style={{ tableLayout: "fixed" }}>
         <tbody>
           <tr className="break-inside-avoid">
-            {dados.mostrarBrasaoEstado && (
+            {temImagemEsquerda && (
               <td className="w-[22%] border border-black p-2 text-center align-middle">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={logoGoverno.src}
-                  alt="Governo de Santa Catarina — Secretaria de Estado da Educação"
+                  src={escola?.imagem_esquerda_url ?? ""}
+                  alt="Imagem do cabeçalho (lado esquerdo)"
                   className="mx-auto max-h-20 max-w-full object-contain"
                 />
               </td>
