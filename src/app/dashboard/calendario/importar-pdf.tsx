@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import LinkNovaEscola from "@/components/link-nova-escola";
 import { Icone } from "@/components/icones";
 import { ROTULO_TIPO, rotuloPeriodo, type TipoEvento } from "@/lib/feriados";
 import { salvarEventosEmLote, type CotaCalendarioIA } from "./actions";
@@ -124,9 +125,9 @@ export default function ImportarCalendarioPdf({ escolas, escolaPadrao, cota, aoS
       {escolas.length === 0 ? (
         <p className="mt-3 text-sm text-slate-700">
           Para enviar um calendário, cadastre antes a escola dele.{" "}
-          <Link href="/dashboard/escolas/nova" className="font-bold text-primary-700 underline">
+          <LinkNovaEscola className="font-bold text-primary-700 underline">
             Cadastrar escola
-          </Link>
+          </LinkNovaEscola>
         </p>
       ) : (
         !lidos && (

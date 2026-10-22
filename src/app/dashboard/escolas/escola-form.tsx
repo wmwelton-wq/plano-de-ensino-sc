@@ -8,13 +8,16 @@ interface EscolaFormProps {
   escola?: Escola;
   action: (estado: EstadoFormularioEscola, formData: FormData) => Promise<EstadoFormularioEscola>;
   textoBotao: string;
+  /** Tela para onde voltar depois de salvar (já validada no servidor). */
+  voltar?: string;
 }
 
-export default function EscolaForm({ escola, action, textoBotao }: EscolaFormProps) {
+export default function EscolaForm({ escola, action, textoBotao, voltar }: EscolaFormProps) {
   const [estado, formAction, pendente] = useActionState(action, {});
 
   return (
     <form action={formAction} className="space-y-4">
+      {voltar && <input type="hidden" name="voltar" value={voltar} />}
       <div>
         <label htmlFor="nome" className="field-label">
           Nome da escola

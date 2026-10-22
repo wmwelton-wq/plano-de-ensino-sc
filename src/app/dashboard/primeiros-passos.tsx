@@ -32,7 +32,7 @@ export default function PrimeirosPassos({ temEscola, temAnual, temMensal, temFin
   }, []);
 
   const itens: { chave: string; icone: NomeIcone; titulo: string; texto: string; href: string; link: string; feito: boolean }[] = [
-    { chave: "escola", icone: "escola", titulo: "Cadastre sua escola", texto: "Nome, município e logo aparecem no cabeçalho dos planos.", href: "/dashboard/escolas/nova", link: "Cadastrar escola", feito: temEscola },
+    { chave: "escola", icone: "escola", titulo: "Cadastre sua escola", texto: "Nome, município e logo aparecem no cabeçalho dos planos.", href: "/dashboard/escolas/nova?voltar=%2Fdashboard", link: "Cadastrar escola", feito: temEscola },
     { chave: "anual", icone: "calendario", titulo: "Faça o plano anual", texto: "Marque as habilidades e os objetos de conhecimento de cada trimestre.", href: "/dashboard/anual/novo", link: "Criar plano anual", feito: temAnual },
     { chave: "mensal", icone: "livro", titulo: "Crie o primeiro plano mensal", texto: "Do zero ou gerado a partir do plano anual.", href: "/dashboard/planos/novo", link: "Criar plano mensal", feito: temMensal },
     { chave: "final", icone: "check", titulo: "Finalize um plano", texto: "Marque como finalizado quando estiver pronto.", href: "/dashboard/meus-planos", link: "Ver meus planos", feito: temFinalizado },

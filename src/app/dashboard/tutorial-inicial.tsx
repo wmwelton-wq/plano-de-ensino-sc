@@ -9,7 +9,7 @@ export const CHAVE_TUTORIAL = "plano-docente:tutorial-visto";
 
 const PASSOS = [
   { icone: "sparkle" as NomeIcone, tom: "azul", titulo: "Bem-vindo(a)!", texto: "Em 4 passos rápidos você vê como montar seus planos. Leva menos de um minuto.", href: null as string | null, link: "" },
-  { icone: "escola" as NomeIcone, tom: "ambar", titulo: "1. Cadastre sua escola", texto: "O nome, o município e a logo aparecem no cabeçalho dos planos.", href: "/dashboard/escolas/nova", link: "Cadastrar escola" },
+  { icone: "escola" as NomeIcone, tom: "ambar", titulo: "1. Cadastre sua escola", texto: "O nome, o município e a logo aparecem no cabeçalho dos planos.", href: "/dashboard/escolas/nova?voltar=%2Fdashboard", link: "Cadastrar escola" },
   { icone: "calendario" as NomeIcone, tom: "azul", titulo: "2. Faça o plano anual", texto: "Uma vez por ano: marque habilidades e objetos de conhecimento de cada trimestre.", href: "/dashboard/anual/novo", link: "Cadastrar plano anual" },
   { icone: "livro" as NomeIcone, tom: "verde", titulo: "3. Gere os mensais e baixe", texto: "No plano anual, “Gerar planos mensais” faz o trabalho pesado. Depois é só baixar em PDF ou Word.", href: null, link: "" },
 ];

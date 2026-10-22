@@ -22,6 +22,7 @@ import {
   type TipoEvento,
 } from "@/lib/feriados";
 import Link from "next/link";
+import LinkNovaEscola from "@/components/link-nova-escola";
 import { definirCalendario, excluirCalendario, excluirEvento, salvarEvento, type CotaCalendarioIA, type EstadoEvento } from "./actions";
 import ImportarCalendarioPdf from "./importar-pdf";
 
@@ -177,10 +178,10 @@ export default function CalendarioView({ hoje, mesInicial, ativo, eventos: todos
             <p className="text-sm text-slate-700">
               <strong>Cada escola tem o seu calendário.</strong> Cadastre primeiro a escola onde você dá aula; depois você adiciona (ou envia em PDF) as datas dela.
             </p>
-            <Link href="/dashboard/escolas/nova" className="btn-azul">
+            <LinkNovaEscola className="btn-azul">
               <Icone nome="mais" className="h-4 w-4" />
               Cadastrar escola
-            </Link>
+            </LinkNovaEscola>
           </div>
         ) : (
           <div className="flex flex-wrap items-end gap-3">
@@ -197,10 +198,10 @@ export default function CalendarioView({ hoje, mesInicial, ativo, eventos: todos
                 <option value="">Só datas gerais (valem para todas as escolas)</option>
               </select>
             </div>
-            <Link href="/dashboard/escolas/nova" className="btn-azul-suave">
+            <LinkNovaEscola className="btn-azul-suave">
               <Icone nome="mais" className="h-4 w-4" />
               Cadastrar outra escola
-            </Link>
+            </LinkNovaEscola>
           </div>
         )}
         <LimparCalendario escolas={escolas} escolaSel={escolaSel} nomeEscola={nomeEscola} eventos={todosEventos} />
