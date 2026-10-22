@@ -1,15 +1,18 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { lerReferenciasGravadas, referenciasParaGravar } from "@/lib/referencias-oficiais";
-import { useAvisoTemporario } from "./linhas-do-editor";
+import { lerReferenciasGravadas } from "@/lib/referencias-oficiais";
 
 interface ReferenciasCampoProps {
   id?: string;
   name?: string;
   valorInicial?: string | null;
   rows?: number;
-  /** Referências oficiais que o plano gerado traz sozinhas; o botão as coloca no quadro para o professor ver e editar. */
+  /**
+   * Fontes oficiais que o plano traz sozinhas (BNCC, Currículo Catarinense, etc.).
+   * Elas entram SEMPRE no plano gerado e não podem ser apagadas, então são removidas
+   * do quadro editável: aqui o professor só vê e edita as próprias referências.
+   */
   sugeridas?: string[];
 }
 
@@ -39,9 +42,10 @@ function chave(l: string): string {
 }
 
 /**
- * Caixa de referências. O botão "Adicionar referências sugeridas" coloca no quadro as fontes
- * oficiais que o plano já traz; a partir daí o plano mostra exatamente o que está no quadro
- * (o professor pode editar ou apagar qualquer linha). Também tem modelos ABNT.
+ * Caixa de referências complementares. As fontes oficiais usadas no plano são adicionadas
+ * automaticamente ao documento (citadas a partir dos documentos oficiais) e não podem ser
+ * removidas; este quadro é só para as referências que o professor acrescentar. Também tem
+ * modelos ABNT para facilitar.
  */
 export default function ReferenciasCampo({
   id = "referencias",
@@ -51,11 +55,15 @@ export default function ReferenciasCampo({
   sugeridas = [],
 }: ReferenciasCampoProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
-  const inicial = lerReferenciasGravadas(valorInicial);
-  const [texto, setTexto] = useState(inicial.texto);
-  // "Completo": o quadro é a lista inteira das referências do plano (sem as oficiais automáticas).
-  const [completo, setCompleto] = useState(inicial.completo);
-  const { aviso, mostrar } = useAvisoTemporario(3200);
+  // Mostra apenas as referências do professor: tira do quadro as fontes oficiais (inclusive de
+  // planos antigos que as tinham gravado) — elas voltam sozinhas no plano gerado.
+  const sugeridasChave = new Set(sugeridas.map(chave));
+  const textoInicial = lerReferenciasGravadas(valorInicial)
+    .texto.split("\n")
+    .filter((l) => !sugeridasChave.has(chave(l)))
+    .join("\n")
+    .replace(/^\n+/, "");
+  const [texto, setTexto] = useState(textoInicial);
 
   function inserir(modelo: string) {
     const base = texto.trimEnd();
@@ -68,32 +76,6 @@ export default function ReferenciasCampo({
     });
   }
 
-  function adicionarSugeridas() {
-    const existentes = new Set(texto.split("\n").map(chave));
-    const novas = sugeridas.filter((r) => !existentes.has(chave(r)));
-    setCompleto(true);
-    if (novas.length === 0) {
-      mostrar("As referências sugeridas já estão no quadro.");
-      return;
-    }
-    const resto = texto.trim();
-    setTexto([...novas, ...(resto ? [resto] : [])].join("\n"));
-    mostrar("Referências sugeridas adicionadas no quadro acima. Você pode editar ou apagar o que quiser.");
-  }
-
-  function voltarAoAutomatico() {
-    const sugeridasChave = new Set(sugeridas.map(chave));
-    setTexto(
-      texto
-        .split("\n")
-        .filter((l) => !sugeridasChave.has(chave(l)))
-        .join("\n")
-        .trim()
-    );
-    setCompleto(false);
-    mostrar("Pronto: as fontes oficiais voltam a entrar sozinhas no plano.");
-  }
-
   return (
     <div>
       <textarea
@@ -104,34 +86,15 @@ export default function ReferenciasCampo({
         onChange={(e) => setTexto(e.target.value)}
         className="input-field"
       />
-      <input type="hidden" name={name} value={referenciasParaGravar(texto, completo)} />
+      {/* O quadro guarda só o que o professor digita; as fontes oficiais entram sozinhas no plano. */}
+      <input type="hidden" name={name} value={texto} />
 
-      {sugeridas.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={adicionarSugeridas} className="btn-verde !px-4 !py-2 !text-sm">
-            <span aria-hidden="true">＋</span> Adicionar referências sugeridas
-          </button>
-          {completo && (
-            <button type="button" onClick={voltarAoAutomatico} className="btn-azul-suave !px-3 !py-2 !text-xs">
-              Voltar ao automático
-            </button>
-          )}
-        </div>
-      )}
-      <p
-        role="status"
-        aria-live="polite"
-        className={`mt-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
-          aviso ? "border border-emerald-200 bg-emerald-50 text-emerald-800" : "hidden"
-        }`}
-      >
-        {aviso ? `✓ ${aviso}` : ""}
+      <p className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
+        As fontes oficiais usadas neste plano (BNCC, Currículo Catarinense e outros documentos
+        curriculares públicos) são adicionadas automaticamente, citadas a partir dos documentos
+        oficiais. Acrescente aqui as demais referências que você utilizou — a lista de referências
+        do plano é de sua responsabilidade.
       </p>
-      {completo && (
-        <p className="mt-2 text-xs text-slate-500">
-          O plano vai mostrar exatamente as referências que estão neste quadro, na ordem em que estão.
-        </p>
-      )}
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <span className="text-xs text-slate-500">Inserir modelo (ABNT):</span>

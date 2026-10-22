@@ -571,8 +571,8 @@ export default function PlanoFormFundamentalAnosIniciais({
           </label>
           <p className="text-xs text-slate-500">
             A referência oficial (Currículo Base do Território Catarinense / BNCC
-            {usarCurriculoDigital ? " e Currículo de Educação Digital" : ""}) já entra
-            automaticamente. Para ver e editar essas fontes aqui, clique em “Adicionar referências sugeridas”; use o quadro também para as demais referências, uma por linha.
+            {usarCurriculoDigital ? " e Currículo de Educação Digital" : ""}) entra
+            automaticamente no plano e não pode ser removida. Use o quadro abaixo apenas para as suas demais referências, uma por linha.
           </p>
           <ReferenciasCampo valorInicial={plano?.referencias} rows={4} sugeridas={referenciasOficiais("fundamental_anos_iniciais", usarCurriculoDigital)} />
         </div>
