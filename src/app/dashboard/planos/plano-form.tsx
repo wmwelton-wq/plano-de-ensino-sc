@@ -602,9 +602,9 @@ export default function PlanoForm({
             Referências complementares <span className="text-slate-400">(opcional)</span>
           </label>
           <p className="text-xs text-slate-500">
-            As fontes oficiais (BNCC, Currículo Catarinense{usarCurriculoDigital ? " e Currículo de Educação Digital" : ""}) já entram
-            automaticamente nas Referências do plano gerado. Se quiser ver e editar essas fontes aqui, clique em
-            “Adicionar referências sugeridas”. Use o quadro também para referências adicionais (livros, artigos etc.), uma por linha.
+            As fontes oficiais (BNCC, Currículo Catarinense{usarCurriculoDigital ? " e Currículo de Educação Digital" : ""}) entram
+            automaticamente nas Referências do plano e não podem ser removidas. Use o quadro abaixo apenas para as suas demais
+            referências (livros, artigos etc.), uma por linha.
           </p>
           <ReferenciasCampo valorInicial={plano?.referencias} rows={5} sugeridas={referenciasOficiais(etapa, usarCurriculoDigital)} />
         </div>

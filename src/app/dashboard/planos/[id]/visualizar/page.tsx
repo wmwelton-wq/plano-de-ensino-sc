@@ -33,10 +33,14 @@ function linhas(texto: string | null): string[] {
     .filter((l) => l.length > 0);
 }
 
-/** Referências do plano: oficiais (modo automático) + as do quadro. No modo completo, só o que está no quadro. */
+/** Referências do plano: as fontes oficiais entram SEMPRE (o professor não pode apagá-las) e, depois delas, as referências dele. */
 function referenciasDoPlano(etapa: string, usarCurriculoDigital: boolean, gravado: string | null): string[] {
-  const { completo, texto } = lerReferenciasGravadas(gravado);
-  return completo ? linhas(texto) : [...referenciasOficiais(etapa, usarCurriculoDigital), ...linhas(texto)];
+  const oficiais = referenciasOficiais(etapa, usarCurriculoDigital);
+  const chave = (l: string) => l.replace(/\s+/g, " ").trim().toLowerCase();
+  const oficiaisChave = new Set(oficiais.map(chave));
+  const { texto } = lerReferenciasGravadas(gravado);
+  const doProfessor = linhas(texto).filter((l) => !oficiaisChave.has(chave(l)));
+  return [...oficiais, ...doProfessor];
 }
 
 function formatarData(data: string | null): string {

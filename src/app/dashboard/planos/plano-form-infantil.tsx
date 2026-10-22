@@ -309,7 +309,7 @@ export default function PlanoFormInfantil({
           </label>
           <p className="text-xs text-slate-500">
             As fontes oficiais (BNCC e Currículo Base SC) já entram automaticamente nas Referências
-            do plano gerado. Para ver e editar essas fontes aqui, clique em “Adicionar referências sugeridas”; use o quadro também para referências adicionais, uma por linha.
+            do plano e não podem ser removidas. Use o quadro abaixo apenas para referências adicionais, uma por linha.
           </p>
           <ReferenciasCampo valorInicial={plano?.referencias} rows={4} sugeridas={referenciasOficiais("educacao_infantil", false)} />
         </div>
