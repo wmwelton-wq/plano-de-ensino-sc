@@ -109,6 +109,11 @@ export default function PrivacidadePage() {
               "Coletada automaticamente ao acessar o painel. Usada só pela administração do serviço, para entender de onde vêm os cadastros e para segurança.",
             ],
             [
+              "Estatísticas de uso",
+              "Páginas visitadas, tipo de aparelho e navegador e país de acesso, em números agregados. Não usamos cookies para isso nem identificamos você pessoalmente; o endereço das páginas é simplificado antes do envio (sem parâmetros, identificadores de plano ou códigos de link).",
+              "Coletadas automaticamente ao navegar, por meio do Vercel Web Analytics. Usadas para entender quais partes do aplicativo são mais usadas e melhorar a experiência.",
+            ],
+            [
               "Verificação anti-robô",
               "Resultado da verificação do Cloudflare Turnstile (\"não sou um robô\"), que pode analisar sinais técnicos do navegador.",
               "Gerado ao entrar, cadastrar ou recuperar a senha.",
