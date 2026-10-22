@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import BuscaPlanos, { type ItemBusca } from "./busca-planos";
 import TutorialInicial from "./tutorial-inicial";
 import PrimeirosPassos from "./primeiros-passos";
+import CartaoInstalar from "@/components/cartao-instalar";
 import AgendaPainel from "./agenda-painel";
 import { PrimeiroNome } from "./usuario-contexto";
 import { Suspense } from "react";
@@ -262,6 +263,8 @@ export default async function InicioPage() {
       <Suspense fallback={null}>
         <TutorialInicial />
       </Suspense>
+
+      <CartaoInstalar />
 
       {/* ── Faixa de boas-vindas ── */}
       <section className="hero-painel painel-entra" aria-labelledby="boas-vindas">

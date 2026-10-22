@@ -4,6 +4,7 @@ import "./globals.css";
 import "./dashboard/painel.css";
 import "./modo-escuro.css";
 import RegistrarApp from "@/components/registrar-app";
+import AnalyticsPainel from "@/components/analytics-painel";
 
 // O nome da variável (--font-inter) é mantido de propósito: assim a fonte funciona
 // mesmo que o tailwind.config.ts do projeto ainda seja o antigo.
@@ -44,6 +45,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-[var(--background)] font-sans antialiased">{children}
         <RegistrarApp />
+        {process.env.VERCEL_ENV === "production" && <AnalyticsPainel />}
       </body>
     </html>
   );
