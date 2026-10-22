@@ -12,7 +12,7 @@ const PASSOS = [
     tom: "ambar",
     titulo: "1. Cadastre sua escola",
     texto: "Em Escolas → Cadastrar escola, informe o nome, o município e (se quiser) a logo. Ela aparece no cabeçalho dos seus planos.",
-    href: "/dashboard/escolas/nova",
+    href: "/dashboard/escolas/nova?voltar=%2Fdashboard%2Fajuda",
     link: "Cadastrar escola",
   },
   {

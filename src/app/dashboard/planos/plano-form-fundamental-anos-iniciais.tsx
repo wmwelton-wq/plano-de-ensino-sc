@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import LinkNovaEscola from "@/components/link-nova-escola";
 import OpcoesLogo from "./opcoes-logo";
 import type { CompetenciaCurricular, Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
@@ -276,9 +277,9 @@ export default function PlanoFormFundamentalAnosIniciais({
             </select>
             <p className="field-hint">
               Usada para preencher o campo &quot;Unidade Escolar&quot; do plano.{" "}
-              <Link href="/dashboard/escolas/nova" className="text-primary-600 hover:underline">
+              <LinkNovaEscola className="text-primary-600 hover:underline">
                 Cadastrar nova escola
-              </Link>
+              </LinkNovaEscola>
             </p>
           </div>
 

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import LinkNovaEscola from "@/components/link-nova-escola";
 import type { Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
@@ -179,9 +180,9 @@ export default function PlanoFormInfantil({
             </select>
             <p className="field-hint">
               Usada para preencher o cabeçalho (nome da escola, município e logo).{" "}
-              <Link href="/dashboard/escolas/nova" className="text-primary-600 hover:underline">
+              <LinkNovaEscola className="text-primary-600 hover:underline">
                 Cadastrar nova escola
-              </Link>
+              </LinkNovaEscola>
             </p>
           </div>
 

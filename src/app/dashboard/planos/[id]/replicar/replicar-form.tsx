@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
+import LinkNovaEscola from "@/components/link-nova-escola";
 import type { EstadoFormulario } from "../../actions";
 import SecaoPlano from "../../secao-plano";
 import BarraSalvar from "../../barra-salvar";
@@ -66,9 +67,9 @@ export default function ReplicarForm({
         {escolas.length === 0 ? (
           <p className="rounded-xl border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
             Você ainda não tem escolas cadastradas.{" "}
-            <Link href="/dashboard/escolas/nova" className="font-semibold text-primary-600 hover:underline">
+            <LinkNovaEscola className="font-semibold text-primary-600 hover:underline">
               Cadastrar escola
-            </Link>
+            </LinkNovaEscola>
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -106,9 +107,9 @@ export default function ReplicarForm({
         )}
         <p className="text-xs text-slate-500">
           Falta alguma escola?{" "}
-          <Link href="/dashboard/escolas/nova" className="font-semibold text-primary-600 hover:underline">
+          <LinkNovaEscola className="font-semibold text-primary-600 hover:underline">
             Cadastrar nova escola
-          </Link>{" "}
+          </LinkNovaEscola>{" "}
           (depois volte aqui).
         </p>
       </SecaoPlano>

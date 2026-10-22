@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { voltarSeguro } from "@/lib/voltar";
 
 export interface EstadoFormularioEscola {
   erro?: string;
@@ -135,7 +136,10 @@ export async function criarEscola(
   }
 
   revalidatePath("/dashboard/escolas");
-  redirect("/dashboard/escolas");
+  // Se o professor veio de outra tela (ex.: o plano), volta para ela.
+  const destino = voltarSeguro(formData.get("voltar"));
+  if (destino) revalidatePath(destino.split("?")[0]);
+  redirect(destino ?? "/dashboard/escolas");
 }
 
 export async function atualizarEscola(

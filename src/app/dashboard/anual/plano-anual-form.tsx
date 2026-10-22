@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import LinkNovaEscola from "@/components/link-nova-escola";
 import type { Escola } from "@/lib/database.types";
 import type { EstadoFormulario } from "../planos/actions";
 import SecaoPlano, { type TomSecao } from "../planos/secao-plano";
@@ -674,9 +675,9 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
             </select>
             <p className="field-hint">
               A mesma escola serve para os planos mensais e anuais.{" "}
-              <Link href="/dashboard/escolas/nova" className="text-primary-600 hover:underline">
+              <LinkNovaEscola className="text-primary-600 hover:underline">
                 Cadastrar nova escola
-              </Link>
+              </LinkNovaEscola>
             </p>
           </div>
 
