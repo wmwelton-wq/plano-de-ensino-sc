@@ -46,6 +46,8 @@ export interface Escola {
   nome: string;
   municipio: string;
   logo_url: string | null;
+  /** Imagem personalizada (lado esquerdo) do cabeçalho dos planos. */
+  imagem_esquerda_url: string | null;
   created_at: string;
   updated_at: string;
 }

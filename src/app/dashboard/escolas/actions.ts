@@ -124,11 +124,22 @@ export async function criarEscola(
     logoUrl = resultado.url;
   }
 
+  let imagemEsquerdaUrl: string | null = null;
+  const imagemEsquerda = formData.get("imagem_esquerda") as File | null;
+  if (imagemEsquerda && imagemEsquerda.size > 0) {
+    const resultado = await enviarLogo(supabase, user.id, imagemEsquerda);
+    if (!resultado.ok) {
+      return { erro: resultado.erro };
+    }
+    imagemEsquerdaUrl = resultado.url;
+  }
+
   const { error } = await supabase.from("escolas").insert({
     professor_id: user.id,
     nome,
     municipio,
     logo_url: logoUrl,
+    imagem_esquerda_url: imagemEsquerdaUrl,
   });
 
   if (error) {
@@ -174,6 +185,16 @@ export async function atualizarEscola(
     novaLogoUrl = resultado.url ?? undefined;
   }
 
+  let novaImagemEsquerdaUrl: string | undefined;
+  const imagemEsquerda = formData.get("imagem_esquerda") as File | null;
+  if (imagemEsquerda && imagemEsquerda.size > 0) {
+    const resultado = await enviarLogo(supabase, user.id, imagemEsquerda);
+    if (!resultado.ok) {
+      return { erro: resultado.erro };
+    }
+    novaImagemEsquerdaUrl = resultado.url ?? undefined;
+  }
+
   const { error } = await supabase
     .from("escolas")
     .update({
@@ -181,6 +202,7 @@ export async function atualizarEscola(
       municipio,
       updated_at: new Date().toISOString(),
       ...(novaLogoUrl !== undefined ? { logo_url: novaLogoUrl } : {}),
+      ...(novaImagemEsquerdaUrl !== undefined ? { imagem_esquerda_url: novaImagemEsquerdaUrl } : {}),
     })
     .eq("id", escolaId);
 
