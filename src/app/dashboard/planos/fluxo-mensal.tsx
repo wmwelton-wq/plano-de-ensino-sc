@@ -4,6 +4,7 @@ import { startTransition, useActionState, useCallback, useEffect, useMemo, useRe
 import { Icone, type NomeIcone } from "@/components/icones";
 import FluxoPassos, { type GrupoFluxo } from "../anual/fluxo-passos";
 import type { TomSecao } from "./secao-plano";
+import { registrarAntesDeSair, restaurarCopiaDoFormulario } from "@/components/link-nova-escola";
 import { atualizarPlano, salvarRascunhoPlano, type EstadoFormulario, type ResultadoGravacao } from "./actions";
 
 const SEGUNDOS_AUTOSSALVAR = 4;
@@ -71,6 +72,21 @@ export function useGravacaoPlano(
       setSalvando(false);
     }
   }, []);
+
+  // "Cadastrar nova escola": guarda o plano antes de sair e devolve o id, para voltar a ESTE plano.
+  useEffect(() => {
+    const cancelar = registrarAntesDeSair(async () => {
+      if (timer.current) clearTimeout(timer.current);
+      const r = await gravar();
+      return { id: r.id ?? idRef.current };
+    });
+    return cancelar;
+  }, [gravar]);
+
+  // Plano novo que voltou de "Cadastrar nova escola" sem poder ser guardado: devolve os campos preenchidos.
+  useEffect(() => {
+    if (!planoIdInicial) restaurarCopiaDoFormulario(formRef.current);
+  }, [planoIdInicial]);
 
   const autosalvar = useCallback(async () => {
     if (!sujo.current || pendente) return;
