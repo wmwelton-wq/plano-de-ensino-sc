@@ -32,18 +32,19 @@ export default async function EditarPlanoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ passo?: string }>;
+  searchParams: Promise<{ passo?: string; escola_nova?: string }>;
 }) {
   const { id } = await params;
-  const { passo } = await searchParams;
+  const { passo, escola_nova: escolaNovaId } = await searchParams;
   const passoInicial = typeof passo === "string" && passo.length <= 80 ? passo : undefined;
   const supabase = await createClient();
 
-  const { data: plano } = await supabase.from("planos_de_ensino").select("*").eq("id", id).single();
+  const { data: planoBanco } = await supabase.from("planos_de_ensino").select("*").eq("id", id).single();
 
-  if (!plano) {
+  if (!planoBanco) {
     notFound();
   }
+  let plano = planoBanco;
 
   const etapa = (plano.etapa ?? "ensino_medio") as EtapaPlano;
 
@@ -52,6 +53,10 @@ export default async function EditarPlanoPage({
     supabase.from("planos_habilidades").select("habilidade_id").eq("plano_id", id),
   ]);
   const habilidadesSelecionadasIds = (planoHabilidades ?? []).map((p) => p.habilidade_id);
+  // Voltou de "Cadastrar nova escola": a escola recém-criada já aparece escolhida.
+  if (typeof escolaNovaId === "string" && (escolas ?? []).some((e) => e.id === escolaNovaId)) {
+    plano = { ...planoBanco, escola_id: escolaNovaId };
+  }
 
   const atualizarComId = atualizarPlano.bind(null, id);
   const excluirComId = excluirPlano.bind(null, id);

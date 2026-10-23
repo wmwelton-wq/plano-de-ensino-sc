@@ -134,13 +134,17 @@ export async function criarEscola(
     imagemEsquerdaUrl = resultado.url;
   }
 
-  const { error } = await supabase.from("escolas").insert({
-    professor_id: user.id,
-    nome,
-    municipio,
-    logo_url: logoUrl,
-    imagem_esquerda_url: imagemEsquerdaUrl,
-  });
+  const { data: escolaNova, error } = await supabase
+    .from("escolas")
+    .insert({
+      professor_id: user.id,
+      nome,
+      municipio,
+      logo_url: logoUrl,
+      imagem_esquerda_url: imagemEsquerdaUrl,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     return { erro: "Não foi possível salvar a escola. Tente novamente." };
@@ -148,8 +152,12 @@ export async function criarEscola(
 
   revalidatePath("/dashboard/escolas");
   // Se o professor veio de outra tela (ex.: o plano), volta para ela.
-  const destino = voltarSeguro(formData.get("voltar"));
+  let destino = voltarSeguro(formData.get("voltar"));
   if (destino) revalidatePath(destino.split("?")[0]);
+  // Voltando a um plano: a escola recém-cadastrada já vem escolhida no plano.
+  if (destino && escolaNova?.id && /^\/dashboard\/planos\/[0-9a-f-]{36}(\?|$)/i.test(destino)) {
+    destino += `${destino.includes("?") ? "&" : "?"}escola_nova=${escolaNova.id}`;
+  }
   redirect(destino ?? "/dashboard/escolas");
 }
 
