@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      menores-e-correcoes:
+        update-types: ["minor", "patch"]
+    ignore:
+      # Tailwind 4 exige migração manual (muda a configuração); fica de fora até ser planejada.
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
