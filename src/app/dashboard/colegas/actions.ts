@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { enviarEmail, envioDeEmailAtivo } from "@/lib/email/resend";
 import { montarEmailPlano } from "@/lib/email/modelo-plano";
@@ -96,10 +95,7 @@ const MOTIVOS: Record<string, string> = {
 };
 
 async function enderecoDoSite(): Promise<string> {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
-  if (host) return `${proto}://${host}`;
+  // Endereço fixo (não depende do cabeçalho Host da requisição): o link enviado por e-mail sempre aponta para o site oficial.
   return (process.env.NEXT_PUBLIC_SITE_URL ?? "https://planodocente.com.br").replace(/\/$/, "");
 }
 

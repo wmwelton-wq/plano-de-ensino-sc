@@ -32,6 +32,26 @@ const nextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
+          // Content-Security-Policy em modo "só relatar": NÃO bloqueia nada. O navegador
+          // apenas avisa no Console (F12) o que seria bloqueado. Depois de usar o app
+          // inteiro sem avisos, troque a chave por "Content-Security-Policy" para aplicar.
+          {
+            key: "Content-Security-Policy-Report-Only",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://va.vercel-scripts.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https://*.supabase.co",
+              "font-src 'self' data:",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://va.vercel-scripts.com https://vitals.vercel-insights.com",
+              "frame-src https://challenges.cloudflare.com",
+              "worker-src 'self' blob:",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "frame-ancestors 'none'",
+            ].join("; "),
+          },
           // Desliga o acesso a APIs sensíveis do navegador que o app não usa.
           {
             key: "Permissions-Policy",
