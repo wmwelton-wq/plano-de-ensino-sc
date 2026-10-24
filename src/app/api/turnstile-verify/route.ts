@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isRateLimited } from "@/lib/rate-limit";
+import { limitadoNoBanco } from "@/lib/rate-limit-banco";
 
 /**
  * Verifica um token do Cloudflare Turnstile no servidor, chamando a API
@@ -16,15 +17,15 @@ export async function POST(request: Request) {
   // muito mais do que qualquer pessoa real precisaria, mesmo errando o
   // captcha algumas vezes; só trava automação de verdade. Ver
   // src/lib/rate-limit.ts para como ajustar ou desativar isso.
-  if (
-    isRateLimited({
-      bucket: "turnstile-verify",
-      identifier: remoteIp,
-      windowMs: 5 * 60 * 1000,
-      maxAttempts: 20,
-      blockMs: 10 * 60 * 1000,
-    })
-  ) {
+  const limiteTurnstile = {
+    bucket: "turnstile-verify",
+    identifier: remoteIp,
+    windowMs: 5 * 60 * 1000,
+    maxAttempts: 20,
+    blockMs: 10 * 60 * 1000,
+  };
+  // Primeiro o limite em memória (barato, por instância); depois o do banco, que vale para todas as instâncias.
+  if (isRateLimited(limiteTurnstile) || (await limitadoNoBanco(limiteTurnstile))) {
     return NextResponse.json(
       { success: false },
       { status: 429, headers: { "Cache-Control": "private, no-store" } }

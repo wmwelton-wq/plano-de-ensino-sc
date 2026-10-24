@@ -64,7 +64,7 @@ export default function EscolaForm({ escola, action, textoBotao, voltar }: Escol
           id="imagem_esquerda"
           name="imagem_esquerda"
           type="file"
-          accept="image/png,image/jpeg,image/svg+xml,image/webp"
+          accept="image/png,image/jpeg,image/webp"
           className="mt-1 w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
         />
       </div>
@@ -85,7 +85,7 @@ export default function EscolaForm({ escola, action, textoBotao, voltar }: Escol
           id="logo"
           name="logo"
           type="file"
-          accept="image/png,image/jpeg,image/svg+xml,image/webp"
+          accept="image/png,image/jpeg,image/webp"
           className="mt-1 w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
         />
       </div>

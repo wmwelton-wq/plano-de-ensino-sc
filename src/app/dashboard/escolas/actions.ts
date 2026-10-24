@@ -19,13 +19,12 @@ const TIPOS_LOGO_PERMITIDOS: Record<string, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
-  "image/svg+xml": "svg",
 };
 
 const TAMANHO_MAXIMO_LOGO = 2 * 1024 * 1024; // 2 MB
 
 /** Confere o conteúdo REAL do arquivo (os primeiros bytes), não só o tipo que o navegador declarou. */
-function conteudoCombinaComTipo(tipo: string, bytes: Uint8Array, texto: string): boolean {
+function conteudoCombinaComTipo(tipo: string, bytes: Uint8Array): boolean {
   const ini = (...b: number[]) => b.every((v, i) => bytes[i] === v);
   switch (tipo) {
     case "image/png":
@@ -34,12 +33,6 @@ function conteudoCombinaComTipo(tipo: string, bytes: Uint8Array, texto: string):
       return ini(0xff, 0xd8, 0xff);
     case "image/webp":
       return ini(0x52, 0x49, 0x46, 0x46) && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
-    case "image/svg+xml": {
-      // SVG é XML e pode carregar scripts: aceita só se for um SVG "limpo".
-      const t = texto.toLowerCase();
-      if (!t.includes("<svg")) return false;
-      return !/<script|<foreignobject|<iframe|<embed|<object|javascript:|\bon[a-z]+\s*=|<!entity|<!doctype[^>]*\[/.test(t);
-    }
     default:
       return false;
   }
@@ -62,7 +55,7 @@ async function enviarLogo(
   if (!extensao) {
     return {
       ok: false,
-      erro: "Formato de imagem não suportado. Envie um arquivo PNG, JPEG, WEBP ou SVG.",
+      erro: "Formato de imagem não suportado. Envie um arquivo PNG, JPEG ou WEBP.",
     };
   }
 
@@ -71,9 +64,8 @@ async function enviarLogo(
   }
 
   const bytes = new Uint8Array(await arquivo.arrayBuffer());
-  const texto = arquivo.type === "image/svg+xml" ? new TextDecoder().decode(bytes) : "";
-  if (!conteudoCombinaComTipo(arquivo.type, bytes, texto)) {
-    return { ok: false, erro: "O arquivo não parece ser uma imagem válida. Envie um PNG, JPEG, WEBP ou SVG simples." };
+  if (!conteudoCombinaComTipo(arquivo.type, bytes)) {
+    return { ok: false, erro: "O arquivo não parece ser uma imagem válida. Envie um PNG, JPEG ou WEBP." };
   }
 
   // Caminho prefixado pelo userId (auth.uid()) — as policies do bucket
