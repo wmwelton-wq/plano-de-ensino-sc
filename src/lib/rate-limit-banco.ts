@@ -21,7 +21,10 @@ export async function limitadoNoBanco(opcoes: {
     if (!opcoes.identifier) return false;
     const segredo = process.env.SUPABASE_SECRET_KEY;
     const supabase = criarClienteServico();
-    if (!segredo || !supabase) return false;
+    if (!segredo || !supabase) {
+      console.error("[limite-banco] limite distribuído DESATIVADO: cliente de serviço indisponível (confira SUPABASE_SECRET_KEY).");
+      return false;
+    }
 
     const codigo = createHmac("sha256", segredo).update(`${opcoes.bucket}:${opcoes.identifier}`).digest("hex");
     const { data, error } = await supabase.rpc("registrar_tentativa", {
@@ -30,9 +33,13 @@ export async function limitadoNoBanco(opcoes: {
       p_max: Math.max(1, Math.round(opcoes.maxAttempts)),
       p_bloqueio_seg: Math.max(1, Math.round(opcoes.blockMs / 1000)),
     });
-    if (error) return false;
+    if (error) {
+      console.error("[limite-banco] falha ao registrar tentativa (limite aberto nesta requisição):", error.message);
+      return false;
+    }
     return data === true;
-  } catch {
+  } catch (e) {
+    console.error("[limite-banco] erro inesperado (limite aberto nesta requisição):", e instanceof Error ? e.message : String(e));
     return false;
   }
 }

@@ -7,6 +7,8 @@ import { localizacaoDosCabecalhos } from "@/lib/localizacao";
 // para o domínio definitivo, que está protegido pelo WAF.
 const OLD_HOST = "plano-de-ensino-sc.vercel.app";
 const NEW_HOST = "planodocente.com.br";
+// O "www" também aponta para o app; redireciona para o endereço principal para ter um só endereço canônico.
+const WWW_HOST = "www.planodocente.com.br";
 
 /**
  * Proxy (substitui o antigo middleware.ts a partir do Next.js 16):
@@ -21,7 +23,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (request.nextUrl.hostname === OLD_HOST) {
+  // Rotas de tarefa agendada: autenticadas por segredo próprio (CRON_SECRET), sem sessão de professor.
+  if (request.nextUrl.pathname.startsWith("/api/cron/")) {
+    return NextResponse.next();
+  }
+
+  if (request.nextUrl.hostname === OLD_HOST || request.nextUrl.hostname === WWW_HOST) {
     const url = request.nextUrl.clone();
     url.hostname = NEW_HOST;
     url.port = "";
