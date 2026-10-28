@@ -37,11 +37,17 @@ export async function linkAtual(tipo: "mensal" | "anual", planoId: string): Prom
   return (data as LinkCompartilhado | null) ?? null;
 }
 
+/**
+ * Remove primeiro os PDFs e só depois os registros. Se a remoção do arquivo falhar, os registros ficam
+ * (para uma nova tentativa) e a função lança erro, em vez de deixar o PDF solto sem referência.
+ */
 async function apagar(linhas: { id: string; arquivo_path: string }[]) {
   if (linhas.length === 0) return;
   const supabase = createClient();
-  await supabase.storage.from(BUCKET).remove(linhas.map((l) => l.arquivo_path));
-  await supabase.from("plano_compartilhamentos").delete().in("id", linhas.map((l) => l.id));
+  const { error: erroArquivos } = await supabase.storage.from(BUCKET).remove(linhas.map((l) => l.arquivo_path));
+  if (erroArquivos) throw new Error("Não foi possível apagar os arquivos compartilhados.");
+  const { error: erroRegistros } = await supabase.from("plano_compartilhamentos").delete().in("id", linhas.map((l) => l.id));
+  if (erroRegistros) throw new Error("Não foi possível encerrar o compartilhamento.");
 }
 
 /** Para de compartilhar: apaga o arquivo e o link. */

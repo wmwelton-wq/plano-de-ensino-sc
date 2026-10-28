@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Logo from "@/components/logo";
 import { Icone } from "@/components/icones";
@@ -25,7 +26,10 @@ export default async function PlanoCompartilhadoPage({ params }: { params: Promi
     const { data } = await supabase.rpc("compartilhamento_publico", { p_token: token });
     item = ((data as Compartilhamento[] | null) ?? [])[0] ?? null;
   }
-  const urlPdf = item ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/compartilhados/${item.arquivo_path}` : null;
+  // Link inexistente, vencido ou encerrado: responde 404 de verdade (a mensagem amigável fica em not-found.tsx).
+  if (!item) notFound();
+  // O PDF não é mais aberto por URL público direto: passa por /p/[token]/pdf, que confere token e prazo a cada acesso.
+  const urlPdf = `/p/${token}/pdf`;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center gap-6 bg-gradient-to-b from-primary-50/60 via-transparent to-transparent px-5 py-10 text-center">
@@ -49,7 +53,7 @@ export default async function PlanoCompartilhadoPage({ params }: { params: Promi
                 <Icone nome="olho" className="h-4 w-4" />
                 Abrir o plano (PDF)
               </a>
-              <a href={urlPdf} download className="btn-azul-suave justify-center">
+              <a href={`${urlPdf}?baixar=1`} className="btn-azul-suave justify-center">
                 <Icone nome="baixar" className="h-4 w-4" />
                 Baixar
               </a>
