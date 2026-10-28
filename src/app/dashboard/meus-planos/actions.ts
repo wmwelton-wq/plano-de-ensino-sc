@@ -24,20 +24,42 @@ function idsValidos(ids: unknown): string[] {
   return Array.from(new Set(ids.filter((x): x is string => typeof x === "string" && UUID.test(x)))).slice(0, MAX_EM_LOTE);
 }
 
-/** Apaga os links de leitura (e os PDFs guardados) dos planos informados. Só alcança os do próprio professor (RLS). */
-async function apagarLinks(supabase: Awaited<ReturnType<typeof createClient>>, tipo: "mensais" | "anuais", ids: string[]): Promise<boolean> {
-  if (ids.length === 0) return true;
+type Supa = Awaited<ReturnType<typeof createClient>>;
+type LinhaLink = { id: string; arquivo_path: string; plano_id: string };
+
+/** Inventário dos links de leitura dos planos informados. Só alcança os do próprio professor (RLS). null = falha na consulta. */
+async function buscarLinks(supabase: Supa, tipo: "mensais" | "anuais", ids: string[]): Promise<LinhaLink[] | null> {
+  if (ids.length === 0) return [];
   const { data, error } = await supabase
     .from("plano_compartilhamentos")
-    .select("id, arquivo_path")
+    .select("id, arquivo_path, plano_id")
     .eq("plano_tipo", tipo === "anuais" ? "anual" : "mensal")
     .in("plano_id", ids);
-  if (error) return false;
-  const linhas = (data ?? []) as { id: string; arquivo_path: string }[];
+  if (error) return null;
+  return (data ?? []) as LinhaLink[];
+}
+
+/** Apaga os PDFs e depois os registros. Se o Storage falhar, os registros ficam para uma nova tentativa. */
+async function removerLinks(supabase: Supa, linhas: LinhaLink[]): Promise<boolean> {
   if (linhas.length === 0) return true;
-  await supabase.storage.from(BUCKET_COMPARTILHADOS).remove(linhas.map((l) => l.arquivo_path));
+  const { error: erroArquivos } = await supabase.storage.from(BUCKET_COMPARTILHADOS).remove(linhas.map((l) => l.arquivo_path));
+  if (erroArquivos) {
+    console.error("[compartilhados] falha ao remover arquivos do Storage:", erroArquivos.message);
+    return false;
+  }
   const { error: erroApagar } = await supabase.from("plano_compartilhamentos").delete().in("id", linhas.map((l) => l.id));
-  return !erroApagar;
+  if (erroApagar) {
+    console.error("[compartilhados] falha ao apagar registros de compartilhamento:", erroApagar.message);
+    return false;
+  }
+  return true;
+}
+
+/** Apaga os links de leitura (e os PDFs guardados) dos planos informados. */
+async function apagarLinks(supabase: Supa, tipo: "mensais" | "anuais", ids: string[]): Promise<boolean> {
+  const linhas = await buscarLinks(supabase, tipo, ids);
+  if (linhas === null) return false;
+  return removerLinks(supabase, linhas);
 }
 
 /** Para de compartilhar vários planos de uma vez: os links deixam de funcionar. */
@@ -65,12 +87,19 @@ export async function excluirPlanosEmLote(tipo: "mensais" | "anuais", planoIds: 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { excluidos: 0, erro: "Sessão expirada. Entre novamente." };
 
+  // Inventário dos PDFs compartilhados ANTES de excluir os planos, para não perder a referência dos arquivos.
+  const links = await buscarLinks(supabase, tipo, ids);
+  if (links === null) return { excluidos: 0, erro: "Não foi possível excluir agora. Tente novamente." };
+
   const tabela = tipo === "anuais" ? "planos_anuais" : "planos_de_ensino";
   const { data, error } = await supabase.from(tabela).delete().eq("professor_id", user.id).in("id", ids).select("id");
   if (error) return { excluidos: 0, erro: "Não foi possível excluir agora. Tente novamente." };
   const apagados = (data ?? []).map((l: { id: string }) => l.id);
-  await apagarLinks(supabase, tipo, apagados);
+  const doApagados = links.filter((l) => apagados.includes(l.plano_id));
+  const limpou = await removerLinks(supabase, doApagados);
 
   revalidatePath("/dashboard", "layout");
-  return { excluidos: apagados.length };
+  return limpou
+    ? { excluidos: apagados.length }
+    : { excluidos: apagados.length, erro: "Os planos foram excluídos, mas não deu para apagar todos os PDFs compartilhados. Eles serão limpos na próxima tentativa; se o problema continuar, avise o suporte." };
 }
