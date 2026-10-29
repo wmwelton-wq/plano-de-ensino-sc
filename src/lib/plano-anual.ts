@@ -1,6 +1,7 @@
 // Tipos, normalização e utilidades do Plano de Ensino ANUAL.
 // (Sem dependência de DOM nem de Supabase: roda no servidor e no navegador.)
 import { livrosDasDisciplinas } from "./referencias-livros";
+import { removerTags } from "@/lib/texto-rico";
 
 
 /** Um item de uma lista de marcar (ementa, habilidade, objeto, competência...). */
@@ -53,7 +54,7 @@ export function projetoVisivel(t: TrimestreAnual): string {
   const p = (t.projeto ?? "").replace(/<!--rt-->/g, "").trim();
   if (!p) return "";
   if (/<(img|table|li)[\s>]/i.test(p)) return t.projeto.trim();
-  return p.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "" ? "" : t.projeto.trim();
+  return removerTags(p).replace(/&nbsp;/g, " ").trim() === "" ? "" : t.projeto.trim();
 }
 
 export function conteudosVisiveis(t: TrimestreAnual): ItemLista[] {
@@ -65,7 +66,7 @@ export function complementoVisivel(t: TrimestreAnual): string {
   const html = (t.complemento ?? "").replace(/<!--rt-->/g, "").trim();
   if (!html) return "";
   if (/<(img|table|li)[\s>]/i.test(html)) return html;
-  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "" ? "" : html;
+  return removerTags(html).replace(/&nbsp;/g, " ").trim() === "" ? "" : html;
 }
 
 export interface CompetenciasGeraisAnual {

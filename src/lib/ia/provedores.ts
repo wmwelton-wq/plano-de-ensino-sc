@@ -93,11 +93,12 @@ function compativelOpenAI(url: string, extra?: { pdf?: boolean }): Provedor["cha
       ],
       temperature: p.temperatura ?? 0.5,
     };
-    if (url.includes("api.openai.com")) corpo.max_completion_tokens = p.maxTokens;
+    const host = new URL(url).hostname;
+    if (host === "api.openai.com") corpo.max_completion_tokens = p.maxTokens;
     else corpo.max_tokens = p.maxTokens;
     if (p.json) corpo.response_format = { type: "json_object" };
     // Modelos "gpt-oss" (Groq) raciocinam antes de responder; raciocínio curto gasta menos tempo e menos tokens.
-    if (url.includes("api.groq.com") && modelo.includes("gpt-oss")) corpo.reasoning_effort = "low";
+    if (host === "api.groq.com" && modelo.includes("gpt-oss")) corpo.reasoning_effort = "low";
     const d = await postJson(url, corpo, { authorization: `Bearer ${chave}` }, sinal);
     const texto = d?.choices?.[0]?.message?.content;
     if (typeof texto !== "string" || !texto.trim()) throw new Error("resposta vazia");
