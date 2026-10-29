@@ -2,6 +2,7 @@
 // Só orienta: nunca trava o plano nem muda o formato dele. Sem dependência de DOM nem de Supabase.
 import { lerSecoes, ordenarComponentes } from "./secoes-componentes";
 import { normalizarComponentes, normalizarDados, type DadosPlanoAnual, type PlanoAnual } from "./plano-anual";
+import { removerTags } from "@/lib/texto-rico";
 
 export interface Pendencia {
   /** Frase mostrada ao professor. */
@@ -15,7 +16,7 @@ export function htmlVazio(html: string | null | undefined): boolean {
   const t = (html ?? "").replace(/<!--rt-->/g, "").trim();
   if (!t) return true;
   if (/<(img|table|li)[\s>]/i.test(t)) return false;
-  return t.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() === "";
+  return removerTags(t).replace(/&nbsp;/g, " ").trim() === "";
 }
 
 const UNICO = "__unico__";

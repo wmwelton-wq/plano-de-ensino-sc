@@ -26,7 +26,7 @@ export const VIDEOS_SUGERIDOS: string[] = [
 export function enderecoIncorporado(url: string): string | null {
   try {
     const u = new URL(url);
-    if (u.hostname.endsWith("youtube.com")) {
+    if ((u.hostname === "youtube.com" || u.hostname.endsWith(".youtube.com"))) {
       const id = u.searchParams.get("v");
       return id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` : null;
     }
@@ -34,7 +34,7 @@ export function enderecoIncorporado(url: string): string | null {
       const id = u.pathname.slice(1);
       return id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` : null;
     }
-    if (u.hostname.endsWith("vimeo.com")) {
+    if ((u.hostname === "vimeo.com" || u.hostname.endsWith(".vimeo.com"))) {
       const id = u.pathname.split("/").filter(Boolean).pop();
       return id ? `https://player.vimeo.com/video/${encodeURIComponent(id)}` : null;
     }

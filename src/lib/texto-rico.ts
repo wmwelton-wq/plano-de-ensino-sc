@@ -171,12 +171,20 @@ export function ehHtml(texto: string | null | undefined): boolean {
   return !!texto && texto.trimStart().startsWith(MARCADOR_HTML);
 }
 
+/** Remove marcação HTML repetindo até estabilizar (evita que "<<b>script>" reapareça após uma única passada). */
+export function removerTags(html: string): string {
+  let atual = html;
+  for (let i = 0; i < 10; i++) {
+    const proximo = atual.replace(/<[^>]*>/g, "");
+    if (proximo === atual) break;
+    atual = proximo;
+  }
+  return atual;
+}
+
 /** Texto visível, sem marcação (para detectar campo vazio e para buscas). */
 export function textoSimples(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|li)>/gi, "\n")
-    .replace(/<[^>]*>/g, "")
+  return removerTags(html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|li)>/gi, "\n"))
     .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")

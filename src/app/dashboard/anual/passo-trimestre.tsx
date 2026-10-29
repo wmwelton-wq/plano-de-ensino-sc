@@ -8,6 +8,7 @@ import { Icone, type NomeIcone } from "@/components/icones";
 import { SugestaoObjetos, type Atualizar, type InfoComp, type ListasComp } from "./blocos-componente";
 import SeletorItens from "./seletor-itens";
 import EditorLivre from "./editor-livre";
+import { removerTags } from "@/lib/texto-rico";
 
 // Um trimestre inteiro do plano anual, numa tela só mas dividido em abas:
 // unidades temáticas, habilidades, objetos de conhecimento, critérios de avaliação, metodologia
@@ -52,7 +53,7 @@ function repetidosEm(trimestres: TrimestreAnual[], indice: number, campo: "unida
 /** O projeto tem algum texto (o editor guarda HTML, mesmo vazio)? */
 function projetoPreenchido(v: string): boolean {
   const limpo = (v ?? "").replace(/<!--rt-->/g, "");
-  return /<(img|table|li)[\s>]/i.test(limpo) || limpo.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() !== "";
+  return /<(img|table|li)[\s>]/i.test(limpo) || removerTags(limpo).replace(/&nbsp;/g, " ").trim() !== "";
 }
 
 export default function PassoTrimestre({ info, valor, atualizar, indice, anoDaTurma, vazioPadrao, chaveEditor, referencias, sugestoes }: Props) {

@@ -48,6 +48,7 @@ import FluxoPassos, { type GrupoFluxo } from "./fluxo-passos";
 import { CRITERIOS_AVALIACAO, INSTRUMENTOS_AVALIACAO } from "../planos/sugestoes-avaliacao";
 import EditorLivre from "./editor-livre";
 import OpcoesLogo from "../planos/opcoes-logo";
+import { removerTags } from "@/lib/texto-rico";
 
 export interface PlanoAnualFormProps {
   escolas: Escola[];
@@ -370,7 +371,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
   /** O passo já tem o essencial? (só para os marcadores do topo) */
   function passoFeito(p: Passo): boolean {
     if (p.tipo === "ident") return !erroIdentificacao() && !!p.chave;
-    if (p.tipo === "livre") return textoLivre.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim() !== "" || textoLivre.includes("<img");
+    if (p.tipo === "livre") return removerTags(textoLivre).replace(/&nbsp;/g, " ").trim() !== "" || textoLivre.includes("<img");
     if (p.tipo === "revisar") return false;
     const l = listasDe(p.comp ?? UNICO);
     if (p.tipo === "ementa") return l.ementa.length > 0;
