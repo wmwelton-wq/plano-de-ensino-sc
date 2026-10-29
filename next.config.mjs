@@ -32,11 +32,12 @@ const nextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
-          // Content-Security-Policy em modo "só relatar": NÃO bloqueia nada. O navegador
-          // apenas avisa no Console (F12) o que seria bloqueado. Depois de usar o app
-          // inteiro sem avisos, troque a chave por "Content-Security-Policy" para aplicar.
+          // Content-Security-Policy EFETIVA (antes era só Report-Only). Bloqueia scripts, quadros e
+          // conexões de origens fora da lista. 'unsafe-inline' em script-src continua porque o Next.js e o
+          // script de tema do layout usam scripts inline; trocar por nonce é uma melhoria futura.
+          // Se algo legítimo for bloqueado, o Console (F12) mostra a origem para acrescentar aqui.
           {
-            key: "Content-Security-Policy-Report-Only",
+            key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://va.vercel-scripts.com",
@@ -44,7 +45,9 @@ const nextConfig = {
               "img-src 'self' data: blob: https://*.supabase.co",
               "font-src 'self' data:",
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com https://va.vercel-scripts.com https://vitals.vercel-insights.com",
-              "frame-src https://challenges.cloudflare.com",
+              "frame-src https://challenges.cloudflare.com https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com",
+              "media-src 'self' blob: https://*.supabase.co",
+              "manifest-src 'self'",
               "worker-src 'self' blob:",
               "object-src 'none'",
               "base-uri 'self'",
