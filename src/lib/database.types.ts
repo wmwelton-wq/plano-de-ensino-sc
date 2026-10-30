@@ -80,6 +80,8 @@ export interface ObjetoConhecimentoMedio {
   /** Conteúdos sugeridos, um por linha iniciado por "• ". */
   conteudos: string | null;
   created_at: string;
+  /** Habilidades sugeridas para o objeto (aproximação a partir do Caderno 2); vem junto na consulta. */
+  habilidade_objeto_medio?: { habilidade_id: string }[] | null;
 }
 
 export interface CompetenciaCurricular {

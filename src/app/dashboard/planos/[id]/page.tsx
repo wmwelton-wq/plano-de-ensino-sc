@@ -10,6 +10,7 @@ import { atualizarPlano, excluirPlano } from "../actions";
 import ExcluirButton from "./excluir-button";
 import AcoesRapidas from "./acoes-rapidas";
 import CabecalhoPagina from "@/components/cabecalho-pagina";
+import { anexarSugestoesMedio } from "@/lib/sugestoes-medio";
 import { Icone } from "@/components/icones";
 import VoltarLink from "../voltar-link";
 import { urlDaPasta } from "../../meus-planos/dados";
@@ -199,7 +200,7 @@ export default async function EditarPlanoPage({
           cursos={cursos ?? []}
           escolas={escolas ?? []}
           habilidades={habilidades ?? []}
-          objetosMedio={objetosMedio ?? []}
+          objetosMedio={await anexarSugestoesMedio(supabase, objetosMedio ?? [])}
           habilidadesSelecionadasIds={habilidadesSelecionadasIds}
           competencias={competencias ?? []}
           competenciasSelecionadasIds={competenciasSelecionadasIds}

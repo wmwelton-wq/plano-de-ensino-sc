@@ -478,6 +478,11 @@ export default function PlanoForm({
               key={vinculoId ?? "sem-disciplina-hab"}
               habilidades={habilidadesCurriculo}
               selecionadasIniciais={habilidadesSelecionadasIds}
+              sugestoesMedio={
+                etapa === "ensino_medio" && objetosDaDisciplina.length > 0
+                  ? { editorRef: conteudosRef, objetos: objetosDaDisciplina }
+                  : undefined
+              }
               vazio={
                 vinculo
                   ? "Ainda não há habilidades cadastradas para esta disciplina/curso no banco de dados."
