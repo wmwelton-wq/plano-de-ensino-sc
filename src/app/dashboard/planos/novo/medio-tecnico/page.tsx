@@ -4,6 +4,7 @@ import PlanoForm from "../../plano-form";
 import { criarPlano } from "../../actions";
 import VoltarLink from "../../voltar-link";
 import CabecalhoPagina from "@/components/cabecalho-pagina";
+import { anexarSugestoesMedio } from "@/lib/sugestoes-medio";
 
 export default async function NovoPlanoMedioTecnicoPage() {
   const supabase = await createClient();
@@ -37,7 +38,7 @@ export default async function NovoPlanoMedioTecnicoPage() {
           cursos={cursos ?? []}
           escolas={escolas ?? []}
           habilidades={habilidades ?? []}
-          objetosMedio={objetosMedio ?? []}
+          objetosMedio={await anexarSugestoesMedio(supabase, objetosMedio ?? [])}
           competencias={competencias ?? []}
           action={criarPlano}
           textoBotao="Salvar plano"

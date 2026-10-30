@@ -1,7 +1,9 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
-import type { HabilidadeCurricular, HabilidadeManual } from "@/lib/database.types";
+import { useId, useMemo, useState, type RefObject } from "react";
+import type { HabilidadeCurricular, HabilidadeManual, ObjetoConhecimentoMedio } from "@/lib/database.types";
+import { normalizarLinha, type EditorTextoRicoHandle } from "./editor-texto-rico";
+import { useLinhasDoEditor } from "./linhas-do-editor";
 
 interface HabilidadePickerProps {
   descricaoAjuda?: string;
@@ -13,6 +15,117 @@ interface HabilidadePickerProps {
   /** Mostra o botão "Adicionar manualmente" (habilidade que não está na lista). */
   permitirManual?: boolean;
   manuaisIniciais?: HabilidadeManual[];
+  /** Ensino Médio: sugere habilidades a partir dos objetos de conhecimento já escritos no plano. */
+  sugestoesMedio?: {
+    editorRef: RefObject<EditorTextoRicoHandle | null>;
+    objetos: ObjetoConhecimentoMedio[];
+  };
+}
+
+interface SugeridasMedioProps {
+  editorRef: RefObject<EditorTextoRicoHandle | null>;
+  objetos: ObjetoConhecimentoMedio[];
+  porId: Map<string, HabilidadeCurricular>;
+  selecionadas: Set<string>;
+  alternar: (id: string) => void;
+  marcarVarias: (ids: string[]) => void;
+}
+
+/**
+ * Ensino Médio: lista as habilidades ligadas aos objetos de conhecimento que o professor já escolheu.
+ * A ligação é aproximada (feita a partir do Caderno 2 do Currículo Base, que usa objetos mais gerais).
+ * Só lê o campo de texto; não muda nenhuma escolha por conta própria.
+ */
+function SugeridasMedio({ editorRef, objetos, porId, selecionadas, alternar, marcarVarias }: SugeridasMedioProps) {
+  const { linhas } = useLinhasDoEditor(editorRef);
+  const [aberta, setAberta] = useState(true);
+
+  const grupos = useMemo(() => {
+    const lista: { id: string; objeto: string; habilidades: HabilidadeCurricular[] }[] = [];
+    for (const o of objetos) {
+      if (!linhas.has(normalizarLinha(o.objeto))) continue;
+      const habilidades = (o.habilidade_objeto_medio ?? [])
+        .map((v) => porId.get(v.habilidade_id))
+        .filter((h): h is HabilidadeCurricular => Boolean(h))
+        .sort((a, b) => (a.codigo ?? "").localeCompare(b.codigo ?? "", "pt-BR", { numeric: true }));
+      if (habilidades.length > 0) lista.push({ id: o.id, objeto: o.objeto, habilidades });
+    }
+    return lista;
+  }, [objetos, linhas, porId]);
+
+  const idsSugeridos = useMemo(() => {
+    const ids = new Set<string>();
+    for (const g of grupos) for (const h of g.habilidades) ids.add(h.id);
+    return Array.from(ids);
+  }, [grupos]);
+  const faltam = idsSugeridos.filter((id) => !selecionadas.has(id));
+
+  if (grupos.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed border-primary-200 bg-white px-3 py-3 text-sm text-slate-500">
+        <strong className="text-slate-700">Habilidades sugeridas:</strong> escolha objetos de conhecimento na etapa
+        anterior e, quando houver ligação com o currículo, as habilidades aparecem aqui. Para usar outras habilidades,
+        abra a lista completa abaixo.
+      </p>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/30 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200 bg-emerald-50 px-3 py-2">
+        <button
+          type="button"
+          aria-expanded={aberta}
+          onClick={() => setAberta((a) => !a)}
+          className="text-left text-sm font-bold text-emerald-900"
+        >
+          Habilidades sugeridas pelos objetos que você escolheu{" "}
+          <span className="font-normal text-emerald-700">
+            ({idsSugeridos.length} habilidade{idsSugeridos.length === 1 ? "" : "s"}) {aberta ? "▲" : "▼"}
+          </span>
+        </button>
+        {aberta && faltam.length > 0 && (
+          <button type="button" onClick={() => marcarVarias(faltam)} className="btn-azul-suave shrink-0 !px-3 !py-1.5 !text-xs">
+            Marcar todas as sugeridas ({faltam.length})
+          </button>
+        )}
+      </div>
+      {aberta && (
+        <div className="bg-white">
+          <p className="border-b border-emerald-100 px-3 py-2 text-xs text-slate-500">
+            Sugestão aproximada, baseada no Caderno 2 do Currículo Base do Ensino Médio de Santa Catarina. Confira se
+            combina com o que você vai trabalhar; todas as habilidades continuam disponíveis na lista completa.
+          </p>
+          <div className="max-h-[26rem] divide-y divide-emerald-100 overflow-y-auto">
+            {grupos.map((g) => (
+              <div key={g.id} className="px-3 py-2.5">
+                <p className="text-sm font-semibold text-slate-800">{g.objeto}</p>
+                <div className="mt-1 space-y-0.5">
+                  {g.habilidades.map((h) => (
+                    <label
+                      key={h.id}
+                      className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1.5 text-sm hover:bg-emerald-50/60"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selecionadas.has(h.id)}
+                        onChange={() => alternar(h.id)}
+                        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="text-slate-600">
+                        {h.codigo && <span className="font-medium text-slate-900">({h.codigo}) </span>}
+                        {h.descricao}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -29,6 +142,7 @@ export default function HabilidadePicker({
   rotuloBotao = "Clique para adicionar habilidades",
   permitirManual = false,
   manuaisIniciais = [],
+  sugestoesMedio,
 }: HabilidadePickerProps) {
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
@@ -57,6 +171,14 @@ export default function HabilidadePicker({
       const novo = new Set(atual);
       if (novo.has(id)) novo.delete(id);
       else novo.add(id);
+      return novo;
+    });
+  }
+
+  function marcarVarias(ids: string[]) {
+    setSelecionadas((atual) => {
+      const novo = new Set(atual);
+      for (const id of ids) if (porId.has(id)) novo.add(id);
       return novo;
     });
   }
@@ -90,6 +212,17 @@ export default function HabilidadePicker({
 
       {descricaoAjuda && <p className="text-xs text-slate-500">{descricaoAjuda}</p>}
 
+      {sugestoesMedio && habilidades.length > 0 && (
+        <SugeridasMedio
+          editorRef={sugestoesMedio.editorRef}
+          objetos={sugestoesMedio.objetos}
+          porId={porId}
+          selecionadas={selecionadas}
+          alternar={alternar}
+          marcarVarias={marcarVarias}
+        />
+      )}
+
       {habilidades.length === 0 ? (
         <p className="rounded-xl border border-dashed border-primary-200 bg-white px-3 py-4 text-sm text-slate-500">
           {vazio}
@@ -103,7 +236,7 @@ export default function HabilidadePicker({
             className="btn-verde"
           >
             <span aria-hidden="true">{aberto ? "▲" : "＋"}</span>
-            {aberto ? "Fechar lista de habilidades" : rotuloBotao}
+            {aberto ? "Fechar lista de habilidades" : sugestoesMedio ? "Todas as habilidades (fora das sugeridas)" : rotuloBotao}
           </button>
           {permitirManual && (
             <button
