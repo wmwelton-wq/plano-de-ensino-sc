@@ -112,7 +112,14 @@ export async function confirmarExclusaoConta(codigoBruto: string): Promise<Retor
   if (!d) return { erro: "O código expirou ou não foi pedido. Peça um novo." };
   if ((d.tentativas as number) >= TENTATIVAS_MAX) return { erro: "Muitas tentativas erradas. Peça um novo código." };
 
-  await q.servico.from("exclusao_conta_desafios").update({ tentativas: (d.tentativas as number) + 1 }).eq("id", d.id);
+  // Conta a tentativa de forma atômica: só uma de várias requisições simultâneas consegue gastar a mesma tentativa.
+  const { data: gasta } = await q.servico
+    .from("exclusao_conta_desafios")
+    .update({ tentativas: (d.tentativas as number) + 1 })
+    .eq("id", d.id)
+    .eq("tentativas", d.tentativas as number)
+    .select("id");
+  if (!gasta || gasta.length !== 1) return { erro: "Não foi possível conferir o código agora. Tente de novo." };
   const esperado = Buffer.from(d.valor as string, "hex");
   const recebido = Buffer.from(sha256Hex((d.sal as string) + codigo), "hex");
   if (esperado.length !== recebido.length || !timingSafeEqual(esperado, recebido)) return { erro: "Código incorreto." };
