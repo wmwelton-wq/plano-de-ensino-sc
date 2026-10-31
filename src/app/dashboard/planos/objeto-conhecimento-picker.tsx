@@ -3,8 +3,13 @@
 import { useEffect, useId, useMemo, useState, type ReactNode, type RefObject } from "react";
 import type { HabilidadeCurricular } from "@/lib/database.types";
 import SecaoPlano from "./secao-plano";
-import type { EditorTextoRicoHandle } from "./editor-texto-rico";
-import { useAvisoTemporario, useCaixinhasIndependentes, type ItemCaixinha } from "./linhas-do-editor";
+import { normalizarLinha, type EditorTextoRicoHandle } from "./editor-texto-rico";
+import {
+  useAvisoTemporario,
+  useCaixinhasIndependentes,
+  useLinhasDoEditor,
+  type ItemCaixinha,
+} from "./linhas-do-editor";
 
 interface ObjetosEHabilidadesProps {
   /** Habilidades (de todas as fontes) da disciplina escolhida, exceto as de educação digital. */
@@ -309,6 +314,116 @@ function BlocoObjetos({
   );
 }
 
+/** Linha que o objeto escreve no campo de texto (a mesma usada pelas caixinhas de objetos). */
+function linhaDoObjeto(g: GrupoObjeto, ehBncc: boolean): string {
+  return ehBncc ? g.objeto : nomeDoObjeto(g.objeto);
+}
+
+interface SugeridasDoEditorProps {
+  /** Campo de texto onde os objetos escolhidos foram escritos. */
+  editorRef: RefObject<EditorTextoRicoHandle | null>;
+  /** Todos os objetos (com as habilidades de cada um) deste componente no ano escolhido. */
+  grupos: GrupoObjeto[];
+  ehBncc: boolean;
+  mostrarDisciplina: boolean;
+  selecionadas: Set<string>;
+  alternar: (id: string) => void;
+  marcarVarias: (ids: string[]) => void;
+}
+
+/**
+ * Aba "Habilidades sugeridas": abre sozinha assim que o professor escolhe objetos de conhecimento e lista, como
+ * no quadro da BNCC e do Currículo Catarinense, as habilidades ligadas a cada objeto escolhido. Só lê o campo de
+ * texto; não muda nenhuma escolha por conta própria.
+ */
+function SugeridasDoEditor({
+  editorRef,
+  grupos,
+  ehBncc,
+  mostrarDisciplina,
+  selecionadas,
+  alternar,
+  marcarVarias,
+}: SugeridasDoEditorProps) {
+  const { linhas } = useLinhasDoEditor(editorRef);
+  const [aberta, setAberta] = useState(true);
+
+  const escolhidos = useMemo(
+    () => grupos.filter((g) => g.objeto !== GRUPO_BNCC && linhas.has(normalizarLinha(linhaDoObjeto(g, ehBncc)))),
+    [grupos, linhas, ehBncc]
+  );
+  const idsSugeridos = useMemo(() => {
+    const ids = new Set<string>();
+    for (const g of escolhidos) for (const h of g.itens) ids.add(h.id);
+    return Array.from(ids);
+  }, [escolhidos]);
+  const faltam = idsSugeridos.filter((id) => !selecionadas.has(id));
+
+  if (escolhidos.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed border-primary-200 bg-white px-3 py-3 text-sm text-slate-500">
+        <strong className="text-slate-700">Habilidades sugeridas:</strong> escolha objetos de conhecimento na etapa
+        anterior e as habilidades ligadas a eles aparecem aqui automaticamente. Para usar habilidades de outros
+        objetos, abra “Todas as habilidades” abaixo.
+      </p>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-emerald-200 bg-emerald-50/30 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200 bg-emerald-50 px-3 py-2">
+        <button
+          type="button"
+          aria-expanded={aberta}
+          onClick={() => setAberta((a) => !a)}
+          className="text-left text-sm font-bold text-emerald-900"
+        >
+          Habilidades sugeridas pelos objetos que você escolheu{" "}
+          <span className="font-normal text-emerald-700">
+            ({idsSugeridos.length} habilidade{idsSugeridos.length === 1 ? "" : "s"}) {aberta ? "▲" : "▼"}
+          </span>
+        </button>
+        {aberta && faltam.length > 0 && (
+          <button type="button" onClick={() => marcarVarias(faltam)} className="btn-azul-suave shrink-0 !px-3 !py-1.5 !text-xs">
+            Marcar todas as sugeridas ({faltam.length})
+          </button>
+        )}
+      </div>
+      {aberta && (
+        <div className="max-h-[26rem] divide-y divide-emerald-100 overflow-y-auto bg-white">
+          {escolhidos.map((g) => (
+            <div key={g.chave} className="px-3 py-2.5">
+              <p className="text-sm font-semibold text-slate-800">
+                {mostrarDisciplina && g.disciplina && <strong>{g.disciplina} — </strong>}
+                {g.objeto}
+              </p>
+              <div className="mt-1 space-y-0.5">
+                {g.itens.map((h) => (
+                  <label
+                    key={h.id}
+                    className="flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1.5 text-sm hover:bg-emerald-50/60"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selecionadas.has(h.id)}
+                      onChange={() => alternar(h.id)}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-slate-600">
+                      {h.codigo && <span className="font-medium text-slate-900">({h.codigo}) </span>}
+                      {h.descricao}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Nome do componente em destaque vermelho (cabeçalho de cada grupo). */
 function EtiquetaDisciplina({ nome, children }: { nome: string; children?: ReactNode }) {
   return (
@@ -466,6 +581,14 @@ export default function ObjetosEHabilidades({
       const novo = new Set(atual);
       if (novo.has(id)) novo.delete(id);
       else novo.add(id);
+      return novo;
+    });
+  }
+
+  function marcarVarias(ids: string[]) {
+    setSelecionadas((atual) => {
+      const novo = new Set(atual);
+      for (const id of ids) if (porId.has(id)) novo.add(id);
       return novo;
     });
   }
@@ -716,7 +839,7 @@ export default function ObjetosEHabilidades({
         numero={numeroHabilidades}
         tom={tom}
         titulo={rotuloComponente ? `Selecionar habilidades — ${rotuloComponente}` : "Selecionar habilidades"}
-        descricao="Escolha, a partir dos objetos de conhecimento, as habilidades que serão trabalhadas."
+        descricao="As habilidades ligadas aos objetos que você escolheu aparecem como sugestão; se preferir, veja todas as habilidades do ano."
       >
         {vazioLista ? (
           <p className="rounded-xl border border-dashed border-primary-200 bg-white px-3 py-4 text-sm text-slate-500">
@@ -724,6 +847,34 @@ export default function ObjetosEHabilidades({
           </p>
         ) : (
           <div className="space-y-3">
+            {/* Aba automática: habilidades dos objetos já escolhidos (como no quadro da BNCC e do Currículo SC). */}
+            {multi
+              ? componentes!.map((comp) => (
+                  <div key={comp.id} className="space-y-2">
+                    <EtiquetaDisciplina nome={comp.nome} />
+                    <SugeridasDoEditor
+                      editorRef={editorPorComponente!(comp.id)}
+                      grupos={objetos.filter((o) => disciplinaDaChave(o.chave) === comp.id)}
+                      ehBncc={ehBncc}
+                      mostrarDisciplina={false}
+                      selecionadas={selecionadas}
+                      alternar={alternar}
+                      marcarVarias={marcarVarias}
+                    />
+                  </div>
+                ))
+              : editorRef && (
+                  <SugeridasDoEditor
+                    editorRef={editorRef}
+                    grupos={objetos}
+                    ehBncc={ehBncc}
+                    mostrarDisciplina
+                    selecionadas={selecionadas}
+                    alternar={alternar}
+                    marcarVarias={marcarVarias}
+                  />
+                )}
+
             <button
               type="button"
               aria-expanded={painelHabilidades}
@@ -731,7 +882,7 @@ export default function ObjetosEHabilidades({
               className="btn-verde w-full sm:w-auto"
             >
               <span aria-hidden="true">{painelHabilidades ? "▲" : "＋"}</span>
-              {painelHabilidades ? "Fechar lista de habilidades" : "Clique para adicionar habilidades"}
+              {painelHabilidades ? "Fechar todas as habilidades" : "Todas as habilidades (fora das sugeridas)"}
             </button>
 
             {painelHabilidades && (
