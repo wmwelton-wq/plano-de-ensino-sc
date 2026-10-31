@@ -6,6 +6,7 @@ import NavegacaoTopo from "@/components/navegacao-topo";
 import { Icone } from "@/components/icones";
 import NomeForm from "./nome-form";
 import SenhaForm from "./senha-form";
+import ExcluirConta from "./excluir-conta";
 
 export default async function ContaPage() {
   const supabase = await createClient();
@@ -89,11 +90,11 @@ export default async function ContaPage() {
             </h2>
           </div>
           <p className="mt-3 text-sm text-slate-600">
-            Para pedir uma cópia dos seus dados, corrigir alguma informação ou excluir sua conta, escreva para{" "}
+            Para pedir uma cópia dos seus dados ou corrigir alguma informação, escreva para{" "}
             <a href="mailto:contato@planodocente.com.br" className="link-primary">
               contato@planodocente.com.br
             </a>
-            .
+            . Para excluir sua conta, use a seção &ldquo;Excluir conta&rdquo; logo abaixo.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link href="/termos-de-uso" className="btn-azul-suave">
@@ -107,6 +108,23 @@ export default async function ContaPage() {
             </Link>
           </div>
         </section>
+        {ehAdmin !== true && (
+          <section className="card p-6 lg:col-span-2" aria-labelledby="excluir-titulo">
+            <div className="flex items-center gap-3">
+              <span data-tom="violeta" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 text-red-600" aria-hidden="true">
+                <Icone nome="documento" className="h-5 w-5" />
+              </span>
+              <h2 id="excluir-titulo" className="text-lg font-extrabold tracking-tight text-slate-900">
+                Excluir conta
+              </h2>
+            </div>
+            <p className="mt-3 text-sm text-slate-600">
+              Se não quiser mais usar o Plano Docente, você pode excluir sua conta. Todos os seus dados serão apagados e pode não haver reembolso
+              de valores pagos. Para confirmar, enviamos um código de segurança para o seu e-mail.
+            </p>
+            <ExcluirConta email={user.email ?? ""} />
+          </section>
+        )}
       </div>
     </div>
   );
