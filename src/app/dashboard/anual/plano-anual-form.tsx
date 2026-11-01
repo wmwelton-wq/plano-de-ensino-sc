@@ -48,6 +48,7 @@ import FluxoPassos, { type GrupoFluxo } from "./fluxo-passos";
 import { CRITERIOS_AVALIACAO, INSTRUMENTOS_AVALIACAO } from "../planos/sugestoes-avaliacao";
 import EditorLivre from "./editor-livre";
 import OpcoesLogo from "../planos/opcoes-logo";
+import CampoAnoLetivo from "../planos/campo-ano-letivo";
 import { removerTags } from "@/lib/texto-rico";
 
 export interface PlanoAnualFormProps {
@@ -797,12 +798,7 @@ export default function PlanoAnualForm({ escolas, disciplinas, nomeProfessor, pl
             <input id="area" name="area" type="text" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Ex.: Ciências da Natureza" className="input-field" />
           </div>
 
-          <div>
-            <label htmlFor="ano_letivo" className="field-label">
-              Ano letivo
-            </label>
-            <input id="ano_letivo" name="ano_letivo" type="number" defaultValue={plano?.ano_letivo ?? new Date().getFullYear()} className="input-field" />
-          </div>
+          <CampoAnoLetivo valorInicial={plano?.ano_letivo} novo={!plano?.id} />
 
           <TurmaSelector
             key={etapa}

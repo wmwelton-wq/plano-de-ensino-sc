@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { anoCompetenciaOuAtual } from "@/lib/ano-competencia-servidor";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import CabecalhoPagina from "@/components/cabecalho-pagina";
@@ -32,7 +33,7 @@ export default async function TurmasDaEscolaPage({
   const tipo = tipoBruto as TipoPlano;
 
   const supabase = await createClient();
-  const [planos, compartilhados] = await Promise.all([carregarPlanos(supabase, tipo), carregarCompartilhados(supabase, tipo)]);
+  const [planos, compartilhados] = await Promise.all([carregarPlanos(supabase, tipo, await anoCompetenciaOuAtual()), carregarCompartilhados(supabase, tipo)]);
   const grupo = agruparPorEscola(planos).find((g) => g.chave === escola);
   if (!grupo) notFound();
 

@@ -7,6 +7,7 @@ import OpcoesLogo from "./opcoes-logo";
 import type { CompetenciaCurricular, Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/lib/database.types";
 import type { EstadoFormulario } from "./actions";
 import SecaoPlano, { type TomSecao } from "./secao-plano";
+import CampoAnoLetivo from "./campo-ano-letivo";
 import CurriculoDigitalCampo from "./curriculo-digital-campo";
 import MetodologiaIA from "./metodologia-ia";
 import { FluxoRodape, FluxoTopo, aoCampoInvalido, semEnterQueEnvia, useFluxoMensal, useGravacaoPlano, type PassoMensal } from "./fluxo-mensal";
@@ -309,19 +310,7 @@ export default function PlanoFormFundamentalAnosIniciais({
 
           <CamposPeriodo inicioInicial={plano?.data_inicio} fimInicial={plano?.data_fim} rotuloInicio="Período do plano — início" rotuloFim="Período do plano — fim" dicaFim="Máximo de 30 dias corridos, conforme o modelo oficial." />
 
-          <div>
-            <label htmlFor="ano_letivo" className="field-label">
-              Ano letivo
-            </label>
-            <input
-              id="ano_letivo"
-              name="ano_letivo"
-              type="number"
-              required
-              defaultValue={plano?.ano_letivo ?? new Date().getFullYear()}
-              className="input-field"
-            />
-          </div>
+          <CampoAnoLetivo valorInicial={plano?.ano_letivo} novo={!plano?.id} />
         </div>
       </SecaoPlano>
 

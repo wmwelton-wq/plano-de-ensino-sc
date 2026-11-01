@@ -7,6 +7,7 @@ import type { Disciplina, Escola, HabilidadeCurricular, PlanoDeEnsino } from "@/
 import type { EstadoFormulario } from "./actions";
 import HabilidadePicker from "./habilidade-picker";
 import SecaoPlano from "./secao-plano";
+import CampoAnoLetivo from "./campo-ano-letivo";
 import PassosPlano from "./passos-plano";
 import MetodologiaIA from "./metodologia-ia";
 import BarraSalvar from "./barra-salvar";
@@ -143,19 +144,7 @@ export default function PlanoFormInfantil({
             }}
           />
 
-          <div>
-            <label htmlFor="ano_letivo" className="field-label">
-              Ano letivo
-            </label>
-            <input
-              id="ano_letivo"
-              name="ano_letivo"
-              type="number"
-              required
-              defaultValue={plano?.ano_letivo ?? new Date().getFullYear()}
-              className="input-field"
-            />
-          </div>
+          <CampoAnoLetivo valorInicial={plano?.ano_letivo} novo={!plano?.id} />
 
           <div className="hidden sm:block" aria-hidden="true" />
 

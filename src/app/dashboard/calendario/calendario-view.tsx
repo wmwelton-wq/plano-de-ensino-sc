@@ -1,5 +1,6 @@
 "use client";
 
+import { useAnoCompetencia } from "../usuario-contexto";
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { Icone } from "@/components/icones";
 import ConfirmarExclusao from "@/components/confirmar-exclusao";
@@ -29,6 +30,8 @@ import ImportarCalendarioPdf from "./importar-pdf";
 interface Props {
   hoje: string;
   mesInicial: string; // AAAA-MM
+  /** Ano de competência: o calendário só navega dentro dele. */
+  anoCompetencia?: number;
   ativo: boolean | null;
   eventos: EventoCalendario[];
   escolas: { id: string; nome: string }[];
@@ -71,7 +74,7 @@ function corOficial(o: DataOficial): Cor {
 
 const DIAS_SEMANA_ESCOLA = [1, 2, 3, 4, 5];
 
-export default function CalendarioView({ hoje, mesInicial, ativo, eventos: todosEventos, escolas, escolaInicial = null, cota }: Props) {
+export default function CalendarioView({ hoje, mesInicial, anoCompetencia, ativo, eventos: todosEventos, escolas, escolaInicial = null, cota }: Props) {
   const [mes, setMes] = useState(mesInicial);
   // Cada escola tem o seu calendário. "" = só as datas gerais (sem escola), que valem para todas as escolas.
   const [escolaSel, setEscolaSel] = useState<string>(() => (escolaInicial && escolas.some((e) => e.id === escolaInicial) ? escolaInicial : escolas[0]?.id ?? ""));
@@ -88,7 +91,13 @@ export default function CalendarioView({ hoje, mesInicial, ativo, eventos: todos
   const primeiroDia = iso(ano, mesNum, 1);
   const ultimoDia = iso(ano, mesNum, new Date(ano, mesNum, 0).getDate());
 
+  // Dentro do ano de competência: não passa de janeiro para trás nem de dezembro para frente.
+  const noPrimeiroMes = anoCompetencia !== undefined && ano === anoCompetencia && mesNum === 1;
+  const noUltimoMes = anoCompetencia !== undefined && ano === anoCompetencia && mesNum === 12;
+  const mesDeHoje = anoCompetencia === undefined || hoje.startsWith(`${anoCompetencia}-`) ? hoje.slice(0, 7) : `${anoCompetencia}-01`;
+
   function irPara(delta: number) {
+    if ((delta < 0 && noPrimeiroMes) || (delta > 0 && noUltimoMes)) return;
     const d = new Date(Date.UTC(ano, mesNum - 1 + delta, 1));
     setMes(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
   }
@@ -222,18 +231,18 @@ export default function CalendarioView({ hoje, mesInicial, ativo, eventos: todos
       <section aria-label="Mês" className="painel-cartao overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5">
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => irPara(-1)} className="btn-azul-suave !px-3" aria-label="Mês anterior">
+            <button type="button" onClick={() => irPara(-1)} disabled={noPrimeiroMes} className="btn-azul-suave !px-3 disabled:opacity-40" aria-label="Mês anterior">
               <Icone nome="setaEsquerda" className="h-4 w-4" />
             </button>
             <h2 className="min-w-[10.5rem] text-center text-lg font-extrabold text-slate-900 first-letter:uppercase" aria-live="polite">
               {NOMES_MESES[mesNum - 1]} de {ano}
             </h2>
-            <button type="button" onClick={() => irPara(1)} className="btn-azul-suave !px-3" aria-label="Próximo mês">
+            <button type="button" onClick={() => irPara(1)} disabled={noUltimoMes} className="btn-azul-suave !px-3 disabled:opacity-40" aria-label="Próximo mês">
               <Icone nome="setaDireita" className="h-4 w-4" />
             </button>
-            {mes !== hoje.slice(0, 7) && (
-              <button type="button" onClick={() => setMes(hoje.slice(0, 7))} className="text-sm font-semibold text-primary-700 hover:underline">
-                Hoje
+            {mes !== mesDeHoje && (
+              <button type="button" onClick={() => setMes(mesDeHoje)} className="text-sm font-semibold text-primary-700 hover:underline">
+                {mesDeHoje === hoje.slice(0, 7) ? "Hoje" : "Início do ano"}
               </button>
             )}
           </div>
@@ -471,6 +480,7 @@ function FormEvento({
   aoFechar: () => void;
 }) {
   const e = estado.evento;
+  const anoComp = useAnoCompetencia();
   const [resultado, acao, pendente] = useActionState<EstadoEvento, FormData>(salvarEvento, {});
   const [tipo, setTipo] = useState<TipoEvento>(e?.tipo ?? "evento");
   const [semAula, setSemAula] = useState(e?.sem_aula ?? SEM_AULA_PADRAO[e?.tipo ?? "evento"]);
@@ -538,13 +548,13 @@ function FormEvento({
             <label htmlFor="ev-ini" className="field-label">
               Data (ou início)
             </label>
-            <input id="ev-ini" name="data_inicio" type="date" required defaultValue={e?.data_inicio ?? estado.data ?? ""} className="input-field" />
+            <input id="ev-ini" name="data_inicio" type="date" required min={`${anoComp}-01-01`} max={`${anoComp}-12-31`} defaultValue={e?.data_inicio ?? estado.data ?? ""} className="input-field" />
           </div>
           <div>
             <label htmlFor="ev-fim" className="field-label">
               Até <span className="font-normal text-slate-400">(se durar mais de um dia)</span>
             </label>
-            <input id="ev-fim" name="data_fim" type="date" defaultValue={e && e.data_fim !== e.data_inicio ? e.data_fim : ""} className="input-field" />
+            <input id="ev-fim" name="data_fim" type="date" min={`${anoComp}-01-01`} max={`${anoComp}-12-31`} defaultValue={e && e.data_fim !== e.data_inicio ? e.data_fim : ""} className="input-field" />
           </div>
         </div>
 

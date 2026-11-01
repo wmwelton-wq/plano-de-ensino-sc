@@ -8,6 +8,8 @@ import Logo from "@/components/logo";
 import LogoutButton from "./logout-button";
 import MenuTopo, { type MenuDoTopo } from "./menu-topo";
 import { UsuarioProvider } from "./usuario-contexto";
+import { anoCompetenciaOuAtual } from "@/lib/ano-competencia-servidor";
+import { Icone } from "@/components/icones";
 import "./painel.css";
 
 export const metadata: Metadata = {
@@ -78,9 +80,10 @@ export default async function DashboardLayout({
   const nomeExibido = professor?.nome ?? user.email ?? "";
   const inicial = nomeExibido.trim().charAt(0).toUpperCase() || "P";
   const primeiroNome = primeiroNomeDe(professor?.nome ?? user.email ?? "");
+  const ano = await anoCompetenciaOuAtual();
 
   return (
-    <UsuarioProvider primeiroNome={primeiroNome}>
+    <UsuarioProvider primeiroNome={primeiroNome} anoCompetencia={ano}>
       <div className="min-h-screen bg-[var(--background)]">
         <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/85 backdrop-blur-md print:hidden">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 sm:px-6 sm:py-2.5">
@@ -96,6 +99,15 @@ export default async function DashboardLayout({
               <MenuTopo menus={menus} extras={extras} />
             </div>
             <div className="ml-auto flex items-center gap-2.5">
+              <Link
+                href="/dashboard/ano?proximo=%2Fdashboard"
+                title="Trocar o ano de competência"
+                aria-label={`Ano de competência ${ano}. Trocar o ano`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+              >
+                <Icone nome="calendario" className="h-4 w-4" />
+                Ano {ano}
+              </Link>
               <Link
                 href="/dashboard/conta"
                 aria-label={`Configurações da conta de ${nomeExibido}`}

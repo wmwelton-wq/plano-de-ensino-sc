@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { localizacaoDosCabecalhos } from "@/lib/localizacao";
+import { COOKIE_ANO, ehRotaDeEscolha, lerAno, ROTA_ESCOLHA_ANO } from "@/lib/ano-competencia";
 
 // Domínio antigo (subdomínio padrão do Vercel) — não passa pelo Cloudflare,
 // então quem ainda tiver esse link salvo é redirecionado permanentemente
@@ -69,6 +70,24 @@ export async function proxy(request: NextRequest) {
   if (!user && isDashboardRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  // Ano de competência: antes de abrir qualquer página do painel, o professor escolhe o ano (cookie de sessão).
+  // Só navegações (GET/HEAD): envios de formulário e ações do servidor não são desviados.
+  if (
+    user &&
+    isDashboardRoute &&
+    (request.method === "GET" || request.method === "HEAD") &&
+    !ehRotaDeEscolha(request.nextUrl.pathname) &&
+    lerAno(request.cookies.get(COOKIE_ANO)?.value) === null
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = ROTA_ESCOLHA_ANO;
+    const parametros = new URLSearchParams(request.nextUrl.searchParams);
+    parametros.delete("_rsc");
+    const consulta = parametros.toString();
+    url.search = `?proximo=${encodeURIComponent(request.nextUrl.pathname + (consulta ? `?${consulta}` : ""))}`;
     return NextResponse.redirect(url);
   }
 

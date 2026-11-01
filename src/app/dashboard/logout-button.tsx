@@ -10,6 +10,8 @@ export default function LogoutButton() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    // O ano de competência vale só para esta entrada: na próxima, o professor escolhe de novo.
+    document.cookie = "ano_competencia=; Max-Age=0; path=/; SameSite=Lax";
     router.push("/login");
     router.refresh();
   }

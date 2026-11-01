@@ -1,3 +1,4 @@
+import { anoCompetenciaOuAtual } from "@/lib/ano-competencia-servidor";
 import CartaoIlustrado from "@/components/cartao-ilustrado";
 import CabecalhoPagina from "@/components/cabecalho-pagina";
 import NavegacaoTopo from "@/components/navegacao-topo";
@@ -42,6 +43,7 @@ export default async function EscolherEtapaPage() {
   const { data: anuaisBrutos } = await supabase
     .from("planos_anuais")
     .select("id, titulo, ano_letivo, turma")
+    .eq("ano_letivo", await anoCompetenciaOuAtual())
     .order("updated_at", { ascending: false })
     .limit(6);
   const anuais = (anuaisBrutos ?? []) as { id: string; titulo: string; ano_letivo: number; turma: string | null }[];
