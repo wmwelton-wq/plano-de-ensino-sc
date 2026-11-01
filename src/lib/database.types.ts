@@ -116,6 +116,8 @@ export interface PlanoDeEnsino {
   /** Logo/brasão da escola no cabeçalho (o espaço fica reservado do lado oposto ao brasão do Estado). */
   incluir_logo_escola: boolean;
   usar_curriculo_digital: boolean;
+  /** Ensino Médio: link do Drive do IFA (só https). */
+  ifa_link?: string | null;
   /** Anos Iniciais: textos de cada componente curricular (conteúdos, metodologia, critérios, instrumentos, recomposição). */
   secoes_componentes?: import("./secoes-componentes").SecaoComponente[] | null;
   /** Habilidades do currículo de educação digital digitadas manualmente. */

@@ -18,6 +18,7 @@ import HabilidadePicker from "./habilidade-picker";
 import SecaoPlano from "./secao-plano";
 import CurriculoDigitalCampo from "./curriculo-digital-campo";
 import MetodologiaIA from "./metodologia-ia";
+import IfaCampo from "./ifa-campo";
 import { FluxoRodape, FluxoTopo, aoCampoInvalido, semEnterQueEnvia, useFluxoMensal, useGravacaoPlano, type PassoMensal } from "./fluxo-mensal";
 import CamposPeriodo from "./campos-periodo";
 import FaltouAlgoBotao from "../faltou-algo/faltou-algo-botao";
@@ -44,6 +45,8 @@ interface PlanoFormProps {
   habilidadesSelecionadasIds?: string[];
   /** Objetos de conhecimento do Ensino Médio (por disciplina e série). */
   objetosMedio?: ObjetoConhecimentoMedio[];
+  /** Ensino Médio: links do IFA já guardados pelo professor por disciplina ({ disciplina_id: url }). */
+  ifaSugestoes?: Record<string, string>;
   competencias: CompetenciaCurricular[];
   competenciasSelecionadasIds?: string[];
   plano?: PlanoDeEnsino;
@@ -95,6 +98,7 @@ export default function PlanoForm({
   habilidades,
   habilidadesSelecionadasIds = [],
   objetosMedio = [],
+  ifaSugestoes,
   competencias,
   competenciasSelecionadasIds = [],
   plano,
@@ -544,6 +548,14 @@ export default function PlanoForm({
             />
           </div>
         </MetodologiaIA>
+        {etapa === "ensino_medio" && (
+          <IfaCampo
+            valorInicial={plano?.ifa_link}
+            disciplinaId={vinculoTipo === "disciplina" ? vinculoId : undefined}
+            disciplinaNome={disciplinaSelecionada?.nome}
+            sugestoes={ifaSugestoes ?? {}}
+          />
+        )}
       </SecaoPlano>
 
       {/* ───────── 7. Avaliação ───────── */}
