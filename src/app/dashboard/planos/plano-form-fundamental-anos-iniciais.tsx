@@ -85,12 +85,13 @@ export default function PlanoFormFundamentalAnosIniciais({
   action,
   passoInicial,
 }: PlanoFormFundamentalAnosIniciaisProps) {
-  const grav = useGravacaoPlano(action, plano?.id);
   const [erroPasso, setErroPasso] = useState<string | undefined>();
 
   const [componentesSelecionados, setComponentesSelecionados] = useState<Set<string>>(
     new Set(disciplinasSelecionadasIds.length > 0 ? disciplinasSelecionadasIds : plano?.disciplina_id ? [plano.disciplina_id] : [])
   );
+  // Sem nenhum componente marcado ainda (primeiro passo), o plano não pode ser criado: o botão só leva ao passo "Componentes".
+  const grav = useGravacaoPlano(action, plano?.id, () => componentesSelecionados.size > 0);
   const [usarCurriculoDigital, setUsarCurriculoDigital] = useState(
     plano?.usar_curriculo_digital ?? true
   );

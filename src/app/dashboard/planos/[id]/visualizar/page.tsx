@@ -511,6 +511,13 @@ export default async function VisualizarPlanoPage({
               >
                 <TextoOuParagrafos texto={plano.metodologia} />
               </Linha>
+              {plano.etapa === "ensino_medio" && plano.ifa_link && (
+                <Linha curta rotulo="IFA (Ensino Médio)">
+                  <a href={plano.ifa_link} target="_blank" rel="noopener noreferrer" className="break-all text-blue-700 underline">
+                    {plano.ifa_link}
+                  </a>
+                </Linha>
+              )}
               <Linha rotulo={ehInfantil ? "Instrumentos de registro" : "Instrumentos de avaliação"}>
                 <TextoOuParagrafos texto={plano.instrumentos_avaliacao} />
               </Linha>

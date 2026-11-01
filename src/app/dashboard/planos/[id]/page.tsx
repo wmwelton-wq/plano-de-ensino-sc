@@ -11,6 +11,7 @@ import ExcluirButton from "./excluir-button";
 import AcoesRapidas from "./acoes-rapidas";
 import CabecalhoPagina from "@/components/cabecalho-pagina";
 import { anexarSugestoesMedio } from "@/lib/sugestoes-medio";
+import { carregarSugestoesIfa } from "@/lib/ifa";
 import { Icone } from "@/components/icones";
 import VoltarLink from "../voltar-link";
 import { urlDaPasta } from "../../meus-planos/dados";
@@ -201,6 +202,7 @@ export default async function EditarPlanoPage({
           escolas={escolas ?? []}
           habilidades={habilidades ?? []}
           objetosMedio={await anexarSugestoesMedio(supabase, objetosMedio ?? [])}
+          ifaSugestoes={etapa === "ensino_medio" ? await carregarSugestoesIfa(supabase) : undefined}
           habilidadesSelecionadasIds={habilidadesSelecionadasIds}
           competencias={competencias ?? []}
           competenciasSelecionadasIds={competenciasSelecionadasIds}

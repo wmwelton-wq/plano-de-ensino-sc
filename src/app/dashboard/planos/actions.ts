@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { EtapaPlano, HabilidadeManual } from "@/lib/database.types";
 import { MARCADOR_HTML, prepararCampoParaSalvar } from "@/lib/texto-rico";
 import { tituloParaTurma } from "@/lib/copiar-turma";
+import { lerIfaLink } from "@/lib/ifa";
 import { CAMPOS_SECAO, nomeCampoSecao, ordenarComponentes, type SecaoComponente } from "@/lib/secoes-componentes";
 
 export interface EstadoFormulario {
@@ -262,6 +263,10 @@ async function gravarPlano(planoId: string | null, formData: FormData): Promise<
   const titulo = ((formData.get("titulo") as string) || "").trim();
   if (!titulo) return { erro: "Dê um título ao plano (primeiro passo)." };
 
+  // IFA (só Ensino Médio): o link só é gravado quando o formulário envia o marcador "tem_ifa".
+  const ifa = etapa === "ensino_medio" && formData.has("tem_ifa") ? lerIfaLink(formData.get("ifa_link")) : null;
+  if (ifa?.erro) return { erro: ifa.erro };
+
   const quantidadeAulasRaw = formData.get("quantidade_aulas") as string;
   const escolaId = (formData.get("escola_id") as string) || null;
   if (escolaId) {
@@ -280,6 +285,7 @@ async function gravarPlano(planoId: string | null, formData: FormData): Promise<
     incluir_logo_estado: formData.get("incluir_logo_estado") === "on",
     incluir_logo_escola: formData.get("incluir_logo_escola") === "on",
     usar_curriculo_digital: formData.get("usar_curriculo_digital") === "on",
+    ...(ifa ? { ifa_link: ifa.link } : {}),
     ...lerHabilidadesManuais(formData),
     titulo,
     ano_letivo: Number(formData.get("ano_letivo")) || new Date().getFullYear(),
@@ -313,6 +319,20 @@ async function gravarPlano(planoId: string | null, formData: FormData): Promise<
       .single();
     if (error || !data) return { erro: "Não foi possível salvar o plano. Tente novamente." };
     id = data.id as string;
+  }
+
+  if (ifa && disciplina_id) {
+    // "Sugerir este link nos próximos planos desta disciplina": guarda (ou retira) a sugestão do professor para a disciplina.
+    if (ifa.link && formData.get("ifa_sugerir") === "on") {
+      await supabase
+        .from("ifa_sugestoes")
+        .upsert({ professor_id: user.id, disciplina_id, url: ifa.link, updated_at: new Date().toISOString() });
+    } else {
+      const { data: atual } = await supabase.from("ifa_sugestoes").select("url").eq("disciplina_id", disciplina_id).maybeSingle();
+      if (atual && (!ifa.link || atual.url === ifa.link)) {
+        await supabase.from("ifa_sugestoes").delete().eq("disciplina_id", disciplina_id);
+      }
+    }
   }
 
   await sincronizarHabilidades(supabase, id, lerHabilidadeIds(formData));

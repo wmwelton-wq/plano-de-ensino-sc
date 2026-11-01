@@ -24,8 +24,12 @@ function primeiroInvalidoVisivel(form: HTMLFormElement): HTMLInputElement | null
  */
 export function useGravacaoPlano(
   action: (estado: EstadoFormulario, formData: FormData) => Promise<EstadoFormulario>,
-  planoIdInicial?: string
+  planoIdInicial?: string,
+  /** Se devolver false, ainda não há o mínimo para criar o plano (ex.: nenhum componente marcado): "Salvar e continuar" só avança, sem gravar. */
+  podeGravar?: () => boolean
 ) {
+  const podeGravarRef = useRef(podeGravar);
+  podeGravarRef.current = podeGravar;
   const formRef = useRef<HTMLFormElement>(null);
   const idRef = useRef<string | null>(planoIdInicial ?? null);
   const sujo = useRef(false);
@@ -90,6 +94,7 @@ export function useGravacaoPlano(
 
   const autosalvar = useCallback(async () => {
     if (!sujo.current || pendente) return;
+    if (podeGravarRef.current && !podeGravarRef.current()) return;
     const r = await gravar();
     if (r.erro) setAvisoAuto(`Ainda não salvo: ${r.erro}`);
   }, [gravar, pendente]);
@@ -130,6 +135,8 @@ export function useGravacaoPlano(
       }
     }
     if (timer.current) clearTimeout(timer.current);
+    // Ainda sem o mínimo para criar o plano (ex.: o passo "Componentes" vem depois): só avança; os campos seguem na tela e são gravados nos próximos passos.
+    if (podeGravarRef.current && !podeGravarRef.current()) return { ok: true };
     const r = await gravar();
     if (r.erro) return { ok: false, erro: r.erro };
     return { ok: true };
