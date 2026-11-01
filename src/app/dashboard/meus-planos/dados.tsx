@@ -77,7 +77,7 @@ const ARTE_DA_ETAPA: Record<EtapaPlano, NomeIlustracao> = {
 export const comparar = (a: string, b: string) =>
   a.localeCompare(b, "pt-BR", { numeric: true, sensitivity: "base" });
 
-export async function carregarPlanos(supabase: SupabaseClient, tipo: TipoPlano): Promise<PlanoLista[]> {
+export async function carregarPlanos(supabase: SupabaseClient, tipo: TipoPlano, ano: number): Promise<PlanoLista[]> {
   // Só o plano mensal tem datas de início e fim; no anual mostramos quando foi atualizado.
   const colunas =
     "id, titulo, ano_letivo, turma, etapa, status, updated_at, escola_id, favorito" +
@@ -86,6 +86,7 @@ export async function carregarPlanos(supabase: SupabaseClient, tipo: TipoPlano):
   const { data } = await supabase
     .from(TIPOS[tipo].tabela)
     .select(colunas)
+    .eq("ano_letivo", ano)
     .order("favorito", { ascending: false })
     .order("updated_at", { ascending: false });
   return (data ?? []) as unknown as PlanoLista[];

@@ -5,13 +5,15 @@ import { createClient } from "@/lib/supabase/server";
 import CabecalhoPagina from "@/components/cabecalho-pagina";
 import NavegacaoTopo from "@/components/navegacao-topo";
 import { TIPOS, type TipoPlano } from "./dados";
+import { anoCompetenciaOuAtual } from "@/lib/ano-competencia-servidor";
 
 export default async function MeusPlanosPage() {
   const supabase = await createClient();
   // Só os totais: contagem no banco, sem baixar nenhum plano.
+  const ano = await anoCompetenciaOuAtual();
   const [mensais, anuais] = await Promise.all([
-    supabase.from(TIPOS.mensais.tabela).select("id", { count: "exact", head: true }),
-    supabase.from(TIPOS.anuais.tabela).select("id", { count: "exact", head: true }),
+    supabase.from(TIPOS.mensais.tabela).select("id", { count: "exact", head: true }).eq("ano_letivo", ano),
+    supabase.from(TIPOS.anuais.tabela).select("id", { count: "exact", head: true }).eq("ano_letivo", ano),
   ]);
   const total: Record<TipoPlano, number> = { mensais: mensais.count ?? 0, anuais: anuais.count ?? 0 };
 

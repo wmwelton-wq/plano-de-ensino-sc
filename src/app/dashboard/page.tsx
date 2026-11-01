@@ -6,6 +6,7 @@ import PrimeirosPassos from "./primeiros-passos";
 import CartaoInstalar from "@/components/cartao-instalar";
 import AgendaPainel from "./agenda-painel";
 import { PrimeiroNome } from "./usuario-contexto";
+import { anoCompetenciaOuAtual } from "@/lib/ano-competencia-servidor";
 import { Suspense } from "react";
 import { CartaoPlano, type PlanoLista } from "./meus-planos/dados";
 import { normalizarDados } from "@/lib/plano-anual";
@@ -200,10 +201,11 @@ const COLUNAS = "id, titulo, ano_letivo, turma, etapa, status, escola_id, favori
 
 export default async function InicioPage() {
   const supabase = await createClient();
+  const ano = await anoCompetenciaOuAtual();
 
   const [{ data: mensaisBrutos }, { data: anuaisBrutos }, { data: escolas }] = await Promise.all([
-    supabase.from("planos_de_ensino").select(COLUNAS).order("updated_at", { ascending: false }),
-    supabase.from("planos_anuais").select(`${COLUNAS}, trimestres`).order("updated_at", { ascending: false }),
+    supabase.from("planos_de_ensino").select(COLUNAS).eq("ano_letivo", ano).order("updated_at", { ascending: false }),
+    supabase.from("planos_anuais").select(`${COLUNAS}, trimestres`).eq("ano_letivo", ano).order("updated_at", { ascending: false }),
     supabase.from("escolas").select("id"),
   ]);
 

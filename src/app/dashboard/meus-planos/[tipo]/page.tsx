@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import CabecalhoPagina from "@/components/cabecalho-pagina";
 import { Icone } from "@/components/icones";
 import NavegacaoTopo from "@/components/navegacao-topo";
+import { anoCompetenciaOuAtual } from "@/lib/ano-competencia-servidor";
 import { CartaoPasta, SEM_ESCOLA, TIPOS, agruparPorEscola, carregarPlanos, tipoValido, type TipoPlano } from "../dados";
 
 export default async function EscolasDoTipoPage({
@@ -19,7 +20,7 @@ export default async function EscolasDoTipoPage({
   const tipo = tipoBruto as TipoPlano;
 
   const supabase = await createClient();
-  const planos = await carregarPlanos(supabase, tipo);
+  const planos = await carregarPlanos(supabase, tipo, await anoCompetenciaOuAtual());
   const escolas = agruparPorEscola(planos);
   const info = TIPOS[tipo];
 
