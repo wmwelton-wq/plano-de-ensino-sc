@@ -7,6 +7,8 @@ import AutoAcao from "./auto-acao";
 import ConclusaoPlano from "./conclusao-plano";
 import { excluirPlano } from "../../actions";
 import PlanoAnosIniciais from "./plano-anos-iniciais";
+import TemasNoPlano, { temasParaImprimir } from "./temas-no-plano";
+import { lerTemas, temasDoGrupo } from "@/lib/temas-transversais";
 import { lerSecoes } from "@/lib/secoes-componentes";
 import ImpressaoPaginada from "./impressao-paginada";
 import { ESTILO_TEXTO_PLANO } from "@/lib/estilo-plano";
@@ -139,6 +141,9 @@ export default async function VisualizarPlanoPage({
   // Planos dos Anos Iniciais salvos com seções por componente usam o modelo em PDF (uma seção por componente);
   // os salvos antes disso continuam no formato anterior até serem editados e salvos de novo.
   const modeloPorComponente = ehAnosIniciais && lerSecoes(plano.secoes_componentes).length > 0;
+  // Temas transversais escolhidos pelo professor (só os que têm algo marcado; sem tema, nada aparece no plano).
+  const temasDoPlano = lerTemas(plano.temas_transversais);
+  const temasSemComponente = temasParaImprimir(temasDoGrupo(temasDoPlano, null));
   // Anos Finais e Ensino Médio: a recomposição das aprendizagens (só Língua Portuguesa e Matemática) fica logo
   // abaixo da competência específica.
   const secaoRecomposicao = ehAnosIniciais
@@ -221,6 +226,7 @@ export default async function VisualizarPlanoPage({
               habilidades: habilidadesCurriculo,
               habilidadesDigitais,
               competencias: competenciasSelecionadas ?? [],
+              temas: temasDoPlano,
               referencias: referenciasDoPlano(plano.etapa, plano.usar_curriculo_digital, plano.referencias),
             }}
           />
@@ -516,6 +522,11 @@ export default async function VisualizarPlanoPage({
                   <a href={plano.ifa_link} target="_blank" rel="noopener noreferrer" className="break-all text-blue-700 underline">
                     {plano.ifa_link}
                   </a>
+                </Linha>
+              )}
+              {temasSemComponente.length > 0 && (
+                <Linha rotulo="Temas transversais">
+                  <TemasNoPlano temas={temasSemComponente} />
                 </Linha>
               )}
               <Linha rotulo={ehInfantil ? "Instrumentos de registro" : "Instrumentos de avaliação"}>

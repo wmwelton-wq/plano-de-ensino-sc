@@ -10,6 +10,8 @@ import SecaoPlano, { type TomSecao } from "./secao-plano";
 import CampoAnoLetivo from "./campo-ano-letivo";
 import CurriculoDigitalCampo from "./curriculo-digital-campo";
 import MetodologiaIA from "./metodologia-ia";
+import TemasTransversaisCampo from "./temas-transversais-campo";
+import { lerTemas, temasDoGrupo } from "@/lib/temas-transversais";
 import { FluxoRodape, FluxoTopo, aoCampoInvalido, semEnterQueEnvia, useFluxoMensal, useGravacaoPlano, type PassoMensal } from "./fluxo-mensal";
 import CamposPeriodo from "./campos-periodo";
 import FaltouAlgoBotao from "../faltou-algo/faltou-algo-botao";
@@ -37,6 +39,48 @@ function useRefsPorComponente() {
     }
     return ref;
   }, []);
+}
+
+/**
+ * Temas transversais de um componente (logo abaixo do caminho metodológico dele). As sugestões saem das habilidades
+ * e dos objetos de conhecimento deste componente; a lista é calculada uma vez, não a cada digitação.
+ */
+function TemasDoComponente({
+  componente,
+  habilidades,
+  plano,
+}: {
+  componente: { id: string; nome: string };
+  habilidades: HabilidadeCurricular[];
+  plano?: PlanoDeEnsino;
+}) {
+  const salvos = useMemo(() => temasDoGrupo(lerTemas(plano?.temas_transversais), componente.id), [plano?.temas_transversais, componente.id]);
+  const habilidadesParaTemas = useMemo(
+    () =>
+      habilidades
+        .filter((h) => h.disciplina_id === componente.id && h.fonte !== "curriculo_educacao_digital")
+        .map((h) => ({ codigo: h.codigo, descricao: h.descricao, contexto: h.objeto_conhecimento })),
+    [habilidades, componente.id]
+  );
+  const objetosParaTemas = useMemo(
+    () =>
+      habilidades
+        .filter((h) => h.disciplina_id === componente.id && h.fonte !== "curriculo_educacao_digital" && h.objeto_conhecimento)
+        .map((h) => ({ objeto: h.objeto_conhecimento as string, contexto: h.conteudos })),
+    [habilidades, componente.id]
+  );
+  return (
+    <TemasTransversaisCampo
+      chave={componente.id}
+      disciplinaId={componente.id}
+      etapa="fundamental_anos_iniciais"
+      nomeComponente={componente.nome}
+      valorInicial={salvos}
+      habilidades={habilidadesParaTemas}
+      objetos={objetosParaTemas}
+      comMarcador
+    />
+  );
 }
 
 interface PlanoFormFundamentalAnosIniciaisProps {
@@ -468,6 +512,7 @@ export default function PlanoFormFundamentalAnosIniciais({
                   </div>
                 </div>
               </MetodologiaIA>
+              <TemasDoComponente componente={d} habilidades={habilidades} plano={plano} />
             </SecaoPlano>
 
             {/* Avaliação */}

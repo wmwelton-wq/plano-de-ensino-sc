@@ -20,6 +20,8 @@ import CampoAnoLetivo from "./campo-ano-letivo";
 import CurriculoDigitalCampo from "./curriculo-digital-campo";
 import MetodologiaIA from "./metodologia-ia";
 import IfaCampo from "./ifa-campo";
+import TemasTransversaisCampo from "./temas-transversais-campo";
+import { lerTemas, temasDoGrupo } from "@/lib/temas-transversais";
 import { FluxoRodape, FluxoTopo, aoCampoInvalido, semEnterQueEnvia, useFluxoMensal, useGravacaoPlano, type PassoMensal } from "./fluxo-mensal";
 import CamposPeriodo from "./campos-periodo";
 import FaltouAlgoBotao from "../faltou-algo/faltou-algo-botao";
@@ -181,6 +183,20 @@ export default function PlanoForm({
         : [],
     [objetosMedio, vinculoTipo, vinculoId]
   );
+
+  // Temas transversais: o que combina com o tema é procurado nas habilidades e objetos desta disciplina.
+  const temasSalvos = useMemo(() => temasDoGrupo(lerTemas(plano?.temas_transversais), null), [plano?.temas_transversais]);
+  const habilidadesParaTemas = useMemo(
+    () => habilidadesCurriculo.map((h) => ({ codigo: h.codigo, descricao: h.descricao, contexto: h.objeto_conhecimento })),
+    [habilidadesCurriculo]
+  );
+  const objetosParaTemas = useMemo(() => {
+    const lista: { objeto: string; contexto?: string | null }[] = objetosDaDisciplina.map((o) => ({ objeto: o.objeto, contexto: o.conteudos }));
+    for (const h of habilidadesCurriculo) {
+      if (h.objeto_conhecimento) lista.push({ objeto: h.objeto_conhecimento, contexto: h.conteudos });
+    }
+    return lista;
+  }, [objetosDaDisciplina, habilidadesCurriculo]);
 
   const competenciasArea = useMemo(() => {
     if (vinculoTipo !== "disciplina" || !vinculoId) {
@@ -545,6 +561,16 @@ export default function PlanoForm({
             sugestoes={ifaSugestoes ?? {}}
           />
         )}
+        <TemasTransversaisCampo
+          key={vinculo || "sem-vinculo"}
+          chave="plano"
+          disciplinaId={null}
+          etapa={etapa}
+          valorInicial={vinculo === vinculoInicial ? temasSalvos : []}
+          habilidades={habilidadesParaTemas}
+          objetos={objetosParaTemas}
+          comMarcador
+        />
       </SecaoPlano>
 
       {/* ───────── 7. Avaliação ───────── */}

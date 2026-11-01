@@ -7,6 +7,7 @@ import type { EtapaPlano, HabilidadeManual } from "@/lib/database.types";
 import { MARCADOR_HTML, prepararCampoParaSalvar } from "@/lib/texto-rico";
 import { tituloParaTurma } from "@/lib/copiar-turma";
 import { lerIfaLink } from "@/lib/ifa";
+import { LIMITES_TEMAS, normalizarTemas, temaPorId, type TemaEscolhido } from "@/lib/temas-transversais";
 import { CAMPOS_SECAO, nomeCampoSecao, ordenarComponentes, type SecaoComponente } from "@/lib/secoes-componentes";
 
 export interface EstadoFormulario {
@@ -227,6 +228,35 @@ function lerRecomposicaoSimples(
   };
 }
 
+/**
+ * Temas transversais (Anos Iniciais, Anos Finais e Ensino Médio): cada grupo (um componente nos Anos Iniciais; o plano
+ * inteiro nos demais) envia a sua lista em "tct__<grupo>". Só mexemos nisso quando o formulário envia o marcador
+ * "tem_tct"; assim, outras telas que gravam o plano não apagam os temas. Tudo é revalidado aqui: só entram temas do
+ * catálogo, textos limpos e componentes que fazem parte do plano.
+ */
+function lerTemasTransversais(
+  formData: FormData,
+  etapa: EtapaPlano,
+  disciplinaIds: string[]
+): { temas_transversais?: TemaEscolhido[] } {
+  if (!formData.has("tem_tct") || etapa === "educacao_infantil") return {};
+  const grupos: (string | null)[] = formData.has("tem_secoes") ? Array.from(new Set(disciplinaIds)) : [null];
+  const todos: TemaEscolhido[] = [];
+  for (const grupo of grupos) {
+    const bruto = formData.get(`tct__${grupo ?? "plano"}`);
+    if (typeof bruto !== "string" || bruto.length > LIMITES_TEMAS.caracteresTotal) continue;
+    let json: unknown;
+    try {
+      json = JSON.parse(bruto);
+    } catch {
+      continue;
+    }
+    const validos = normalizarTemas(json, grupo).filter((t) => etapa === "ensino_medio" || !temaPorId(t.tema)?.somenteMedio);
+    todos.push(...validos.slice(0, LIMITES_TEMAS.temasPorGrupo));
+  }
+  return { temas_transversais: todos };
+}
+
 /** Resultado de gravar o plano sem sair da tela (usado pelo salvamento a cada passo). */
 export interface ResultadoGravacao {
   id?: string;
@@ -303,6 +333,7 @@ async function gravarPlano(planoId: string | null, formData: FormData): Promise<
     status: (formData.get("status") as string) || "rascunho",
     ...(await lerSecoesComponentes(supabase, formData, disciplinaIds)),
     ...lerRecomposicaoSimples(formData, disciplina_id),
+    ...lerTemasTransversais(formData, etapa, disciplinaIds),
   };
 
   let id = planoId;

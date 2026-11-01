@@ -118,6 +118,8 @@ export interface PlanoDeEnsino {
   usar_curriculo_digital: boolean;
   /** Ensino Médio: link do Drive do IFA (só https). */
   ifa_link?: string | null;
+  /** Temas transversais escolhidos (lista vazia = não aparece no plano). Leia com lerTemas() de lib/temas-transversais. */
+  temas_transversais?: unknown;
   /** Anos Iniciais: textos de cada componente curricular (conteúdos, metodologia, critérios, instrumentos, recomposição). */
   secoes_componentes?: import("./secoes-componentes").SecaoComponente[] | null;
   /** Habilidades do currículo de educação digital digitadas manualmente. */
