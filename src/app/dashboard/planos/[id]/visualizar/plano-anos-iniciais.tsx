@@ -1,6 +1,8 @@
 import { Fragment } from "react";
 import { ehHtml, sanitizarHtml } from "@/lib/texto-rico";
 import { lerSecoes, ordenarComponentes } from "@/lib/secoes-componentes";
+import { temasDoGrupo, type TemaEscolhido } from "@/lib/temas-transversais";
+import TemasNoPlano, { temasParaImprimir } from "./temas-no-plano";
 
 /**
  * Plano dos Anos Iniciais no modelo em PDF enviado pelo Estado: um cabeçalho e UMA tabela em que cada
@@ -23,6 +25,8 @@ export interface DadosPlanoAnosIniciais {
   habilidades: { id: string; codigo: string | null; descricao: string; disciplina_id: string | null }[];
   habilidadesDigitais: { id: string; codigo: string | null; descricao: string }[];
   competencias: { id: string; numero: number; titulo: string | null; descricao: string; disciplina_id: string | null }[];
+  /** Temas transversais escolhidos (de todos os componentes). */
+  temas: TemaEscolhido[];
   referencias: string[];
 }
 
@@ -160,6 +164,7 @@ export default function PlanoAnosIniciais({ dados }: { dados: DadosPlanoAnosInic
               .filter((c) => c.disciplina_id === comp.id)
               .sort((a, b) => a.numero - b.numero);
             const temRecomposicao = Boolean(secao?.recomposicao_objetos || secao?.recomposicao_habilidades);
+            const temasDoComponente = temasParaImprimir(temasDoGrupo(dados.temas, comp.id));
             return (
               <Fragment key={comp.id}>
                 {/* data-reservar: o título só começa na página se couber junto com a competência, os cabeçalhos e o início do conteúdo. */}
@@ -233,6 +238,16 @@ export default function PlanoAnosIniciais({ dados }: { dados: DadosPlanoAnosInic
                     <Texto valor={secao?.instrumentos} />
                   </td>
                 </tr>
+                {temasDoComponente.length > 0 && (
+                  <tr>
+                    <td colSpan={5} className="border border-black px-2 py-1.5 align-top">
+                      <p className="font-bold">Temas transversais:</p>
+                      <div className="mt-1">
+                        <TemasNoPlano temas={temasDoComponente} />
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </Fragment>
             );
           })}
