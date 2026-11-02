@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { enviarEmail, envioDeEmailAtivo } from "@/lib/email/resend";
 import { montarEmailPlano } from "@/lib/email/modelo-plano";
+import { finalizarEnvioEmail } from "@/lib/ia/finalizar";
 
 export interface Colega {
   id: string;
@@ -147,7 +148,7 @@ export async function enviarPlanoPorEmail(pedido: PedidoEnvio): Promise<Resultad
     }
     const modelo = montarEmailPlano({ nomeRemetente, nomeDestinatario: colega.nome, tituloPlano: link.titulo as string, link: endereco, validoAte, mensagem });
     const envio = await enviarEmail({ para: colega.email, assunto: modelo.assunto, html: modelo.html, texto: modelo.texto, responderPara: user.email ?? undefined });
-    await supabase.rpc("email_finalizar_envio", { p_id: r.id, p_ok: envio.ok });
+    await finalizarEnvioEmail(supabase, user.id, r.id, envio.ok);
     if (envio.ok) resultado.enviados.push(colega.nome);
     else {
       console.error("[email] falha no envio", envio.motivo, envio.detalhe ?? "");

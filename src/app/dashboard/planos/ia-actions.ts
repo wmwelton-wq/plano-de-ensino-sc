@@ -14,6 +14,7 @@ import {
   type DadosMetodologia,
 } from "@/lib/ia/metodologia";
 import type { ContextoIA } from "./metodologia-ia";
+import { finalizarUsoIA } from "@/lib/ia/finalizar";
 
 export type ResultadoMetodologia = { ok: true; paragrafos: string[]; aviso?: string } | { ok: false; erro: string };
 
@@ -115,13 +116,12 @@ export async function gerarMetodologia(contexto: ContextoIA): Promise<ResultadoM
       paragrafos.length > 0 && paragrafos.length < quantidade
         ? `A IA escreveu só ${paragrafos.length} de ${quantidade} ${nome}. Escreva as que faltam ou clique em criar de novo.`
         : undefined;
-    await supabase.rpc("ia_finalizar", {
-      p_id: r.id,
-      p_modelo: `${resposta.provedor}:${resposta.modelo}`,
-      p_tokens_entrada: resposta.tokensEntrada,
-      p_tokens_saida: resposta.tokensSaida,
-      p_custo: resposta.custo,
-      p_status: paragrafos.length ? "ok" : "erro",
+    await finalizarUsoIA(supabase, user.id, r.id, {
+      modelo: `${resposta.provedor}:${resposta.modelo}`,
+      tokensEntrada: resposta.tokensEntrada,
+      tokensSaida: resposta.tokensSaida,
+      custo: resposta.custo,
+      status: paragrafos.length ? "ok" : "erro",
     });
     await registrarDetalheIA(
       supabase,
@@ -132,7 +132,7 @@ export async function gerarMetodologia(contexto: ContextoIA): Promise<ResultadoM
     if (paragrafos.length === 0) return { ok: false, erro: "A IA respondeu em um formato que não deu para aproveitar. Tente de novo." };
     return { ok: true, paragrafos, aviso };
   } catch (e) {
-    await supabase.rpc("ia_finalizar", { p_id: r.id, p_modelo: "-", p_tokens_entrada: 0, p_tokens_saida: 0, p_custo: 0, p_status: "erro" });
+    await finalizarUsoIA(supabase, user.id, r.id, { modelo: "-", tokensEntrada: 0, tokensSaida: 0, custo: 0, status: "erro" });
     await registrarDetalheIA(supabase, r.id, resumoDoErro(e), e instanceof ErroIA ? e.duracaoMs : null);
     return { ok: false, erro: "A IA está indisponível neste momento. Seu uso não foi descontado; tente novamente em alguns minutos." };
   }
