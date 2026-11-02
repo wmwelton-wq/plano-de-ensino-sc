@@ -9,7 +9,16 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const nextBruto = searchParams.get("next") ?? "/dashboard";
-  const next = nextBruto.startsWith("/") && !nextBruto.startsWith("//") && !nextBruto.includes("\\") ? nextBruto : "/dashboard";
+  // Tira tabulação/quebra de linha (o navegador as ignora e "/\t/site.com" viraria "//site.com") e confere que o destino é do próprio site.
+  const limpo = nextBruto.replace(/[\u0000-\u001f\u007f]/g, "");
+  let next = "/dashboard";
+  if (limpo.startsWith("/") && !limpo.startsWith("//") && !limpo.includes("\\")) {
+    try {
+      if (new URL(limpo, origin).origin === origin) next = limpo;
+    } catch {
+      /* mantém /dashboard */
+    }
+  }
 
   if (code) {
     const supabase = await createClient();

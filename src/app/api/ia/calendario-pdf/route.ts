@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { chamarIA, resumoDoErro, ErroIA } from "@/lib/ia/provedores";
 import { registrarDetalheIA } from "@/lib/ia/registro";
 import { LIMITE_BYTES_PDF, LIMITE_PAGINAS_PDF, SISTEMA_CALENDARIO, contarPaginasPdf, eventosDaResposta, promptCalendario } from "@/lib/ia/calendario-pdf";
+import { finalizarUsoIA } from "@/lib/ia/finalizar";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -60,19 +61,18 @@ export async function POST(request: Request) {
       temperatura: 0.1,
     });
     const eventos = eventosDaResposta(resposta.texto);
-    await supabase.rpc("ia_finalizar", {
-      p_id: r.id,
-      p_modelo: `${resposta.provedor}:${resposta.modelo}`,
-      p_tokens_entrada: resposta.tokensEntrada,
-      p_tokens_saida: resposta.tokensSaida,
-      p_custo: resposta.custo,
-      p_status: "ok",
+    await finalizarUsoIA(supabase, user.id, r.id, {
+      modelo: `${resposta.provedor}:${resposta.modelo}`,
+      tokensEntrada: resposta.tokensEntrada,
+      tokensSaida: resposta.tokensSaida,
+      custo: resposta.custo,
+      status: "ok",
     });
     await registrarDetalheIA(supabase, r.id, resposta.falhas.length ? `recuperado: ${resposta.falhas.join(" | ")}` : null, resposta.duracaoMs);
     return NextResponse.json({ ok: true, eventos }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     // Falha dos provedores: o envio fica marcado como falha e não conta na cota de calendários.
-    await supabase.rpc("ia_finalizar", { p_id: r.id, p_modelo: "-", p_tokens_entrada: 0, p_tokens_saida: 0, p_custo: 0, p_status: "erro" });
+    await finalizarUsoIA(supabase, user.id, r.id, { modelo: "-", tokensEntrada: 0, tokensSaida: 0, custo: 0, status: "erro" });
     await registrarDetalheIA(supabase, r.id, resumoDoErro(e), e instanceof ErroIA ? e.duracaoMs : null);
     return erro("A IA está indisponível agora. Seu direito de envio foi mantido; tente novamente mais tarde.", 503);
   }
